@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3108ef6cc00d77d4382be122c93d406b, type: 3}
+  m_Name: DefaultDataLevels
+  m_EditorClassIdentifier: 
+  levels:
+  - name: A
+    minZoom: 0
+    maxZoom: 3
+  - name: B
+    minZoom: 3
+    maxZoom: 7
+  - name: C
+    minZoom: 7
+    maxZoom: 11
+  - name: D
+    minZoom: 11
+    maxZoom: 16
+  - name: E
+    minZoom: 16
+    maxZoom: 20

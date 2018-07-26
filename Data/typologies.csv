@@ -1,0 +1,10 @@
+Typology |1 hectare|,description,Author,Color |red channel|,Color |green channel|,Color |blue channel|,Population|People|,Crops Production|Tonnes / Ha|,Green Cover |Percentage|,Gross Floor Area|Ha|,Cost Summary|K$|,Water |m3|
+Slum,Low cost Informal housing,Dummy Data,200,125,0,120,0,10,0.5,210,0
+Detached Houses,Common Estate housing typology with average efficiency performace,Dummy Data,200,170,0,100,0,20,0.75,895,0
+Low Rises,Typicaly up to 4 stories residential building.,Dummy Data,200,200,20,200,0,30,2,2500,0
+High Rises,Residential Multi Dwelling Unit with technical and economic advantages in areas of high population density.,Dummy Data,175,190,15,400,0,40,6,4000,0
+Rumah Tambah,Rubah (expandable house) is a housing and economic unit embedded within the Tropical Town package. It incorporates sustainable principles in the form of co-operatively owned and managed bamboo plantation strips; rainwater harvesting systems; passive cooling designs and a high density urban plan.,Dummy Data,50,175,0,260,1,50,1,745,20
+Public Space,A public space which is a place that is generally open and accessible to people.,Dummy Data,70,120,80,0,0,0,0,100,0
+Low Value Crops,Crops with low yielding and low revenue per tone of product produced.,Dummy Data,30,170,80,0,5,100,0,4,0
+High Value Crops,Crops with high yielding and high revenue per tone of product produced.,Dummy Data,30,170,120,0,17.059,100,0,10,0
+Bare Land,Bare land is areas with no dominant vegetation cover on at least 90 % of the area with no housing.,Dummy Data,30,120,170,0,0,0,0,0,0

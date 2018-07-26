@@ -1,0 +1,99 @@
+Type,Name,Color (red),Color (green),Color (blue)
+Group,Transportation,60,100,220
+Layer,Network,60,100,220
+Layer,Reachability,60,100,220
+Layer,Barrier,135,180,240
+Layer,Roads Area,135,180,240
+Layer,Accidents Density,135,180,240
+,,,,
+Group,Resources,80,70,140
+Layer,Solar GHI,80,70,140
+Layer,Rain Fall,20,70,160
+Layer,Wind,20,90,200
+Layer,Water Consumption,20,90,200
+Layer,Water Access,20,90,200
+Layer,Water from Wells,20,90,200
+Layer,Water from Pipes,20,90,200
+,,,,
+Group,Economy,0,160,190
+Layer,SME,80,70,140
+Layer,Land Price,0,100,110
+Layer,GDP,20,160,200
+Layer,Poverty,20,100,130
+Layer,Night Light,80,200,255
+,,,,
+Group,Agriculture Production,158,137,74
+Layer,Crops Production,40,95,60
+Layer,Cropland,40,95,60
+Layer,All Crops,40,95,60
+Layer,Soil Suitability,170,180,70
+Layer,Maize,90,200,70
+Layer,Wheat,150,170,20
+Layer,Rice,90,200,20
+Layer,Field Size,210,200,50
+Layer,HANPP,210,200,50
+Layer,Turnover,210,200,50
+,,,,
+Group,Geography,100,255,0
+Layer,Green Cover,180,180,120
+Layer,Land Cover,180,180,120
+Layer,Water,90,110,140
+Layer,Slope,180,180,120
+Layer,Peatland Area,180,180,120
+Layer,State Forest,180,180,120
+Layer,River Buffer,180,180,120
+Layer,Topography,180,180,120
+,,,,
+Group,Land Use,210,200,50
+Layer,Amenities,210,200,50
+Layer,Divisions,210,200,50
+Layer,Master Plan,210,200,50
+Layer,Jurisdictions,210,200,50
+Layer,Land Use,210,200,50
+Layer,Slum Area,210,200,50
+Layer,Urban Expansion,210,200,50
+Layer,Urban Density,210,200,50
+Layer,Landfill,210,200,50
+Layer,Built Up Area,128,128,128
+Layer,Restricted Areas,120,20,150
+Layer,SKL Kestabilan Lereng,70,180,20
+Layer,SKL Kestabilan Pondasi,70,180,20
+Layer,SKL Ketersediaan Air,70,180,20
+Layer,RW,210,200,50
+,,,,
+Group,Demography,220,80,50
+Layer,Population,220,80,50
+Layer,Density Dasymetric,220,80,50
+Layer,Density,220,80,50
+Layer,Population Density,220,80,50
+Layer,Education Index,240,100,50
+Layer,Infant Age,220,80,50
+Layer,Young Age,220,80,50
+Layer,Working Age,220,80,50
+Layer,Elderly Age,220,80,50
+Layer,Segregation Edges,220,80,50
+Layer,Crime Spots,220,80,50
+Layer,Occupation Farmers,128,128,128
+,,,,
+Group,Health,210,70,110
+Layer,Malaria PV,220,70,150
+Layer,Infant Mortality,220,70,150
+Layer,Hospitals,220,70,150
+,,,,
+Group,Vulnerable Land,250,0,0
+Layer,Floods,250,0,0
+Layer,Subsidence,250,0,0
+Layer,Cyclons,250,0,0
+Layer,Earthquakes,250,0,0
+Layer,Land Movement,250,0,0
+Layer,Fire,250,0,0
+Layer,Rawan Longsor,250,0,0
+Layer,Geologi Amblesan,250,0,0
+Layer,Banjir,250,0,0
+,,,,
+Group,Ecology,88,36,100
+Layer,Aerosol,88,36,100
+Layer,Sulfor Dioxide,88,36,100
+Layer,Nitrogen Dioxide,88,36,100
+Layer,Carbon,88,36,100
+Layer,Waste,88,36,100

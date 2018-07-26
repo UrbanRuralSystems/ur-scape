@@ -1,0 +1,149 @@
+﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+// All rights reserved.
+//
+// This software may be modified and distributed under the terms
+// of the MIT license. See the LICENSE file for details.
+//
+// Author:  Michael Joos  (joos@arch.ethz.ch)
+
+#pragma kernel CSReset
+#pragma kernel CSContinuous_Masked_Include CONTINUOUS MASKED INCLUDE_CELLS_WITH_NO_DATA
+#pragma kernel CSContinuous_Masked_Exclude CONTINUOUS MASKED EXCLUDE_CELLS_WITH_NO_DATA
+#pragma kernel CSCategorized_Masked_Include CATEGORIZED MASKED 
+#pragma kernel CSCategorized_Masked_Exclude CATEGORIZED MASKED EXCLUDE_CELLS_WITH_NO_DATA
+#pragma kernel CSContinuous_Unmasked_Include CONTINUOUS UNMASKED INCLUDE_CELLS_WITH_NO_DATA
+#pragma kernel CSContinuous_Unmasked_Exclude CONTINUOUS UNMASKED EXCLUDE_CELLS_WITH_NO_DATA
+#pragma kernel CSCategorized_Unmasked_Include CATEGORIZED UNMASKED 
+#pragma kernel CSCategorized_Unmasked_Exclude CATEGORIZED UNMASKED EXCLUDE_CELLS_WITH_NO_DATA
+
+#if SHADER_API_METAL 
+#define CC_THREAD_COUNT 256
+#else
+#define CC_THREAD_COUNT 1024
+#endif
+
+
+//
+// Buffers
+//
+
+RWStructuredBuffer<float> contourValues;
+StructuredBuffer<float> patchValues;
+StructuredBuffer<uint> patchMask;
+
+int initialValue;
+uint contourValueCount;
+uint contourCountX;
+uint croppedContourCountX;
+uint gridCountX;
+uint categoryMask;
+float2 minmax;
+float2 offset;
+float2 scale;
+uint startX;
+uint startY;
+
+//
+// Helper Functions
+//
+
+void Compute(uint i)
+{
+	if (i >= contourValueCount)
+		return;
+
+	uint y = i / croppedContourCountX;
+	uint x = i - y * croppedContourCountX + startX;
+	y += startY;
+
+	uint contourIndex = x + y * contourCountX;
+
+	uint pX = (uint)(offset.x + x * scale.x);
+	uint pY = (uint)(offset.y + y * scale.y);
+	uint patchIndex = pY * gridCountX + pX;
+
+#ifdef CATEGORIZED
+	int value = (int)patchValues[patchIndex];
+	value = ((categoryMask >> value) & 1);
+#else
+	float value = patchValues[patchIndex];
+	value = step(minmax.x, value) * step(value, minmax.y);
+#endif
+
+#ifdef MASKED
+	uint maskIndex = patchIndex / 4;
+	uint maskShift = (patchIndex - maskIndex * 4) * 8;
+	uint mask = (patchMask[maskIndex] >> maskShift) & 1;
+
+#ifdef EXCLUDE_CELLS_WITH_NO_DATA
+	value = lerp(0, value, mask);
+#else
+	value = lerp(1, contourValues[contourIndex] * value, mask);
+#endif
+#endif
+
+#ifdef EXCLUDE_CELLS_WITH_NO_DATA
+	contourValues[contourIndex] += value;
+#else
+	contourValues[contourIndex] *= value;
+#endif
+}
+
+//
+// Kernels
+//
+
+[numthreads(CC_THREAD_COUNT, 1, 1)]
+void CSReset(uint3 id : SV_DispatchThreadID)
+{
+	if (id.x < contourValueCount)
+		contourValues[id.x] = initialValue;
+}
+
+[numthreads(CC_THREAD_COUNT, 1, 1)]
+void CSContinuous_Masked_Include(uint3 id : SV_DispatchThreadID)
+{
+	Compute(id.x);
+}
+
+[numthreads(CC_THREAD_COUNT, 1, 1)]
+void CSContinuous_Masked_Exclude(uint3 id : SV_DispatchThreadID)
+{
+	Compute(id.x);
+}
+
+[numthreads(CC_THREAD_COUNT, 1, 1)]
+void CSCategorized_Masked_Include(uint3 id : SV_DispatchThreadID)
+{
+	Compute(id.x);
+}
+
+[numthreads(CC_THREAD_COUNT, 1, 1)]
+void CSCategorized_Masked_Exclude(uint3 id : SV_DispatchThreadID)
+{
+	Compute(id.x);
+}
+
+[numthreads(CC_THREAD_COUNT, 1, 1)]
+void CSContinuous_Unmasked_Include(uint3 id : SV_DispatchThreadID)
+{
+	Compute(id.x);
+}
+
+[numthreads(CC_THREAD_COUNT, 1, 1)]
+void CSContinuous_Unmasked_Exclude(uint3 id : SV_DispatchThreadID)
+{
+	Compute(id.x);
+}
+
+[numthreads(CC_THREAD_COUNT, 1, 1)]
+void CSCategorized_Unmasked_Include(uint3 id : SV_DispatchThreadID)
+{
+	Compute(id.x);
+}
+
+[numthreads(CC_THREAD_COUNT, 1, 1)]
+void CSCategorized_Unmasked_Exclude(uint3 id : SV_DispatchThreadID)
+{
+	Compute(id.x);
+}
