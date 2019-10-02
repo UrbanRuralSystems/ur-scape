@@ -44,7 +44,7 @@ Software:
 
 ### Documentation
 
-The user guides can be found [here](./Docs/User Guides) or downloaded from http://urs.fcl.sg/documentation/
+The user guides can be found [here](./Docs/User%20Guides) or downloaded from http://urs.fcl.sg/documentation/
 
 Other documents can be found inside the [Docs](./Docs) folder
 
