@@ -1,30 +1,19 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENSE file for details.
 //
 // Author:  Michael Joos  (joos@arch.ethz.ch)
-// Summary: 
 
 using System;
 using System.Collections;
 using System.IO;
 using UnityEngine;
-using UnityEngine.Events;
 
-[ExecuteInEditMode]
 [RequireComponent(typeof(Camera))]
 public class MapCamera : UrsComponent
 {
-	public event UnityAction OnResolutionChanged;
-
-	public enum MovementType
-    {
-        MoveCamera,
-        MoveMap
-    }
-
     // Bottom-left, top-left, top-right and bottom-right corners of the viewport
     private static readonly Vector3[] FullViewportPoints = {
         new Vector3(0, 0, 0),
@@ -36,9 +25,6 @@ public class MapCamera : UrsComponent
 
     [Header("Camera")]
     public Transform pivot;
-
-    [Header("Movement")]
-    public MovementType movementType;
 
     [Header("Rotation Constraints")]
     public float MinPitchAngle = 30f;
@@ -53,11 +39,9 @@ public class MapCamera : UrsComponent
     public float ZoomScale = 1f;
 
     [Header("Distance to Ground")]
-    public float InitialDistanceToTarget = 20f;
     public float MinDistanceToTarget = 2f;
 
     [Header("Map")]
-    public float mapScale = 1f;
     [Range(2f, 15f)]
     public float MaxBoundsScale = 5f;
 
@@ -72,10 +56,9 @@ public class MapCamera : UrsComponent
     private MapController map;
     private MapViewArea mapViewArea;
     private InputHandler inputHandler;
+	private Canvas canvas;
 
     // Ground point and distance to it
-    private Vector3 target;
-    private float distanceToTarget = 10f;
     private float distanceToMap = 10f;
 
     // Dragging
@@ -91,17 +74,12 @@ public class MapCamera : UrsComponent
     // Ground plane (for raycasting)
     private readonly Plane plane = new Plane(Vector3.up, Vector3.zero);
 
-    private Vector3[] groundPoints;
-
-    // Frustrum boundaries (Unity units)
-    private float west = 0;
-    private float east = 0;
-    private float south = 0;
-    private float north = 0;
+	public Vector2[] BoundaryPoints { get; private set; } = new Vector2[4] { Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero };
 
     private bool needToUpdateBounds = false;
     private bool needToUpdateViewport = false;
-    private Vector2 mapViewCenter;
+	private bool needToAdjustZoom = false;
+	private Vector2 mapViewCenter = Vector2.zero;
 
     private int lastPixelHeight = 0;
 
@@ -122,31 +100,25 @@ public class MapCamera : UrsComponent
     {
         // Get camera reference
         cam = GetComponent<Camera>();
+		canvas = GameObject.FindWithTag("Canvas").GetComponent<Canvas>();
 
-        // Double the size of the map for resolutions higher than 4K (4K = 8.85 mill pixels)
-        if (cam.pixelWidth * cam.pixelHeight > 8850000)
-        {
-            mapScale = 2f;
-        }
+		lastPixelHeight = cam.pixelHeight;
 
-        // Initialize variables
-        WrapAngle(ref MinYawAngle);
+		// Double the size of the map for resolutions higher than 4K (4K = 8.85 mill pixels)
+		map = FindObjectOfType<MapController>();
+		if (cam.pixelWidth * cam.pixelHeight > 8850000)
+		{
+			map.mapScale *= 2f;
+		}
+
+		// Initialize variables
+		WrapAngle(ref MinYawAngle);
         WrapAngle(ref MaxYawAngle);
 
-        currentPivot = pivot == null ? transform : pivot;
-
-        groundPoints = new Vector3[4] { Vector3.zero, Vector3.zero, Vector3.zero, Vector3.zero };
-
-        distanceToMap = InitialDistanceToTarget;
-
-        if (movementType == MovementType.MoveMap)
-        {
-            // Set camera distance so that MapTile.Size pixels represent 1 unit in world space
-            distanceToMap = DistanceFromPixelsAndUnits(MapTile.Size, 1f / mapScale);
-        }
+        currentPivot = pivot ?? transform;
 
         // Initialize camera position
-        SetDistanceToTarget(distanceToMap);
+        UpdateDistanceToMap();
 
         needToUpdateBounds = true;
         needToUpdateViewport = true;
@@ -167,7 +139,6 @@ public class MapCamera : UrsComponent
 
         yield return WaitFor.Frames(WaitFor.InitialFrames);
 
-        map = ComponentManager.Instance.Get<MapController>();
         inputHandler = ComponentManager.Instance.Get<InputHandler>();
         mapViewArea = ComponentManager.Instance.Get<MapViewArea>();
 
@@ -203,27 +174,8 @@ public class MapCamera : UrsComponent
 		}
 	}
 
-    void Update()
+	void Update()
     {
-        // Check if resolution has changed
-        if (lastPixelHeight != cam.pixelHeight)
-        {
-            lastPixelHeight = cam.pixelHeight;
-
-            if (movementType == MovementType.MoveMap)
-            {
-                // Set camera distance so that MapTile.Size pixels represent 1 unit in world space
-                distanceToMap = DistanceFromPixelsAndUnits(MapTile.Size, 1f / mapScale);
-                UpdatePosition();
-            }
-
-            needToUpdateBounds = true;
-            needToUpdateViewport = true;
-
-			if (OnResolutionChanged != null)
-				OnResolutionChanged();
-		}
-
 		if (Input.touchCount == 2)
 		{
 			Touch t1 = Input.GetTouch(0);
@@ -231,8 +183,7 @@ public class MapCamera : UrsComponent
 
 			var touchCenter = (t1.position + t2.position) * 0.5f;
 
-			Vector3 touchCenterWorld;
-			inputHandler.GetWorldPoint(touchCenter, out touchCenterWorld);
+			inputHandler.GetWorldPoint(touchCenter, out Vector3 touchCenterWorld);
 
 			if (t1.phase == TouchPhase.Began || t2.phase == TouchPhase.Began)
 			{
@@ -249,8 +200,8 @@ public class MapCamera : UrsComponent
 
 				var yawDiff = Angle(t2.position - t1.position, initialTouchVector) - currentPivot.rotation.eulerAngles.y + initialCameraYaw;
 
+				map.ChangeZoom(newZoom - map.zoom, touchCenterWorld.x, touchCenterWorld.z);
 				PanMap(prevTouchCenterWorld);
-				Zoom(newZoom - map.zoom);
 				Orbit(0, yawDiff);
 				PanMap(-touchCenterWorld);
 			}
@@ -268,18 +219,14 @@ public class MapCamera : UrsComponent
 
             if (needToUpdateViewport)
             {
-                UpdateCameraOffset();
-                needToUpdateViewport = false;
+				needToUpdateViewport = false;
+				UpdateCameraOffset();
             }
 
-            UpdateCameraBounds();
-
-            if (map)
-            {
-                map.SetViewBounds(north, south, east, west);
-            }
-        }
-    }
+			UpdateMapBounds(needToAdjustZoom);
+			needToAdjustZoom = false;
+		}
+	}
 
 	private static float Angle(Vector2 a, Vector2 b)
 	{
@@ -314,58 +261,32 @@ public class MapCamera : UrsComponent
         bw.Write(currentPivot.rotation.z);
         bw.Write(currentPivot.rotation.w);
 
-        bw.Write(target.x);
-        bw.Write(target.y);
-        bw.Write(target.z);
-
-        bw.Write(distanceToTarget);
         bw.Write(distanceToMap);
 
         for (int i = 0; i < 4; i++)
         {
-            bw.Write(groundPoints[i].x);
-            bw.Write(groundPoints[i].y);
-            bw.Write(groundPoints[i].z);
+            bw.Write(BoundaryPoints[i].x);
+            bw.Write(BoundaryPoints[i].y);
         }
-
-        bw.Write(west);
-        bw.Write(east);
-        bw.Write(south);
-        bw.Write(north);
 
         bw.Write(mapViewCenter.x);
         bw.Write(mapViewCenter.y);
-
-        bw.Write(lastPixelHeight);
     }
 
     public override void LoadFromBookmark(BinaryReader br, string bookmarkPath)
     {
         currentPivot.rotation = new Quaternion(br.ReadSingle(), br.ReadSingle(), br.ReadSingle(), br.ReadSingle());
 
-        target.x = br.ReadSingle();
-        target.y = br.ReadSingle();
-        target.z = br.ReadSingle();
-
-        distanceToTarget = br.ReadSingle();
         distanceToMap = br.ReadSingle();
 
         for (int i = 0; i < 4; i++)
         {
-            groundPoints[i].x = br.ReadSingle();
-            groundPoints[i].y = br.ReadSingle();
-            groundPoints[i].z = br.ReadSingle();
+			BoundaryPoints[i].x = br.ReadSingle();
+			BoundaryPoints[i].y = br.ReadSingle();
         }
-
-        west = br.ReadSingle();
-        south = br.ReadSingle();
-        south = br.ReadSingle();
-        north = br.ReadSingle();
 
         mapViewCenter.x = br.ReadSingle();
         mapViewCenter.y = br.ReadSingle();
-
-        lastPixelHeight = br.ReadInt32();
 
         UpdatePosition();
 
@@ -389,7 +310,6 @@ public class MapCamera : UrsComponent
     {
         return units * cam.pixelHeight / (pixels * 2.0f * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad));
     }
-
 
     //
     // Private Methods
@@ -481,50 +401,57 @@ public class MapCamera : UrsComponent
 
     private void UpdateMapViewCenter()
     {
-        needToUpdateBounds = true;
+		UpdateDistanceToMap();
+
+		needToUpdateBounds = true;
         needToUpdateViewport = true;
 
-        if (mapViewArea != null)
+		if (lastPixelHeight != cam.pixelHeight)
+		{
+			lastPixelHeight = cam.pixelHeight;
+			needToAdjustZoom = true;
+		}
+
+		if (mapViewArea != null)
         {
-            var rt = mapViewArea.GetComponent<RectTransform>();
-            mapViewCenter = rt.TransformPoint(rt.rect.center);
-            mapViewCenter.x -= Screen.width * 0.5f;
-            mapViewCenter.y -= Screen.height * 0.5f;
+            mapViewCenter = mapViewArea.WorldCenter();
         }
     }
 
-    private void UpdateCameraBounds()
+    private void UpdateMapBounds(bool adjustZoom)
     {
-        west = float.MaxValue;
-        east = float.MinValue;
-        south = float.MaxValue;
-        north = float.MinValue;
+		if (map == null)
+			return;
 
-        Ray ray;
-        float distance;
-        Vector3 viewportPoint = Vector3.zero;
+		var west = float.MaxValue;
+		var east = float.MinValue;
+		var south = float.MaxValue;
+		var north = float.MinValue;
 
+		Vector3 pt;
         float maxDistance = MaxBoundsScale * distanceToMap;
         for (int i = 0; i < viewportPoints.Length; i++)
         {
-            ray = cam.ViewportPointToRay(viewportPoints[i]);
-            if (plane.Raycast(ray, out distance))
+			var ray = cam.ViewportPointToRay(viewportPoints[i]);
+            if (plane.Raycast(ray, out float distance))
             {
-                groundPoints[i] = ray.GetPoint(Mathf.Min(distance, maxDistance));
-                groundPoints[i].y = 0;
+                pt = ray.GetPoint(Mathf.Min(distance, maxDistance));
             }
             else
             {
-                groundPoints[i] = ray.GetPoint(maxDistance);
-                groundPoints[i].y = 0;
-            }
+                pt = ray.GetPoint(maxDistance);
+			}
+			BoundaryPoints[i].x = pt.x;
+			BoundaryPoints[i].y = pt.z;
 
-            west = Mathf.Min(west, groundPoints[i].x);
-            east = Mathf.Max(east, groundPoints[i].x);
-            south = Mathf.Min(south, groundPoints[i].z);
-            north = Mathf.Max(north, groundPoints[i].z);
+			west = Mathf.Min(west, BoundaryPoints[i].x);
+            east = Mathf.Max(east, BoundaryPoints[i].x);
+            south = Mathf.Min(south, BoundaryPoints[i].y);
+            north = Mathf.Max(north, BoundaryPoints[i].y);
         }
-    }
+
+		map.SetViewBounds(north, south, east, west, adjustZoom);
+	}
 
     private void StartPan()
     {
@@ -533,26 +460,11 @@ public class MapCamera : UrsComponent
 
     private void Pan()
     {
-        Vector3 point;
-        if (inputHandler.GetWorldPoint(Input.mousePosition, out point))
+        if (inputHandler.GetWorldPoint(Input.mousePosition, out Vector3 point))
         {
-            switch (movementType)
-            {
-                case MovementType.MoveCamera:
-                    PanCamera(dragWorldOrigin - point);
-                    break;
-                case MovementType.MoveMap:
-                    PanMap(dragWorldOrigin - point);
-                    dragWorldOrigin = point;
-                    break;
-            }
+            PanMap(dragWorldOrigin - point);
+            dragWorldOrigin = point;
         }
-    }
-
-    private void PanCamera(Vector3 offset)
-    {
-        target += offset;
-        UpdatePosition();
     }
 
     private void PanMap(Vector3 offset)
@@ -572,46 +484,31 @@ public class MapCamera : UrsComponent
         if (euler.y > 180f)
             euler.y -= 360f;
 
-        Quaternion quat = Quaternion.Euler(
+		currentPivot.rotation = Quaternion.Euler(
             Mathf.Clamp(euler.x, MinPitchAngle, MaxPitchAngle),
             Mathf.Clamp(euler.y, MinYawAngle, MaxYawAngle),
             0);
-        currentPivot.rotation = quat;
-        UpdatePosition();
+
+		UpdatePosition();
     }
 
-    private void Zoom(float change)
+	private void Zoom(float change)
+	{
+		inputHandler.GetWorldPoint(Input.mousePosition, out Vector3 zoomPoint);
+		map.ChangeZoom(change, zoomPoint.x, zoomPoint.z);
+	}
+
+	private void UpdateDistanceToMap()
     {
-        switch (movementType)
-        {
-            case MovementType.MoveCamera:
-                SetDistanceToTarget(Mathf.Max(MinDistanceToTarget, distanceToTarget - change * ZoomScale * distanceToTarget));
-                break;
-            case MovementType.MoveMap:
-                Vector3 zoomPoint;
-                inputHandler.GetWorldPoint(Input.mousePosition, out zoomPoint);
-                map.ChangeZoom(change, zoomPoint.x, zoomPoint.z);
-                break;
-        }
+		// Set camera distance so that MapTile.Size pixels represent 1 unit in world space
+		distanceToMap = DistanceFromPixelsAndUnits(MapTile.Size, 1f / map.mapScale);
+		UpdatePosition();
     }
 
-    private void SetDistanceToTarget(float distance)
+	// This methods needs to be called when currentPivot or distanceToMap have changed
+	private void UpdatePosition()
     {
-        distanceToTarget = distance;
-        UpdatePosition();
-    }
-
-    private void UpdatePosition()
-    {
-        switch (movementType)
-        {
-            case MovementType.MoveCamera:
-                currentPivot.localPosition = target - currentPivot.forward * distanceToTarget;
-                break;
-            case MovementType.MoveMap:
-                currentPivot.localPosition = currentPivot.forward * -distanceToMap;
-                break;
-        }
+        currentPivot.localPosition = currentPivot.forward * -distanceToMap;
         needToUpdateBounds = true;
     }
 
@@ -643,7 +540,7 @@ public class MapCamera : UrsComponent
         }
         else
         {
-            (mapViewArea.transform as RectTransform).GetWorldCorners(viewportPoints);
+            mapViewArea.RectTransform.GetWorldCorners(viewportPoints);
             for (int i = 0; i < 4; i++)
             {
                 viewportPoints[i] = cam.ScreenToViewportPoint(viewportPoints[i]);
@@ -662,10 +559,15 @@ public class MapCamera : UrsComponent
     private void DebugDrawCameraBounds()
     {
         Gizmos.color = Color.blue;
-        Gizmos.DrawLine(groundPoints[0], groundPoints[1]);
-        Gizmos.DrawLine(groundPoints[1], groundPoints[2]);
-        Gizmos.DrawLine(groundPoints[2], groundPoints[3]);
-        Gizmos.DrawLine(groundPoints[3], groundPoints[0]);
+		DebugDrawLine(BoundaryPoints[0], BoundaryPoints[1]);
+		DebugDrawLine(BoundaryPoints[1], BoundaryPoints[2]);
+		DebugDrawLine(BoundaryPoints[2], BoundaryPoints[3]);
+		DebugDrawLine(BoundaryPoints[3], BoundaryPoints[0]);
     }
+
+	private void DebugDrawLine(Vector2 ptA, Vector2 ptB)
+	{
+		Gizmos.DrawLine(new Vector3(ptA.x, 0, ptA.y), new Vector3(ptB.x, 0, ptB.y));
+	}
 
 }

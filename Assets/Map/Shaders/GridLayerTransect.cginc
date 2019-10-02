@@ -1,4 +1,4 @@
-// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // Upgrade NOTE: excluded shader from DX11, OpenGL ES 2.0 because it uses unsized arrays
 // All rights reserved.
 //
@@ -7,7 +7,6 @@
 //
 // Author:  David Neudecker (neudecker@arch.ethz.ch)
 //          Michael Joos  (joos@arch.ethz.ch)
-// Summary:
 
 #ifndef GRIDLAYERTRANSECT_INCLUDED
 #define GRIDLAYERTRANSECT_INCLUDED

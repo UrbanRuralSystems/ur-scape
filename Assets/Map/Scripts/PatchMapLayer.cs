@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -36,8 +36,8 @@ public class PatchMapLayer : AreaMapLayer
     {
         base.Init(map, patchData.north, patchData.east, patchData.south, patchData.west);
 
-        // Deregister old events
-        if (this.patchData != null)
+		// Deregister old events
+		if (this.patchData != null)
         {
             this.patchData.OnBoundsChange -= OnPatchBoundsChange;
         }
@@ -48,12 +48,24 @@ public class PatchMapLayer : AreaMapLayer
         patchData.OnBoundsChange += OnPatchBoundsChange;
     }
 
+	public override void UpdateContent()
+	{
+		// Update the position
+		var offset = areaCenterInMeters - map.MapCenterInMeters;
+		var units = GeoCalculator.RelativeMetersToPixels(offset, map.ZoomLevel) * map.PixelsToUnits;
+		transform.localPosition = new Vector3((float)units.x, (float)units.y, -0.001f);
 
-    //
-    // Private/Protected Methods
-    //
+		// Update the size
+		units = GeoCalculator.RelativeMetersToPixels(areaSizeInMeters, map.ZoomLevel) * map.PixelsToUnits;
+		transform.localScale = new Vector3((float)units.x, (float)units.y, 1);
+	}
 
-    protected virtual void OnPatchBoundsChange(PatchData patchData)
+
+	//
+	// Private/Protected Methods
+	//
+
+	protected virtual void OnPatchBoundsChange(PatchData patchData)
     {
         UpdateAreaCenterAndSize(patchData.north, patchData.east, patchData.south, patchData.west);
     }

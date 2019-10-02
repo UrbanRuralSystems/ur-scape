@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -28,7 +28,8 @@ public class MapController : UrsComponent
     private double latitude;
 
     [Header("Zoom")]
-    [Range(MinZoomLevel, MaxZoomLevel)]
+	public float mapScale = 1f;
+	[Range(MinZoomLevel, MaxZoomLevel)]
     public float minZoomLevel = 0f;
     [Range(MinZoomLevel, MaxZoomLevel)]
     public float maxZoomLevel = 20f;
@@ -62,7 +63,8 @@ public class MapController : UrsComponent
     public event OnZoomChangeDelegate OnZoomChange;
 
     public delegate void OnLevelChangeDelegate(int level);
-    public event OnLevelChangeDelegate OnLevelChange;
+	public event OnLevelChangeDelegate OnPreLevelChange;
+	public event OnLevelChangeDelegate OnLevelChange;
     public event OnLevelChangeDelegate OnPostLevelChange;
 
     public delegate void OnBoundsChangeDelegate();
@@ -105,21 +107,23 @@ public class MapController : UrsComponent
 
     private Rect viewBounds = new Rect(0, 0, 0, 0);   // Measured in units
 
-    private readonly AreaBounds mapCoordBounds = new AreaBounds(0,0,0,0); // Measured in degrees (Lon/Lat)
-    public AreaBounds MapCoordBounds { get { return new AreaBounds(mapCoordBounds); } }
+    private AreaBounds mapCoordBounds = new AreaBounds(0,0,0,0); // Measured in degrees (Lon/Lat)
+    public AreaBounds MapCoordBounds { get => mapCoordBounds; }
 
     private readonly MapTileBounds mapTileBounds = new MapTileBounds(0, 0, 0, 0);
-    public MapTileBounds MapTileBounds { get { return mapTileBounds; } }
+    public MapTileBounds MapTileBounds { get => mapTileBounds; }
 
     private MapTileId anchor = new MapTileId();
-    public MapTileId Anchor { get { return anchor; } }
+    public MapTileId Anchor { get => anchor; }
 
     private Vector2 anchorOffsetInUnits = Vector2.zero;
-    public Vector2 AnchorOffsetInUnits { get { return anchorOffsetInUnits; } }
+    public Vector2 AnchorOffsetInUnits { get => anchorOffsetInUnits; }
 
     private bool needsUpdate = false;
     private List<MapLayerController> layerControllers = new List<MapLayerController>();
 
+	private static readonly AreaBounds WorldBounds = new AreaBounds(GeoCalculator.MinLongitude, GeoCalculator.MaxLongitude, GeoCalculator.MaxLatitude, GeoCalculator.MinLatitude);
+	private static readonly Distance WorldExtentMeters = GeoCalculator.LonLatToMeters(WorldBounds.east, WorldBounds.north) - GeoCalculator.LonLatToMeters(WorldBounds.west, WorldBounds.south);
 	private static readonly double InvLogTwo = 1.0 / Math.Log(2);
 
 
@@ -357,7 +361,7 @@ public class MapController : UrsComponent
         SetCenter(newLonLat.Longitude, newLonLat.Latitude);
     }
 
-	public void SetViewBounds(float n, float s, float e, float w)
+	public void SetViewBounds(float n, float s, float e, float w, bool adjustZoom)
     {
         // Measured in units. Center is the origin
         viewBounds.yMax = n;
@@ -365,7 +369,11 @@ public class MapController : UrsComponent
         viewBounds.xMax = e;
         viewBounds.xMin = w;
 
-        UpdateMapBounds();
+		if (adjustZoom)
+			ZoomToBounds(mapCoordBounds);
+		else
+			UpdateMapBounds();
+
         RequestMapUpdate();
     }
 
@@ -406,33 +414,43 @@ public class MapController : UrsComponent
         HandleLevelChange(previousLevel);
     }
 
-	public void ZoomToBounds(AreaBounds bounds, bool fit = true)
+	public void ZoomToBounds(AreaBounds bounds)
 	{
+		var max = GeoCalculator.LonLatToMeters(bounds.east, bounds.north);
+		var min = GeoCalculator.LonLatToMeters(bounds.west, bounds.south);
+		var center = GeoCalculator.MetersToLonLat((min.x + max.x) * 0.5, (min.y + max.y) * 0.5);
+		var meters = max - min;
 
-		Distance meters = GeoCalculator.LonLatToMeters(bounds.east, bounds.north) - GeoCalculator.LonLatToMeters(bounds.west, bounds.south);
-		var rect = ComponentManager.Instance.Get<MapViewArea>().GetComponent<RectTransform>().rect;
+		UpdateCenter(center.Longitude, center.Latitude);
 
-		var canvas = FindObjectOfType<Canvas>();
-		double zoomX = Math.Log(rect.width * canvas.scaleFactor * GeoCalculator.InitialResolution / meters.x) * InvLogTwo;
-		double zoomY = Math.Log(rect.height * canvas.scaleFactor * GeoCalculator.InitialResolution / meters.y) * InvLogTwo;
+		CalculateZoomForExtent(WorldExtentMeters, out double minZoomX, out double minZoomY);
+		CalculateZoomForExtent(meters, out double zoomX, out double zoomY);
 
-		if (fit)
-		{
-			float zoom = (float)Math.Min(zoomX, zoomY);
-			SetZoom(0.1f * Mathf.Floor(zoom * 10));
-		}
-		else
-		{
-			float zoom = (float)Math.Max(zoomX, zoomY);
-			SetZoom(0.1f * Mathf.Ceil(zoom * 10));
-		}
+		float minZoom = (float)Math.Max(minZoomX, minZoomY);
+		minZoom = 0.1f * Mathf.Ceil(minZoom * 10);
+
+		float zoom = (float)Math.Min(zoomX, zoomY);
+		zoom = 0.1f * Mathf.Floor(zoom * 10);
+
+		SetZoom(Math.Max(minZoom, zoom));
+	}
+
+	private void CalculateZoomForExtent(Distance meters, out double zoomX, out double zoomY)
+	{
+		var canvas = GameObject.FindWithTag("Canvas").GetComponent<Canvas>();
+		var rect = ComponentManager.Instance.Get<MapViewArea>().Rect;
+
+		zoomX = Math.Log(rect.width * canvas.scaleFactor * GeoCalculator.InitialResolution / (meters.x * mapScale)) * InvLogTwo;
+		zoomY = Math.Log(rect.height * canvas.scaleFactor * GeoCalculator.InitialResolution / (meters.y * mapScale)) * InvLogTwo;
 	}
 
 	private void HandleLevelChange(int previousLevel)
     {
         if (previousLevel != currentLevel)
         {
-            if (OnLevelChange != null)
+			if (OnPreLevelChange != null)
+				OnPreLevelChange(currentLevel);
+			if (OnLevelChange != null)
                 OnLevelChange(currentLevel);
             if (OnPostLevelChange != null)
                 OnPostLevelChange(currentLevel);
@@ -468,7 +486,7 @@ public class MapController : UrsComponent
         return GeoCalculator.MetersToLonLat(currentMeters.x + x * unitsToMeters, currentMeters.y + y * unitsToMeters);
     }
 
-    public Vector3 GetUnitsFromCoordinates(Coordinate coords)
+	public Vector3 GetUnitsFromCoordinates(Coordinate coords)
     {
         var distance = GeoCalculator.LonLatToMeters(coords.Longitude, coords.Latitude) - currentMeters;
         return new Vector3((float)distance.x * metersToUnits, (float)distance.y * metersToUnits, 0);
@@ -480,17 +498,19 @@ public class MapController : UrsComponent
 	}
 
 
-	public void SetMinMaxLevels(int min, int max)
+	public void SetMinMaxLevels(int min, int max, bool update)
 	{
 		if (minLevel != min || maxLevel != max)
 		{
-			var previousLevel = currentLevel;
-
 			minLevel = min;
 			maxLevel = max;
-			currentLevel = Mathf.Clamp(dataLevels.GetDataLevelIndex(zoom), minLevel, maxLevel);
 
-			HandleLevelChange(previousLevel);
+			if (update)
+			{
+				var previousLevel = currentLevel;
+				currentLevel = Mathf.Clamp(dataLevels.GetDataLevelIndex(zoom), minLevel, maxLevel);
+				HandleLevelChange(previousLevel);
+			}
 		}
 	}
 
@@ -505,8 +525,7 @@ public class MapController : UrsComponent
 		yield return null;
 		yield return null;
 
-		AreaBounds bounds = new AreaBounds(GeoCalculator.MinLongitude, GeoCalculator.MaxLongitude, GeoCalculator.MaxLatitude, GeoCalculator.MinLatitude);
-		ZoomToBounds(bounds, false);
+		ZoomToBounds(WorldBounds);
 	}
 
 	private void UpdateCenter(Coordinate coords)

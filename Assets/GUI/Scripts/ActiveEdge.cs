@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -35,7 +35,7 @@ public class ActiveEdge : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
 
     void Start()
     {  
-        var canvas = FindObjectOfType<Canvas>();
+        var canvas = GameObject.FindWithTag("Canvas").GetComponent<Canvas>();
         scale = 1f / canvas.scaleFactor;
         
         int index = transform.GetSiblingIndex();

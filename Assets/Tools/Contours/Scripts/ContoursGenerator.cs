@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -23,7 +23,7 @@ public abstract class ContoursGenerator
 		this.contoursMapLayer = contoursMapLayer;
 	}
 
-	public abstract void InitializeValues(int layersCount);
+	public abstract void InitializeValues(int layersCount, Vector2[] boundary);
 	public abstract void CalculateValues();
 }
 
@@ -33,7 +33,7 @@ public class ContoursGenerator_CPU : ContoursGenerator
 	{
 	}
 
-	public override void InitializeValues(int layersCount)
+	public override void InitializeValues(int layersCount, Vector2[] boundary)
 	{
 		var grid = contoursMapLayer.Grid;
 		int count = grid.countX * grid.countY;
@@ -83,22 +83,23 @@ public class ContoursGenerator_CPU : ContoursGenerator
 			{
 				for (int y = startY; y < endY; y++)
 				{
+					int pY = grid.countX * (int)(offsetY + y * scaleY);
 					int contourIndex = y * contourGrid.countX + startX;
 					for (int x = startX; x < endX; x++, contourIndex++)
 					{
 						int pX = (int)(offsetX + x * scaleX);
-						int pY = (int)(offsetY + y * scaleY);
-						int patchIndex = pY * grid.countX + pX;
+						int patchIndex = pY + pX;
 
 						int value = (int)grid.values[patchIndex];
+						byte mask = grid.valuesMask == null ? (byte)1 : grid.valuesMask[patchIndex];
 						if (excludeCellsWithNoData)
 						{
-							value = grid.valuesMask[patchIndex] ? (int)((grid.categoryMask >> value) & 1) : 0;
+							value = mask & grid.categoryFilter.IsSetAsInt(value);
 							contourGrid.values[contourIndex] += value;
 						}
 						else
 						{
-							value = grid.valuesMask[patchIndex] ? (int)contourGrid.values[contourIndex] * (int)((grid.categoryMask >> value) & 1) : 1;
+							value = mask == 1? (int)contourGrid.values[contourIndex] * grid.categoryFilter.IsSetAsInt(value) : 1;
 							contourGrid.values[contourIndex] *= value;
 						}
 					}
@@ -108,23 +109,24 @@ public class ContoursGenerator_CPU : ContoursGenerator
 			{
 				for (int y = startY; y < endY; y++)
 				{
+					int pY = grid.countX * (int)(offsetY + y * scaleY);
 					int contourIndex = y * contourGrid.countX + startX;
 					for (int x = startX; x < endX; x++, contourIndex++)
 					{
 						int pX = (int)(offsetX + x * scaleX);
-						int pY = (int)(offsetY + y * scaleY);
-						int patchIndex = pY * grid.countX + pX;
+						int patchIndex = pY + pX;
 
 						float value = grid.values[patchIndex];
+						byte mask = grid.valuesMask == null ? (byte)1 : grid.valuesMask[patchIndex];
 						if (excludeCellsWithNoData)
 						{
 							value = (value >= grid.minFilter && value <= grid.maxFilter) ? 1 : 0;
-							contourGrid.values[contourIndex] += grid.valuesMask[patchIndex] ? value : 0;
+							contourGrid.values[contourIndex] += mask == 1? value : 0;
 						}
 						else
 						{
 							value = (value >= grid.minFilter && value <= grid.maxFilter) ? contourGrid.values[contourIndex] : 0;
-							contourGrid.values[contourIndex] *= grid.valuesMask[patchIndex] ? value : 1;
+							contourGrid.values[contourIndex] *= mask == 1? value : 1;
 						}
 					}
 				}
@@ -138,16 +140,20 @@ public class ContoursGenerator_CPU : ContoursGenerator
 #if !USE_TEXTURE
 public class ContoursGenerator_GPU : ContoursGenerator
 {
-	private readonly int ResetKID;
+	private readonly int Reset_KID;
+	private readonly int ClipViewArea_Include_KID;
+	private readonly int ClipViewArea_Exclude_KID;
 	private readonly ComputeShader compute;
 
 	public ContoursGenerator_GPU(ContoursMapLayer contoursMapLayer) : base(contoursMapLayer)
 	{
 		compute = contoursMapLayer.compute;
-		ResetKID = compute.FindKernel("CSReset");
+		Reset_KID = compute.FindKernel("CSReset");
+		ClipViewArea_Include_KID = compute.FindKernel("CSClipViewArea_Include");
+		ClipViewArea_Exclude_KID = compute.FindKernel("CSClipViewArea_Exclude");
 	}
 
-	public override void InitializeValues(int layersCount)
+	public override void InitializeValues(int layersCount, Vector2[] boundary)
 	{
 		var contourGrid = contoursMapLayer.Grid;
 		int count = contourGrid.countX * contourGrid.countY;
@@ -156,22 +162,44 @@ public class ContoursGenerator_GPU : ContoursGenerator
 			contoursMapLayer.CreateBuffer();
 		}
 
-		int initialValue = excludeCellsWithNoData ? 1 - layersCount : -1;
+		int kernelID = boundary == null ? Reset_KID : (excludeCellsWithNoData ? ClipViewArea_Exclude_KID : ClipViewArea_Include_KID);
+
+		int initialValue = excludeCellsWithNoData ? 1 - layersCount : 1;
 
 		// Get kernel thread count
 		uint threadsX, threadsY, threadsZ;
-		compute.GetKernelThreadGroupSizes(ResetKID, out threadsX, out threadsY, out threadsZ);
+		compute.GetKernelThreadGroupSizes(kernelID, out threadsX, out threadsY, out threadsZ);
 
 		// Calculate threads & groups
 		uint threads = threadsX * threadsY * threadsZ;
 		int groups = (int)((count + threads - 1) / threads);
 
 		// Assign shader variables
-		compute.SetBuffer(ResetKID, "contourValues", contoursMapLayer.ValuesBuffer);
+		compute.SetBuffer(kernelID, "contourValues", contoursMapLayer.ValuesBuffer);
 		compute.SetInt("contourValueCount", count);
 		compute.SetInt("initialValue", initialValue);
 
-		compute.Dispatch(ResetKID, groups, 1, 1);
+		if (boundary != null)
+		{
+			// Calculate scale and offset
+			var metersNW = GeoCalculator.LonLatToMeters(contourGrid.west, contourGrid.north);
+			var metersSE = GeoCalculator.LonLatToMeters(contourGrid.east, contourGrid.south);
+			double scaleX = (metersSE.x - metersNW.x) / contourGrid.countX;
+			double scaleY = (contourGrid.south - contourGrid.north) / contourGrid.countY;
+			double offsetX = metersNW.x + 0.5 * scaleX;
+			double offsetY = contourGrid.north + 0.5 * scaleY;
+
+			compute.SetInt("contourCountX", contourGrid.countX);
+			compute.SetVector("offset", new Vector2((float)offsetX, (float)offsetY));
+			compute.SetVector("scale", new Vector2((float)scaleX, (float)scaleY));
+			for (int i = 0; i < boundary.Length; i++)
+			{
+				compute.SetVector("pt" + i, boundary[i]);
+			}
+		}
+
+		compute.Dispatch(kernelID, groups, 1, 1);
+		contoursMapLayer.SetGpuChangedValues();
 	}
 
 	public override void CalculateValues()
@@ -194,7 +222,16 @@ public class ContoursGenerator_GPU : ContoursGenerator
 		for (int i = 0; i < grids.Count; i++)
 		{
 			var grid = grids[i];
-			var patchMapLayer = grid.patch.GetMapLayer() as GridMapLayer;
+
+			GridMapLayer mapLayer;
+			if (grid.patch is GridPatch)
+			{
+				mapLayer = grid.patch.GetMapLayer() as GridMapLayer;
+			}
+			else
+			{
+				mapLayer = (grid.patch as MultiGridPatch).GetMapLayer(grid);
+			}
 
 			var cellsPerDegreeX = grid.countX / (grid.east - grid.west);
 			var cellsPerDegreeY = grid.countY / (grid.south - grid.north);
@@ -215,7 +252,7 @@ public class ContoursGenerator_GPU : ContoursGenerator
 			int count = countX * countY;
 
 			string kernelName = grid.IsCategorized ? "CSCategorized" : "CSContinuous";
-			string kernelMask = patchMapLayer.MaskBuffer != null? "_Masked" : "_Unmasked";
+			string kernelMask = mapLayer.MaskBuffer != null? "_Masked" : "_Unmasked";
 			int kernelID = compute.FindKernel(kernelName + kernelMask + kernelSufix);
 			compute.GetKernelThreadGroupSizes(kernelID, out threadsX, out threadsY, out threadsZ);
 
@@ -224,14 +261,14 @@ public class ContoursGenerator_GPU : ContoursGenerator
 			int groups = (int)((count + threads - 1) / threads);
 
 			compute.SetBuffer(kernelID, "contourValues", contoursMapLayer.ValuesBuffer);
-			compute.SetBuffer(kernelID, "patchValues", patchMapLayer.ValuesBuffer);
-			if (patchMapLayer.MaskBuffer != null)
-				compute.SetBuffer(kernelID, "patchMask", patchMapLayer.MaskBuffer);
+			compute.SetBuffer(kernelID, "patchValues", mapLayer.ValuesBuffer);
+			if (mapLayer.MaskBuffer != null)
+				compute.SetBuffer(kernelID, "patchMask", mapLayer.MaskBuffer);
 
 			compute.SetInt("contourValueCount", count);
 			compute.SetInt("croppedContourCountX", countX);
 			compute.SetInt("gridCountX", grid.countX);
-			compute.SetInt("categoryMask", (int)grid.categoryMask);
+			compute.SetInts("categoryFilter", grid.categoryFilter.bits);
 			compute.SetVector("minmax", new Vector2(grid.minFilter, grid.maxFilter));
 			compute.SetVector("offset", new Vector2((float)offsetX, (float)offsetY));
 			compute.SetVector("scale", new Vector2((float)scaleX, (float)scaleY));
@@ -240,6 +277,7 @@ public class ContoursGenerator_GPU : ContoursGenerator
 
 			compute.Dispatch(kernelID, groups, 1, 1);
 		}
+		contoursMapLayer.SetGpuChangedValues();
 	}
 }
 #endif

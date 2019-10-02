@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -10,54 +10,38 @@
 #define SAFETY_CHECK
 #endif
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.Events;
 
-public class Level
-{
-	public List<LayerSite> layerSites = new List<LayerSite>();
-    
-	public LayerSite AddSite(string name, Patch patch)
-	{
-		var layerSite = new LayerSite(this, name, patch);
-		layerSites.Add(layerSite);
-		return layerSite;
-	}
-}
-
 public class DataLayer
 {
-    public readonly string name;
-    public readonly Color color;
-    public readonly int index;
+	public string Name { get; private set; }
+	public Color Color { get; private set; }
+	public LayerGroup Group { get; private set; }
 
-    private float minFilter = 0;
-    public float MinFilter { get { return minFilter; } }
-    private float maxFilter = 1;
-	public float MaxFilter { get { return maxFilter; } }
+	public float MinFilter { get; private set; } = 0;
+	public float MaxFilter { get; private set; } = 1;
 
-    public const int MaxLevels = 5;
-    public readonly Level[] levels = new Level[MaxLevels];
+	public const int MaxLevels = 5;
+	public readonly LayerLevel[] levels = new LayerLevel[MaxLevels];
 
-    public readonly List<Patch> patchesInView = new List<Patch>();
+	public readonly List<Patch> patchesInView = new List<Patch>();
 	public readonly List<Patch> loadedPatchesInView = new List<Patch>();
 
-	private float minVisibleValue = float.MaxValue;
-    public float MinVisibleValue { get { return minVisibleValue; } }
-    private float maxVisibleValue = float.MinValue;
-    public float MaxVisibleValue { get { return maxVisibleValue; } }
+	public float MinVisibleValue { get; private set; } = float.MaxValue;
+	public float MaxVisibleValue { get; private set; } = float.MinValue;
 
 	public int visibleYear = -1;
 
-    public float UserOpacity { get; private set; }
+	public float UserOpacity { get; private set; }
 	public float ToolOpacity { get; private set; }
+	public bool IsTemp { get; private set; }
 
-	private readonly List<string> patchFiles = new List<string>();
-
-	public int PatchCount { get { return patchFiles.Count; } }
+	private readonly DataManager dataManager;
 
 
 	//
@@ -65,46 +49,102 @@ public class DataLayer
 	//
 
 	public delegate void OnPatchVisibilityChangeDelegate(DataLayer dataLayer, Patch patch, bool visible);
-    public event OnPatchVisibilityChangeDelegate OnPatchVisibilityChange;
+	public event OnPatchVisibilityChangeDelegate OnPatchVisibilityChange;
 
 
 	//
 	// Public Methods
 	//
 
-	public DataLayer(string name, Color color, int index)
-    {
-        this.name = name;
-        this.color = color;
-        this.index = index;
-        this.UserOpacity = 1;
-		this.ToolOpacity = 1;
+	public DataLayer(DataManager dataManager, string name, Color color, LayerGroup group)
+	{
+		Name = name;
+		Color = color;
+		Group = group;
+		UserOpacity = 1;
+		ToolOpacity = 1;
 
 		for (int i = 0; i < levels.Length; i++)
-        {
-            levels[i] = new Level();
-        }
-    }
+		{
+			levels[i] = new LayerLevel();
+		}
+
+		group.AddLayer(this);
+
+		this.dataManager = dataManager;
+	}
+
+	public void ChangeName(string newName)
+	{
+		if (string.IsNullOrWhiteSpace(newName) || Name == newName)
+			return;
+
+		RenamePatches(newName);
+
+		Name = newName;
+	}
+
+	public void ChangeGroup(LayerGroup newGroup)
+	{
+		if (newGroup == null || newGroup == Group)
+			return;
+
+		Group.MoveLayerToGroup(this, newGroup);
+		Group = newGroup;
+	}
+
+	public void ChangeColor(Color color)
+	{
+		Color = color;
+
+		foreach (var patch in loadedPatchesInView)
+		{
+			var mapLayer = patch.GetMapLayer() as GridMapLayer;
+			if (mapLayer != null)
+			{
+				mapLayer.SetColor(color);
+			}
+		}
+	}
+
+	public void ChangeYear(int oldYear, int newYear, Site site)
+	{
+		foreach (var level in levels)
+		{
+			foreach (var layerSite in level.layerSites)
+			{
+				if (layerSite.Site == site)
+				{
+					layerSite.ChangeYear(oldYear, newYear);
+					break;
+				}
+			}
+		}
+	}
+
+	public void SetIsTemp(bool temp)
+	{
+		IsTemp = temp;
+	}
 
 	// Called by the Filter Panel to set the values to all patches
-    public void SetMinMaxFilters(float min, float max)
-    {
-        minFilter = min;
-        maxFilter = max;
+	public void SetMinMaxFilters(float min, float max)
+	{
+		MinFilter = min;
+		MaxFilter = max;
 
-        foreach (var level in levels)
-        {
+		foreach (var level in levels)
+		{
 			foreach (var site in level.layerSites)
 				UpdateSitePatchesMinMaxFilters(site);
-        }
-    }
+		}
+	}
 
 	public void ResetFiltersAndOpacity()
 	{
 		float opacity = 1;
-		uint mask = 0xFFFFFFFF;
-		minFilter = 0;
-		maxFilter = 1;
+		MinFilter = 0;
+		MaxFilter = 1;
 		UserOpacity = opacity;
 		ToolOpacity = opacity;
 
@@ -122,20 +162,9 @@ public class DataLayer
 							mapLayer.SetUserOpacity(opacity);
 							mapLayer.SetToolOpacity(opacity);
 						}
-						var gridPatch = patch as GridPatch;
-						if (gridPatch != null && gridPatch.grid.values != null)
+						if (patch is GridPatch gridPatch && gridPatch.grid.values != null)
 						{
-							var grid = gridPatch.grid;
-							if (grid.IsCategorized)
-							{
-								gridPatch.SetCategoryMask(mask);
-							}
-							else
-							{
-								gridPatch.SetMinMaxFilter(
-									Mathf.Lerp(grid.minValue, grid.maxValue, minFilter),
-									Mathf.Lerp(grid.minValue, grid.maxValue, maxFilter));
-							}
+							gridPatch.ResetFilter();
 						}
 					}
 				}
@@ -143,56 +172,55 @@ public class DataLayer
 		}
 	}
 
-    public void SetMinMaxFilterToAllPatches(float min, float max)
-    {
-        minFilter = min;
-        maxFilter = max;
+	public void SetMinMaxFilterToAllPatches(float min, float max)
+	{
+		MinFilter = min;
+		MaxFilter = max;
 
-        foreach (var level in levels)
-        {
+		foreach (var level in levels)
+		{
 			foreach (var site in level.layerSites)
-            {
-                foreach (var record in site.records.Values)
-                {
-                    foreach (var patch in record.patches)
-                    {
-                        var gridPatch = patch as GridPatch;
-                        if (gridPatch != null && gridPatch.grid.values != null)
-                        {
-                            var grid = gridPatch.grid;
-                            gridPatch.SetMinMaxFilter(
-                                Mathf.Lerp(grid.minValue, grid.maxValue, min),
-                                Mathf.Lerp(grid.minValue, grid.maxValue, max));
-                        }
-                    }
-                }
-            }
-        }
-    }
+			{
+				foreach (var record in site.records.Values)
+				{
+					foreach (var patch in record.patches)
+					{
+						if (patch is GridPatch gridPatch && gridPatch.grid.values != null)
+						{
+							var grid = gridPatch.grid;
+							gridPatch.SetMinMaxFilter(
+								Mathf.Lerp(grid.minValue, grid.maxValue, min),
+								Mathf.Lerp(grid.minValue, grid.maxValue, max));
+						}
+					}
+				}
+			}
+		}
+	}
 
-    public void SetUserOpacity(float opacity)
-    {
-        UserOpacity = opacity;
-        foreach (var level in levels)
-        {
+	public void SetUserOpacity(float opacity)
+	{
+		UserOpacity = opacity;
+		foreach (var level in levels)
+		{
 			foreach (var site in level.layerSites)
-            {
-                foreach (var record in site.records.Values)
-                {
-                    foreach (var patch in record.patches)
-                    {
-                        var mapLayer = patch.GetMapLayer() as GridMapLayer;
-                        if (mapLayer != null)
-                        {
-                            mapLayer.SetUserOpacity(opacity);
-                        }
-                    }
-                }
-            }
-        }
-    }
+			{
+				foreach (var record in site.records.Values)
+				{
+					foreach (var patch in record.patches)
+					{
+						var mapLayer = patch.GetMapLayer() as GridMapLayer;
+						if (mapLayer != null)
+						{
+							mapLayer.SetUserOpacity(opacity);
+						}
+					}
+				}
+			}
+		}
+	}
 
-    public void SetToolOpacity(float opacity)
+	public void SetToolOpacity(float opacity)
 	{
 		opacity = Mathf.Clamp01(opacity);
 		ToolOpacity = opacity;
@@ -208,28 +236,28 @@ public class DataLayer
 						if (mapLayer != null)
 						{
 							mapLayer.SetToolOpacity(opacity);
-                        }
+						}
 					}
 				}
 			}
 		}
 	}
 
-    public void BuildFileList()
-    {
-        patchFiles.Clear();
+#if !UNITY_WEBGL
+	private static int fileCounter = 0;
+#endif
 
-		var dataManager = ComponentManager.Instance.Get<DataManager>();
+	public IEnumerator GetPatchFiles(List<string> paths, UnityAction<List<string>> callback)
+	{
+		var patchFiles = new List<string>();
 
 #if UNITY_WEBGL
+		string start = Name + "_";
 
-		string start = name + "_";
-
-		var allPatchFiles = dataManager.AllPatchFiles;
-		int count = allPatchFiles.Count;
+		int count = paths.Count;
         for (int i = 0; i < count; i++)
         {
-			string filepath = allPatchFiles[i];
+			string filepath = paths[i];
 			string filename = Path.GetFileName(filepath);
 
             if (filename.StartsWith(start))
@@ -239,7 +267,7 @@ public class DataLayer
 
 				for (; i < count; i++)
                 {
-					filepath = allPatchFiles[i];
+					filepath = paths[i];
 					filename = Path.GetFileName(filepath);
                     if (!filename.StartsWith(start))
                         break;
@@ -250,16 +278,33 @@ public class DataLayer
             }
         }
 #else
-		var dirs = dataManager.DataDirs;
-		foreach (var dir in dirs)
+		const int MaxPatchesPerFrame = 100;
+		HashSet<string> hs = new HashSet<string>();
+		string binFilter = Name + "_*." + Patch.BIN_EXTENSION;
+		string csvFilter = Name + "_*." + Patch.CSV_EXTENSION;
+		foreach (var dir in paths)
 		{
-			var binFiles = Directory.GetFiles(dir, name + "_*." + Patch.BIN_EXTENSION);
-			patchFiles.AddRange(binFiles);
+			hs.Clear();
 
-			HashSet<string> hs = new HashSet<string>(binFiles);
-			var csvFiles = Directory.GetFiles(dir, name + "_*." + Patch.CSV_EXTENSION);
-			foreach (var csvFile in csvFiles)
+			var binFiles = Directory.GetFiles(dir, binFilter);
+			int count = binFiles.Length;
+			for (int i = 0; i < count; i++)
 			{
+				var binFile = binFiles[i];
+				if (PatchDataIO.CheckBinVersion(binFile))
+				{
+					patchFiles.Add(binFile);
+					hs.Add(binFile);
+				}
+				if (++fileCounter % MaxPatchesPerFrame == 0)
+					yield return null;
+			}
+
+			var csvFiles = Directory.GetFiles(dir, csvFilter);
+			count = csvFiles.Length;
+			for (int i = 0; i < count; i++)
+			{
+				var csvFile = csvFiles[i];
 				string binFile = Path.ChangeExtension(csvFile, Patch.BIN_EXTENSION);
 				if (hs.Contains(binFile))
 				{
@@ -273,6 +318,8 @@ public class DataLayer
 				{
 					patchFiles.Add(csvFile);
 				}
+				if (++fileCounter % MaxPatchesPerFrame == 0)
+					yield return null;
 			}
 		}
 #endif
@@ -281,81 +328,126 @@ public class DataLayer
 		// Check if all patch filenames match exactly (without ignoring case)
 		foreach (var patchFile in patchFiles)
 		{
-			if (!patchFile.Contains(name))
+			if (!patchFile.Contains(Name))
 			{
-				Debug.LogWarning("Patch " + patchFile + " has wrong case, should be: " + name);
+				Debug.LogWarning("Patch " + patchFile + " has wrong case, should be: " + Name);
 			}
 		}
 #endif
+
+		callback(patchFiles);
+
+#if UNITY_WEBGL
+		yield break;
+#endif
 	}
 
-	public IEnumerator CreatePatches()
-    {
-#if SAFETY_CHECK
-        HashSet<string> loadedFiles = new HashSet<string>();
-#endif
-
-        foreach (var patchFile in patchFiles)
-        {
-#if SAFETY_CHECK
-            string fileWithoutExtension = Path.GetFileNameWithoutExtension(patchFile);
-            if (loadedFiles.Contains(fileWithoutExtension))
-            {
-               Debug.LogError("This shouldn't happen! Data layer duplicate:" + fileWithoutExtension);
-               continue;
-            }
-            loadedFiles.Add(fileWithoutExtension);
-#endif
-
-            string type = Patch.GetFileNameType(patchFile);
-
-            if (type.Equals("grid"))
-            {
-                yield return Patch.Create(this, patchFile, GridPatch.Create, GridDataIO.GetPatchHeaderLoader, OnPatchCreated);
-            }
-            else if (type.Equals("graph"))
-            {
-                yield return Patch.Create(this, patchFile, GraphPatch.Create, GraphDataIO.GetPatchHeaderLoader, OnPatchCreated);
-            }
-            else
-            {
-                Debug.LogError("Found unknown data file type: " + patchFile);
-            }
-        }
-    }
-
-	public GridPatch CreateGridPatch(string name, int level, int year, GridData data)
+#if !UNITY_WEBGL
+	public List<string> GetPatchFiles(List<string> directories, string site = null, string extension = "*")
 	{
-		var newPatch = new GridPatch(this, name, level, year, data, null);
-		OnPatchCreated(newPatch);
+		var patchFiles = new List<string>();
+
+		string filter1 = Name + "_*.*";
+		string filter2 = null;
+		if (site != null)
+		{
+			filter1 = Name + "_*_" + site + "@*." + extension;
+			filter2 = Name + "_*_" + site + "_*." + extension;
+		}
+
+		foreach (var dir in directories)
+		{
+			patchFiles.AddRange(Directory.GetFiles(dir, filter1));
+			if (filter2 != null)
+				patchFiles.AddRange(Directory.GetFiles(dir, filter2));
+		}
+
+		return patchFiles;
+	}
+#endif
+
+	public void DeleteFiles(string site = null)
+	{
+#if !UNITY_WEBGL
+		var dirs = dataManager.GetDataDirectories();
+		IOUtils.SafeDelete(GetPatchFiles(dirs, site));
+#endif
+	}
+
+	public IEnumerator CreatePatches(List<string> patchFiles)
+	{
+#if SAFETY_CHECK
+		HashSet<string> loadedFiles = new HashSet<string>();
+#endif
+
+		foreach (var patchFile in patchFiles)
+		{
+#if SAFETY_CHECK
+			string fileWithoutExtension = Path.GetFileNameWithoutExtension(patchFile);
+			if (loadedFiles.Contains(fileWithoutExtension))
+			{
+				Debug.LogError("This shouldn't happen! Data layer duplicate:" + fileWithoutExtension);
+				continue;
+			}
+			loadedFiles.Add(fileWithoutExtension);
+#endif
+
+			yield return CreatePatch(patchFile);
+		}
+	}
+
+	public IEnumerator CreatePatch(string filename)
+	{
+		string type = Patch.GetFileNameType(filename);
+
+		if (type.Equals(GridDataIO.FileSufix))
+		{
+			yield return Patch.Create(this, filename, GridPatch.Create, GridDataIO.GetPatchHeaderLoader, OnPatchCreated);
+		}
+		else if (type.Equals(GraphDataIO.FileSufix))
+		{
+			yield return Patch.Create(this, filename, GraphPatch.Create, GraphDataIO.GetPatchHeaderLoader, OnPatchCreated);
+		}
+		else if (type.Equals(MultiGridDataIO.FileSufix))
+		{
+			yield return Patch.Create(this, filename, MultiGridPatch.Create, MultiGridDataIO.GetPatchHeaderLoader, OnPatchCreated);
+		}
+		else
+		{
+			Debug.LogError("Found unknown data file type: " + filename);
+		}
+	}
+
+	public GridPatch CreateGridPatch(string siteName, int level, int year, GridData data)
+	{
+		var newPatch = new GridPatch(this, level, year, data, null);
+		OnPatchCreated(newPatch, siteName);
 		return newPatch;
 	}
 
 	public void Show(int levelIndex, AreaBounds bounds)
-    {
-        InitVisibleRange();
-        UpdatePatches(levelIndex, bounds);
-    }
+	{
+		InitVisibleRange();
+		UpdatePatches(dataManager.ActiveSite, levelIndex, bounds);
+	}
 
-    public bool HasPatchesInView()
-    {
-        return patchesInView.Count > 0;
-    }
+	public bool HasPatchesInView()
+	{
+		return patchesInView.Count > 0;
+	}
 
 	public bool HasLoadedPatchesInView()
 	{
 		return loadedPatchesInView.Count > 0;
 	}
 
-	public bool HasPatches(int levelIndex, double west, double east, double north, double south)
-    {
-		var activeSite = ComponentManager.Instance.Get<SiteBrowser>().ActiveSite;
-
+	public bool HasPatches(Site site, int levelIndex, double west, double east, double north, double south)
+	{
 		foreach (var layerSite in levels[levelIndex].layerSites)
-        {
-			if (layerSite.site == activeSite)
+		{
+			if (layerSite.Site == site)
 			{
-				foreach (var patch in layerSite.lastRecord.patches)
+				foreach (var patch in layerSite.LastRecord.patches)
 				{
 					if (patch.Data.Intersects(west, east, north, south))
 					{
@@ -363,37 +455,35 @@ public class DataLayer
 					}
 				}
 			}
-        }
-        return false;
-    }
+		}
+		return false;
+	}
 
-    public void UpdatePatches(int levelIndex, AreaBounds bounds)
-    {
-		var dataManager = ComponentManager.Instance.Get<DataManager>();
-		var activeSite = ComponentManager.Instance.Get<SiteBrowser>().ActiveSite;
-
+	public void UpdatePatches(Site site, int levelIndex, AreaBounds bounds)
+	{
 		bool removedPatches = false;
 
-        if (visibleYear == -1)
-        {
-            // Hide visible patches that don't meet the criteria
-            for (int i = patchesInView.Count - 1; i >= 0; i--)
-            {
-				var patchData = patchesInView[i].Data;
-                if (patchesInView[i].level != levelIndex || !patchData.Intersects(bounds.west, bounds.east, bounds.north, bounds.south)
-					|| patchesInView[i].siteRecord.layerSite.site != activeSite)
-                {
+		if (visibleYear == -1)
+		{
+			// Hide visible patches that don't meet the criteria
+			for (int i = patchesInView.Count - 1; i >= 0; i--)
+			{
+				var patch = patchesInView[i];
+				if (patch.Level != levelIndex ||
+					!patch.Data.Intersects(bounds.west, bounds.east, bounds.north, bounds.south) ||
+					patch.SiteRecord.layerSite.Site != site)
+				{
 					RemovePatchInView(i);
 					removedPatches = true;
 				}
-            }
+			}
 
 			// Show non-visible patches that meet the criteria
 			foreach (var layerSite in levels[levelIndex].layerSites)
-            {
-				if (layerSite.site == activeSite)
+			{
+				if (layerSite.Site == site)
 				{
-					foreach (var patch in layerSite.lastRecord.patches)
+					foreach (var patch in layerSite.LastRecord.patches)
 					{
 						var patchData = patch.Data;
 						if (!patch.IsVisible() &&
@@ -405,47 +495,47 @@ public class DataLayer
 					}
 				}
 			}
-        }
-        else
-        {
-            // Hide visible patches that don't meet the criteria
-            for (int i = patchesInView.Count - 1; i >= 0; i--)
-            {
-                var patchData = patchesInView[i].Data;
-                if (patchesInView[i].level != levelIndex || !patchData.Intersects(bounds.west, bounds.east, bounds.north, bounds.south)
-					|| patchesInView[i].year != visibleYear
-					|| patchesInView[i].siteRecord.layerSite.site != activeSite)
+		}
+		else
+		{
+			// Hide visible patches that don't meet the criteria
+			for (int i = patchesInView.Count - 1; i >= 0; i--)
+			{
+				var patch = patchesInView[i];
+				if (patch.Level != levelIndex || !patch.Data.Intersects(bounds.west, bounds.east, bounds.north, bounds.south)
+					|| patch.Year != visibleYear
+					|| patch.SiteRecord.layerSite.Site != site)
 				{
 					RemovePatchInView(i);
 					removedPatches = true;
 				}
-            }
+			}
 
 			// Show non-visible sites that meet the criteria
 			foreach (var layerSite in levels[levelIndex].layerSites)
-            {
-				if (layerSite.site == activeSite &&
+			{
+				if (layerSite.Site == site &&
 					layerSite.records.ContainsKey(visibleYear))
-                {
-                    foreach (var patch in layerSite.records[visibleYear].patches)
-                    {
-                        var patchData = patch.Data;
-						if (!patch.IsVisible() && 
+				{
+					foreach (var patch in layerSite.records[visibleYear].patches)
+					{
+						var patchData = patch.Data;
+						if (!patch.IsVisible() &&
 							patchData.Intersects(bounds.west, bounds.east, bounds.north, bounds.south) &&
-							!dataManager.IsRequesting(patch)) 
+							!dataManager.IsRequesting(patch))
 						{
 							AddPatchInView(patch);
 						}
 					}
 				}
-            }
-        }
+			}
+		}
 
 		if (removedPatches)
 		{
 			UpdateLoadedVisibleRange();
 		}
-    }
+	}
 
 	public void HidePatchesInView()
 	{
@@ -456,35 +546,83 @@ public class DataLayer
 		UpdateLoadedVisibleRange();
 	}
 
-
 	public void HideLoadedPatches()
-    {
-        for (int i = loadedPatchesInView.Count - 1; i >= 0; i--)
-        {
+	{
+		for (int i = loadedPatchesInView.Count - 1; i >= 0; i--)
+		{
 			RemoveLoadedPatch(i);
-        }
-    }
+		}
+	}
+
+	public void RemovePatches(Site site, int level, int year)
+	{
+		bool removedPatches = false;
+		for (int i = patchesInView.Count - 1; i >= 0; i--)
+		{
+			var patch = patchesInView[i];
+			if (patch.Level == level &&
+				patch.Year == year &&
+				patch.SiteRecord.layerSite.Site == site)
+			{
+				RemovePatchInView(i);
+				removedPatches = true;
+			}
+		}
+
+		if (removedPatches)
+			UpdateLoadedVisibleRange();
+	}
+
+	public List<Site> GetSites()
+	{
+		List<Site> sites = new List<Site>();
+		foreach (var level in levels)
+		{
+			foreach (var layerSite in level.layerSites)
+			{
+				if (!sites.Contains(layerSite.Site))
+				{
+					sites.Add(layerSite.Site);
+				}
+			}
+		}
+		sites.Sort((s1, s2) => s1.Name.CompareTo(s2.Name));
+		return sites;
+	}
+
+	public bool HasDataForSite(Site site)
+	{
+		foreach (var level in levels)
+		{
+			foreach (var layerSite in level.layerSites)
+			{
+				if (site == layerSite.Site)
+					return true;
+			}
+		}
+		return false;
+	}
 
 
 	//
 	// Event Methods
 	//
 
-	private void OnPatchCreated(Patch patch)
+	private void OnPatchCreated(Patch patch, string siteName)
 	{
 #if SAFETY_CHECK
-		if (patch.level < 0 || patch.level >= levels.Length)
+		if (patch.Level < 0 || patch.Level >= levels.Length)
 		{
-			Debug.LogError("Patch " + patch.name + "(" + patch.Filename + ") has invalid level: " + patch.level);
+			Debug.LogError("Patch " + patch.Filename + " has invalid level: " + patch.Level);
 			return;
 		}
 #endif
-		var level = levels[patch.level];
+		var level = levels[patch.Level];
 
 		SiteRecord siteRecord = null;
 		foreach (var layerSite in level.layerSites)
 		{
-			if (patch.name.Equals(layerSite.name))
+			if (siteName == layerSite.Site.Name)
 			{
 				siteRecord = layerSite.Add(patch);
 				break;
@@ -493,20 +631,18 @@ public class DataLayer
 
 		if (siteRecord == null)
 		{
-			var site = level.AddSite(patch.name, patch);
-			siteRecord = site.lastRecord;
+			var site = dataManager.GetOrAddSite(siteName);
+			var layerSite = level.AddSite(site, patch);
+			siteRecord = layerSite.LastRecord;
 		}
 
-		patch.siteRecord = siteRecord;
+		patch.SetSiteRecord(siteRecord);
 	}
 
-	private void OnPatchLoaded(Patch patch)
+	private void OnPatchLoaded(Patch patch, bool isInView)
 	{
-		var map = ComponentManager.Instance.Get<MapController>();
-		var bounds = map.MapCoordBounds;
-
 		// Check that the loaded patch is still visible, otherwise hide it
-		if (patch.level == map.CurrentLevel && patch.Data.Intersects(bounds.west, bounds.east, bounds.north, bounds.south))
+		if (isInView)
 		{
 			ShowPatch(patch);
 		}
@@ -525,20 +661,20 @@ public class DataLayer
 
 	private void RequestPatch(Patch patch)
 	{
-		patchesInView.Add(patch);
-
-		ComponentManager.Instance.Get<DataManager>().RequestPatch(patch, OnPatchLoaded);
+		dataManager.RequestPatch(patch, OnPatchLoaded);
 	}
 
 	private void AddPatchInView(Patch patch)
 	{
+		// A patch could be re-added if its layer is toggled on-off-on, as it is always in view.
+		if (!patchesInView.Contains(patch))
+			patchesInView.Add(patch);
+
 		if (!patch.Data.IsLoaded())
 		{
 			RequestPatch(patch);
 			return;
 		}
-
-		patchesInView.Add(patch);
 
 		ShowPatch(patch);
 	}
@@ -558,7 +694,7 @@ public class DataLayer
 
 		loadedPatchesInView.Add(patch);
 
-		ComponentManager.Instance.Get<DataManager>().ShowPatch(patch);
+		dataManager.ShowPatch(patch);
 
 		if (OnPatchVisibilityChange != null)
             OnPatchVisibilityChange(this, patch, true);
@@ -598,7 +734,7 @@ public class DataLayer
 	{
 		bool isVisible = patch.IsVisible();
 
-		ComponentManager.Instance.Get<DataManager>().HidePatch(patch);
+		dataManager.HidePatch(patch);
 
 		if (isVisible && OnPatchVisibilityChange != null)
             OnPatchVisibilityChange(this, patch, false);
@@ -606,56 +742,65 @@ public class DataLayer
 
 	private void UpdateValueRanges(Patch patch)
 	{
-		var gridData = patch.Data as GridData;
-		if (gridData != null)
+		if (patch.Data is GridData)
 		{
-			// Update site's value range
-			var layerSite = patch.siteRecord.layerSite;
-			if (layerSite.minValue == 0 && layerSite.maxValue == 0)
+			UpdateValueRanges(patch.Data as GridData);
+
+		}
+		else if (patch.Data is MultiGridData)
+		{
+			var multigrid = patch.Data as MultiGridData;
+			foreach (var c in multigrid.categories)
 			{
-				layerSite.minValue = gridData.minValue;
-				layerSite.maxValue = gridData.maxValue;
+				UpdateValueRanges(c.grid);
 			}
-			else if (gridData.minValue < layerSite.minValue || gridData.maxValue > layerSite.maxValue)
-			{
-				layerSite.minValue = Mathf.Min(layerSite.minValue, gridData.minValue);
-				layerSite.maxValue = Mathf.Max(layerSite.maxValue, gridData.maxValue);
-			}
-
-			if (patch is GridPatch)
-				UpdateSiteMean(layerSite);
-			else
-				layerSite.mean = 1;
-
-			if (minFilter != 0 || maxFilter != 1)
-				UpdateSitePatchesMinMaxFilters(layerSite);
-
-
-			// Update layer's value range
-			minVisibleValue = Mathf.Min(minVisibleValue, gridData.minValue);
-			maxVisibleValue = Mathf.Max(maxVisibleValue, gridData.maxValue);
 		}
 	}
 
-	private void UpdateSiteMean(LayerSite layerSite)
+	private void UpdateValueRanges(GridData gridData)
+	{
+		bool siteValueRangeHasChanged = false;
+
+		// Update site's value range
+		var layerSite = gridData.patch.SiteRecord.layerSite;
+		if (layerSite.minValue == 0 && layerSite.maxValue == 0)
+		{
+			layerSite.minValue = gridData.minValue;
+			layerSite.maxValue = gridData.maxValue;
+			siteValueRangeHasChanged = true;
+		}
+		else if (gridData.minValue < layerSite.minValue || gridData.maxValue > layerSite.maxValue)
+		{
+			layerSite.minValue = Mathf.Min(layerSite.minValue, gridData.minValue);
+			layerSite.maxValue = Mathf.Max(layerSite.maxValue, gridData.maxValue);
+			siteValueRangeHasChanged = true;
+		}
+
+		if (gridData.patch is GridPatch)
+			UpdateSiteMean(layerSite, siteValueRangeHasChanged);
+		else
+			layerSite.mean = 1;
+
+		if (MinFilter != 0 || MaxFilter != 1)
+			UpdateSitePatchesMinMaxFilters(layerSite);
+
+		// Update layer's value range
+		MinVisibleValue = Mathf.Min(MinVisibleValue, gridData.minValue);
+		MaxVisibleValue = Mathf.Max(MaxVisibleValue, gridData.maxValue);
+	}
+
+	private void UpdateSiteMean(LayerSite layerSite, bool recalculateMean)
 	{
 		layerSite.mean = 0;
 		foreach (var record in layerSite.records.Values)
 		{
+			//var record = visibleYear == -1 ? layerSite.LastRecord : layerSite.records[visibleYear];
 			foreach (var patch in record.patches)
 			{
-				var grid = patch.Data as GridData;
-				if (grid != null && grid.values != null)
+				if (patch.Data is GridData grid && grid.IsLoaded())
 				{
-					float mean = 0;
-					int count = grid.countX * grid.countY;
-					for (int i = 0; i < count; i++)
-					{
-						mean += grid.valuesMask[i] ? grid.values[i] : layerSite.minValue;
-					}
-					mean /= count;
-
-					float meanPercent = Mathf.InverseLerp(layerSite.minValue, layerSite.maxValue, mean);
+					double mean = grid.GetMean(layerSite.minValue, recalculateMean);
+					float meanPercent = Mathf.InverseLerp(layerSite.minValue, layerSite.maxValue, (float)mean);
 					layerSite.mean = Mathf.Max(layerSite.mean, meanPercent);
 				}
 			}
@@ -667,10 +812,14 @@ public class DataLayer
 		InitVisibleRange();
 		if (loadedPatchesInView.Count > 0)
         {
-            foreach (GridedPatch patch in loadedPatchesInView)
+            foreach (var patch in loadedPatchesInView)
             {
-				minVisibleValue = Mathf.Min(minVisibleValue, patch.grid.minValue);
-				maxVisibleValue = Mathf.Max(maxVisibleValue, patch.grid.maxValue);
+				if (patch is GridPatch)
+				{
+					var gridPatch = patch as GridPatch;
+					MinVisibleValue = Mathf.Min(MinVisibleValue, gridPatch.grid.minValue);
+					MaxVisibleValue = Mathf.Max(MaxVisibleValue, gridPatch.grid.maxValue);
+				}
 			}
 
 			UpdateMapLayersVisibleRange();
@@ -679,46 +828,66 @@ public class DataLayer
 
 	private void UpdateMapLayersVisibleRange()
 	{
-		foreach (GridedPatch patch in loadedPatchesInView)
+		foreach (var patch in loadedPatchesInView)
 		{
-			(patch.GetMapLayer() as GridMapLayer).UpdateRange();
+			if (patch is GridPatch)
+			{
+				(patch.GetMapLayer() as GridMapLayer).UpdateRange();
+			}
 		}
 	}
 
 	private void InitVisibleRange()
     {
-        minVisibleValue = float.MaxValue;
-        maxVisibleValue = float.MinValue;
+        MinVisibleValue = float.MaxValue;
+        MaxVisibleValue = float.MinValue;
 	}
 
 	private void UpdateSitePatchesMinMaxFilters(LayerSite layerSite)
 	{
-		float siteMin = Mathf.Lerp(layerSite.minValue, layerSite.maxValue, minFilter);
-		float siteMax = Mathf.Lerp(layerSite.minValue, layerSite.maxValue, maxFilter);
+		float siteMin = Mathf.Lerp(layerSite.minValue, layerSite.maxValue, MinFilter);
+		float siteMax = Mathf.Lerp(layerSite.minValue, layerSite.maxValue, MaxFilter);
 
 		foreach (var record in layerSite.records.Values)
 		{
-			foreach (GridedPatch patch in record.patches)
+			foreach (var patch in record.patches)
 			{
-				patch.SetMinMaxFilter(siteMin, siteMax);
+				if (patch is GridPatch)
+				{
+					(patch as GridPatch).SetMinMaxFilter(siteMin, siteMax);
+				}
 			}
 		}
 	}
 
-}
+	private void RenamePatches(string newName)
+	{
+#if SAFETY_CHECK
+		if (newName == Name)
+		{
+			Debug.LogWarning("Trying to rename files with the same name");
+			return;
+		}
+#endif
 
-internal static class StringExtensions
-{
-    public static bool StartsWithIgnoreCase(this string filename, string start)
-    {
-        if (filename.StartsWith(start, System.StringComparison.CurrentCultureIgnoreCase))
-        {
-            if (!filename.StartsWith(start))
-            {
-                Debug.LogWarning(filename + " has a different case than layer name: " + start);
-            }
-            return true;
-        }
-        return false;
-    }
+		var oldValue = Path.DirectorySeparatorChar + Name + "_";
+		var newValue = Path.DirectorySeparatorChar + newName + "_";
+		foreach (var level in levels)
+		{
+			foreach (var layerSite in level.layerSites)
+			{
+				foreach (var record in layerSite.records)
+				{
+					foreach (var patch in record.Value.patches)
+					{
+						if (patch.Filename != null)
+						{
+							patch.RenameFile(patch.Filename.Replace(oldValue, newValue));
+						}
+					}
+				}
+			}
+		}
+	}
+
 }

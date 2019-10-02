@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -6,6 +6,12 @@
 //
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 //          David Neudecker(neudecker@arch.ethz.ch)
+
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
+#define IS_WINDOWS
+#elif UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
+#define IS_OSX
+#endif
 
 using System;
 using System.Collections;
@@ -22,12 +28,13 @@ public class WindowController : MonoBehaviour
 	public Button fullscreenButton;
 	public Button minimizeButton;
 
+#if IS_WINDOWS
 	[DllImport("user32.dll")]
 	private static extern bool ShowWindow(IntPtr hwnd, int nCmdShow);
 
 	[DllImport("user32.dll")]
 	private static extern IntPtr GetActiveWindow();
-
+#endif
 
 	//
 	// Unity Methods
@@ -35,56 +42,69 @@ public class WindowController : MonoBehaviour
 
 	private void Start()
 	{
-		fullscreenButton.onClick.AddListener(OnFullscreen);
-
 #if UNITY_WEBGL
-		closeButton.interactable = false;
-		minimizeButton.interactable = false;
+		minimizeButton.onClick.AddListener(OnExitWebFullScreenClick);
+		fullscreenButton.onClick.AddListener(OnExitWebFullScreenClick);
+		closeButton.onClick.AddListener(OnExitWebFullScreenClick);
 #else
-		closeButton.onClick.AddListener(OnClose);
-		minimizeButton.onClick.AddListener(OnMinimize);
+		minimizeButton.onClick.AddListener(OnMinimizeClick);
+		fullscreenButton.interactable = false;
+		closeButton.onClick.AddListener(OnCloseClick);
 #endif
-		topBar.gameObject.SetActive(Screen.fullScreen);
 
-		StartCoroutine(CheckFullScreen());
+		topBar.gameObject.SetActive(Screen.fullScreenMode != FullScreenMode.Windowed && -1 != (int)Screen.fullScreenMode);
+
+		StartCoroutine(CheckFullScreenChange());
 
 		versionLabel.text += "   v" + Application.version;
 	}
 
 
-	//
-	// Event Methods
-	//
+    //
+    // Event Methods
+    //
 
-	private static readonly IEnumerator framesToWait = WaitFor.Frames(120);
-	private IEnumerator CheckFullScreen()
+    private IEnumerator CheckFullScreenChange()
 	{
+        var delay = new WaitForSeconds(1f);
+
 		bool fullScreen = Screen.fullScreen;
+        var mode = Screen.fullScreenMode;
 		while (true)
 		{
-			yield return framesToWait;
-			if (fullScreen != Screen.fullScreen)
+			yield return delay;
+			if (fullScreen != Screen.fullScreen || mode != Screen.fullScreenMode)
 			{
 				fullScreen = Screen.fullScreen;
-				topBar.gameObject.SetActive(fullScreen);
-			}
+                mode = Screen.fullScreenMode;
+                topBar.gameObject.SetActive(mode != FullScreenMode.Windowed && -1 != (int)Screen.fullScreenMode);
+            }
 		}
 	}
 
-	private void OnClose()
+	private void OnExitWebFullScreenClick()
+	{
+		OnFullscreenClick();
+	}
+
+	private void OnCloseClick()
 	{
 		Quit();
 	}
 
-	private void OnFullscreen()
+	private void OnFullscreenClick()
 	{
 		topBar.gameObject.SetActive(!Screen.fullScreen);
 		Screen.fullScreen = !Screen.fullScreen;
 	}
 
-	private void OnMinimize()
+	private void OnMinimizeClick()
 	{
+#if IS_WINDOWS
 		ShowWindow(GetActiveWindow(), 2);
+#else
+		Screen.fullScreen = false;
+#endif
 	}
 
 

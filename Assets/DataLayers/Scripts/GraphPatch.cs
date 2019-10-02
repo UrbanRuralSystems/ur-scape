@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -13,8 +13,8 @@ public class GraphPatch : GridedPatch
 {
     public readonly GraphData graph;
 
-    protected GraphPatch(DataLayer dataLayer, string name, int level, int year, GraphData graph, string filename)
-        : base(dataLayer, name, level, year, new GridData(), filename)
+    protected GraphPatch(DataLayer dataLayer, int level, int year, GraphData graph, string filename)
+        : base(dataLayer, level, year, new GridData(), filename)
     {
         this.graph = graph;
         graph.patch = this;
@@ -26,9 +26,9 @@ public class GraphPatch : GridedPatch
     // Public Methods
     //
 
-    public static GraphPatch Create<D>(DataLayer dataLayer, string site, int level, int year, D data, string filename) where D: GraphData
+    public static GraphPatch Create<D>(DataLayer dataLayer, int level, int year, D data, string filename) where D: GraphData
     {
-        return new GraphPatch(dataLayer, site, level, year, data, filename);
+        return new GraphPatch(dataLayer, level, year, data, filename);
     }
 
     public override IEnumerator LoadData(PatchLoadedCallback callback)
@@ -54,7 +54,7 @@ public class GraphPatch : GridedPatch
         {
             case PatchDataFormat.BIN:
                 graph.SaveBin(filename);
-				Filename = filename;
+				SetFilename(filename);
                 break;
             default:
                 Debug.LogError("Not implemented");

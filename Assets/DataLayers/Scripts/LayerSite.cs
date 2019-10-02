@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -8,49 +8,30 @@
 
 using System.Collections.Generic;
 
-public class SiteRecord
-{
-	public readonly LayerSite layerSite;
-    public readonly int year;
-    public readonly List<Patch> patches = new List<Patch>();
-
-	public SiteRecord(LayerSite layerSite, Patch patch)
-    {
-		this.layerSite = layerSite;
-        year = patch.year;
-
-        patches.Add(patch);
-    }
-}
-
 public class LayerSite
 {
-	public readonly Level level;
-    public readonly Dictionary<int, SiteRecord> records = new Dictionary<int, SiteRecord>();
-	public readonly string name;
-	public SiteRecord lastRecord;
-	public Site site;
+	// Link to Site
+	public Site Site { get; private set; }
+
+	public readonly Dictionary<int, SiteRecord> records = new Dictionary<int, SiteRecord>();
+	public SiteRecord LastRecord { get; private set; }
 
 	public float minValue;
 	public float maxValue;
 	public float mean;
 
-	public LayerSite(Level level, string name, Patch patch)
+	public LayerSite(Site site, Patch patch)
 	{
-		this.level = level;
-		this.name = name;
+		Site = site;
 
-		lastRecord = new SiteRecord(this, patch);
-		records.Add(lastRecord.year, lastRecord);
+		Add(patch);
 	}
 
 	public SiteRecord Add(Patch patch)
 	{
-		SiteRecord siteRecord;
-		if (records.ContainsKey(patch.year))
+		if (records.TryGetValue(patch.Year, out SiteRecord siteRecord))
 		{
-			siteRecord = records[patch.year];
-			siteRecord.patches.Add(patch);
+			siteRecord.Add(patch);
 		}
 		else
 		{
@@ -61,14 +42,48 @@ public class LayerSite
 		return siteRecord;
 	}
 
-	public void Add(SiteRecord record)
+	private void Add(SiteRecord record)
     {
-        records.Add(record.year, record);
+        records.Add(record.Year, record);
 
-        if (lastRecord == null || record.year > lastRecord.year )
+        if (LastRecord == null || record.Year > LastRecord.Year )
         {
-            lastRecord = record;
+            LastRecord = record;
         }
     }
 
+	public void ChangeSite(Site newSite)
+	{
+		if (newSite == Site)
+			return;
+
+		Site = newSite;
+
+		var siteDir = Site.GetDirectory();
+
+		foreach (var record in records)
+		{
+			foreach (var patch in record.Value.patches)
+			{
+				patch.ChangeSiteName(Site.Name, siteDir);
+			}
+		}
+	}
+
+	public void ChangeYear(int oldYear, int newYear)
+	{
+		if (!records.TryGetValue(oldYear, out SiteRecord record))
+			return;
+
+		records.Remove(oldYear);
+		records.Add(newYear, record);
+		record.ChangeYear(newYear);
+
+		// Update last record
+		foreach (var pair in records)
+		{
+			if (pair.Key > LastRecord.Year)
+				LastRecord = pair.Value;
+		}
+	}
 }

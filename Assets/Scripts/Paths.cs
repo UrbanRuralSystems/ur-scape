@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -41,9 +41,9 @@ public static class Paths
 		Backgrounds = Cache + "Backgrounds" + Path.DirectorySeparatorChar;
 
 #if UNITY_WEBGL
-	DataWebDB = Data + "WebDB" + Path.DirectorySeparatorChar;
-	DataWebDBHeaders = DataWebDB + "headers";
-	DataWebDBPatches = DataWebDB + "patches";
+	    DataWebDB = Data + "WebDB" + Path.DirectorySeparatorChar;
+	    DataWebDBHeaders = DataWebDB + "headers";
+	    DataWebDBPatches = DataWebDB + "patches";
 #endif
 
 	}

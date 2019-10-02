@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -58,9 +58,10 @@ public class DistributionChart : MonoBehaviour
 
     public void Init(Color color)
     {
-        this.color = color;
+        this.color = color * 0.6f;
+		this.color.a = 1;
 
-        image = GetComponent<Image>();
+		image = GetComponent<Image>();
 
         material = new Material(image.material);
 		material.hideFlags = HideFlags.HideAndDontSave;

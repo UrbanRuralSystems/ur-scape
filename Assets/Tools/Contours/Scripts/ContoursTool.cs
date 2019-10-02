@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -7,8 +7,10 @@
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 //          David Neudecker(neudecker@arch.ethz.ch)
 
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,6 +21,7 @@ public class ContoursTool : Tool
         public GridMapLayer mapLayer;
         public RectTransform uiTransform;
         public string name;
+		public string id;
     }
 
     [Header("General Setup")]
@@ -29,51 +32,51 @@ public class ContoursTool : Tool
     public GridMapLayer snapshotLayerPrefab;
     public RectTransform snapshotPrefab;
     public RectTransform emptySnapshotPrefab;
-    public ContoursOutput contoursOutputPrefab;
+	public ContoursInfoPanel infoPanelPrefab;
 
-    [Header("UI References")]
+	[Header("UI References")]
 	public Toggle showContoursToggle;
-	public Toggle filteredToggle;
+	public Toggle cropToggle;
     public Toggle lockToggle;
     public Toggle analysisToggle;
 	public Scrollbar analysisProgress;
 	public Toggle excludeNoDataToggle;
 	public Button addButton;
-    public ToggleButton deleteToggle;
+    public Toggle deleteToggle;
     public Transform SnapshotList;
 
 	// Prefab Instances
-    private ContoursOutput contoursOutput;
+    private ContoursInfoPanel infoPanel;
 	private ContoursMapLayer contoursLayer;
     public ContoursMapLayer ContoursLayer { get { return contoursLayer; } }
 
     // Component References
     private DataLayers dataLayers;
-    private DataManager dataManager;
     private InputHandler inputHandler;
 
     // UI References
-    private readonly List<Snapshot> snapshots = new List<Snapshot>();
-    private readonly List<RectTransform> emptySnapshots = new List<RectTransform>();
+    private Snapshot[] snapshots = null;
+    private RectTransform[] emptySnapshots = null;
+	private int usedSnapshots = 0;
 
 	// Misc
 	private List<GridData> grids = new List<GridData>();
     private GridMapLayer lockedContours;
     private ContoursAnalyzer analyzer;
 	private int runningSnapshotCounter;
+	private bool allowInfoUpdate = true;
 
 
-    //
-    // Inheritance Methods
-    //
+	//
+	// Inheritance Methods
+	//
 
-    protected override void OnComponentRegistrationFinished()
+	protected override void OnComponentRegistrationFinished()
     {
         base.OnComponentRegistrationFinished();
 
         // Get Components
         dataLayers = ComponentManager.Instance.Get<DataLayers>();
-        dataManager = ComponentManager.Instance.Get<DataManager>();
         inputHandler = ComponentManager.Instance.Get<InputHandler>();
     }
 
@@ -168,14 +171,17 @@ public class ContoursTool : Tool
 
         if (lockedContours != null)
             lockedContours.Show(isOn && lockToggle.isOn);
-    }
 
-	private void OnShowFilteredChanged(bool isOn)
+		UpdateContoursInfo();
+	}
+
+	private void OnCropWithViewAreaChanged(bool isOn)
     {
 		CancelRemoveSnapshotMode();
 
-		dataManager.EnableSiteFilters(!filteredToggle.isOn);
-    }
+		contoursLayer.SetCropWithViewArea(isOn);
+		contoursLayer.Refresh();
+	}
 
     private void OnLockChanged(bool isOn)
     {
@@ -195,7 +201,9 @@ public class ContoursTool : Tool
         // Show/hide contours layer at the end!
         if (showContoursToggle.isOn)
             ShowContoursLayer(!isOn);
-    }
+
+		UpdateContoursInfo();
+	}
 
     public override void OnToggleTool(bool isOn)
     {
@@ -210,7 +218,7 @@ public class ContoursTool : Tool
 			// Listen to any data layers being added/removed
 			dataLayers.OnLayerVisibilityChange += OnLayerVisibilityChange;
 			dataLayers.OnLayerAvailabilityChange += OnLayerAvailabilityChange;
-            
+
 			// Listen to any grid layers being added/removed
 			var gridController = map.GetLayerController<GridLayerController>();
             gridController.OnShowGrid += OnShowGrid;
@@ -219,11 +227,11 @@ public class ContoursTool : Tool
             grids.Clear();
             foreach (var mapLayer in gridController.mapLayers)
             {
-				mapLayer.Grid.OnFilterChange += OnGridFilterChange;
                 grids.Add(mapLayer.Grid);
             }
 
-            // Reset buttons
+			// Reset buttons
+			analysisToggle.isOn = false;
             showContoursToggle.isOn = true;
             lockToggle.isOn = false;
 			//filteredToggle.isOn = true;		// Don't reset, user wants to keep this setting
@@ -231,12 +239,13 @@ public class ContoursTool : Tool
 			deleteToggle.isOn = false;
 			deleteToggle.interactable = false;
 			addButton.interactable = true;
+			cropToggle.isOn = contoursLayer.CropWithViewArea;
 
 			// Initialize listeners
-			addButton.onClick.AddListener(OnAddButtonClick);
+			addButton.onClick.AddListener(OnAddSnapshotClick);
             deleteToggle.onValueChanged.AddListener(OnDeleteToggleChange);
             showContoursToggle.onValueChanged.AddListener(OnShowContoursChanged);
-			filteredToggle.onValueChanged.AddListener(OnShowFilteredChanged);
+			cropToggle.onValueChanged.AddListener(OnCropWithViewAreaChanged);
             lockToggle.onValueChanged.AddListener(OnLockChanged);
             analysisToggle.onValueChanged.AddListener(OnAnalysisChanged);
 			excludeNoDataToggle.onValueChanged.AddListener(OnExcludeNoDataChanged);
@@ -244,136 +253,165 @@ public class ContoursTool : Tool
             // Show contours layer
             ShowContoursLayer(true);
 
-            // Create output panel
-            contoursOutput = Instantiate(contoursOutputPrefab);
-            contoursOutput.name = "Contours_OutputPanel";
+			// Create the info panel
+			infoPanel = Instantiate(infoPanelPrefab);
+			infoPanel.name = infoPanelPrefab.name;
+			infoPanel.Init();
 			var outputPanel = ComponentManager.Instance.Get<OutputPanel>();
-			outputPanel.SetPanel(contoursOutput.transform);
-            contoursLayer.FetchGridValues();
-            contoursOutput.AddGroup("All Contours", contoursLayer, true, false);
+			outputPanel.SetPanel(infoPanel.transform);
+
+			var translator = LocalizationManager.Instance;
+			infoPanel.AddEntry("CC", translator.Get("Current Contours"));
+			infoPanel.AddEntry("SC", translator.Get("Selected Contours"));
+
+			snapshots = new Snapshot[snapshotCount];
+			emptySnapshots = new RectTransform[snapshotCount];
+			usedSnapshots = 0;
 
 			// Create empty snapshots
 			for (int i = 0; i < snapshotCount; ++i)
 			{
-				emptySnapshots.Add(Instantiate(emptySnapshotPrefab, SnapshotList, false));
+				var emptySnapshot = Instantiate(emptySnapshotPrefab, SnapshotList, false);
+				emptySnapshot.name = emptySnapshotPrefab.name + (i + 1);
+				emptySnapshots[i] = emptySnapshot;
+				infoPanel.AddEntry("S" + i, translator.Get("Snapshot") + " " + (i+1));
 			}
-            GuiUtils.RebuildLayout(SnapshotList);
+
+			UpdateContoursInfo();
+
+			translator.OnLanguageChanged += OnLanguageChanged;
+
+			GuiUtils.RebuildLayout(SnapshotList);
         }
         else
         {
 			// Remove listeners
 			addButton.onClick.RemoveAllListeners();
 			showContoursToggle.onValueChanged.RemoveAllListeners();
-			filteredToggle.onValueChanged.RemoveAllListeners();
+			cropToggle.onValueChanged.RemoveAllListeners();
 			lockToggle.onValueChanged.RemoveAllListeners();
 			analysisToggle.onValueChanged.RemoveAllListeners();
 			excludeNoDataToggle.onValueChanged.RemoveAllListeners();
 			dataLayers.OnLayerVisibilityChange -= OnLayerVisibilityChange;
 			dataLayers.OnLayerAvailabilityChange -= OnLayerAvailabilityChange;
+			inputHandler.OnLeftMouseUp -= OnLeftMouseUp;
 
 			if (map)
             {
-                var gridController = map.GetLayerController<GridLayerController>();
+				var gridController = map.GetLayerController<GridLayerController>();
                 if (gridController)
                 {
                     gridController.OnShowGrid -= OnShowGrid;
                 }
             }
 
-            // for output update
-            foreach (var grid in contoursLayer.grids)
-                grid.OnFilterChange -= OnGridFilterChange;
+			// Remove the info panel
+			ComponentManager.Instance.Get<OutputPanel>().DestroyPanel(infoPanel.gameObject);
 
-			var outputPanel = ComponentManager.Instance.Get<OutputPanel>();
-			outputPanel.RemovePanel(contoursOutput.transform);
-
-            // Remove map layers
-            DeleteAllLayers();
+			// Remove map layers
+			DeleteAllLayers();
 
 			// Remove snapshots UI
 			foreach (var snapshot in snapshots)
 			{
-				Destroy(snapshot.uiTransform.gameObject);
+				if (snapshot != null)
+					Destroy(snapshot.uiTransform.gameObject);
 			}
-			snapshots.Clear();
+			snapshots = null;
 			foreach (var emptySnapshot in emptySnapshots)
             {
                 Destroy(emptySnapshot.gameObject);
             }
-			emptySnapshots.Clear();
+			emptySnapshots = null;
+			usedSnapshots = 0;
 
 			grids.Clear();
 
 			dataLayers.ResetToolOpacity();
 
 			CancelRemoveSnapshotMode();
-		}
 
-		// Enable/disable map layer filters
-		dataManager.EnableSiteFilters(!(isOn && filteredToggle.isOn));
+			LocalizationManager.Instance.OnLanguageChanged -= OnLanguageChanged;
+		}
 	}
 
-    public override void OnActiveTool(bool isActive)
+	public override void OnActiveTool(bool isActive)
     {
-        if (isActive && contoursOutput != null)
-        {
-			var outputPanel = ComponentManager.Instance.Get<OutputPanel>();
-			outputPanel.SetPanel(contoursOutput.transform);
-        }
-    }
+		base.OnActiveTool(isActive);
 
-    private void OnGridFilterChange(GridData grid)
-    {
-		contoursOutput.Grid_OnFilterChange();
-    }
+        if (infoPanel != null)
+        {
+			ComponentManager.Instance.Get<OutputPanel>().SetPanel(isActive ? infoPanel.transform : null);
+
+			if (isActive)
+				UpdateContoursInfo();
+		}
+
+		if (analysisToggle.isOn)
+		{
+			if (isActive)
+				inputHandler.OnLeftMouseUp += OnLeftMouseUp;
+			else
+				inputHandler.OnLeftMouseUp -= OnLeftMouseUp;
+		}
+	}
 
     private void OnLayerVisibilityChange(DataLayer layer, bool visible)
     {
-		dataLayers.AutoReduceToolOpacity();
+		UpdateLayersOpacity();
 	}
 
 	private void OnLayerAvailabilityChange(DataLayer layer, bool visible)
 	{
 		if (dataLayers.IsLayerActive(layer))
 		{
-			dataLayers.AutoReduceToolOpacity();
+			UpdateLayersOpacity();
 		}
 	}
 
-	private void OnAddButtonClick()
+	private void OnAddSnapshotClick()
     {
 		CancelRemoveSnapshotMode();
 
 		contoursLayer.FetchGridValues();
-		CreateSnapshot(snapshots.Count, contoursLayer.Grid);
+		for (int i = 0; i < snapshots.Length; i++)
+		{
+			if (snapshots[i] == null)
+			{
+				CreateSnapshot(i, contoursLayer.Grid);
+				break;
+			}
+		}
 
-		if (snapshots.Count == snapshotCount)
+		if (usedSnapshots == snapshotCount)
 		{
             addButton.interactable = false;
         }
+
         deleteToggle.interactable = true;
-		GuiUtils.RebuildLayout(transform);
     }
 
     private void OnDeleteToggleChange(bool isOn)
     {
         foreach (var snapshot in snapshots)
         {
-            var toggle = snapshot.uiTransform.GetComponentInChildren<Toggle>(true);
-			toggle.gameObject.SetActive(!isOn);
+			if (snapshot != null)
+			{
+				var toggle = snapshot.uiTransform.GetComponentInChildren<Toggle>(true);
+				toggle.gameObject.SetActive(!isOn);
 
-			var deleteButton = snapshot.uiTransform.GetComponentInChildren<Button>(true);
-			deleteButton.gameObject.SetActive(isOn);
+				var deleteButton = snapshot.uiTransform.GetComponentInChildren<Button>(true);
+				deleteButton.gameObject.SetActive(isOn);
+			}
 		}
     }
 
 	private void OnRemoveSnapshot(Snapshot snapshot)
 	{
         RemoveSnapshot(snapshot);
-        emptySnapshots[snapshots.Count].gameObject.SetActive(true);
  
 		addButton.interactable = true;
-		if (snapshots.Count == 0)
+		if (usedSnapshots == 0)
 		{
 			deleteToggle.isOn = false;
 			deleteToggle.interactable = false;
@@ -382,14 +420,14 @@ public class ContoursTool : Tool
 
 	private void OnEndEdit(string value, InputField input, Snapshot snapshot)
     {
-        if (string.IsNullOrEmpty(value))
+        if (string.IsNullOrWhiteSpace(value))
         {
-            input.text = "Snapshot";
+            input.text = snapshot.name;
         }
 
-		contoursOutput.RenameGroup(snapshot.name, input.text);
-
-        snapshot.name = input.text;
+		var newSnapshotName = Regex.Replace(input.text, @"\n|\r", "");
+		snapshot.name = newSnapshotName;
+		infoPanel.RenameEntry(snapshot.id, newSnapshotName);
     }
 
     private void OnSnapshotToggleChanged(Snapshot snapshot, bool isOn)
@@ -409,7 +447,8 @@ public class ContoursTool : Tool
         }
         else
         {
-            DestroyAnalyzer();
+			DeselectContour();
+			DestroyAnalyzer();
             inputHandler.OnLeftMouseUp -= OnLeftMouseUp;
          }
     }
@@ -422,32 +461,33 @@ public class ContoursTool : Tool
 		contoursLayer.Refresh();
 	}
 
+	private void OnLanguageChanged()
+	{
+		var translator = LocalizationManager.Instance;
+		infoPanel.RenameEntry("CC", translator.Get("Current Contours"));
+		infoPanel.RenameEntry("SC", translator.Get("Selected Contours"));
+		for (int i = 0; i < snapshotCount; ++i)
+		{
+			infoPanel.RenameEntry("S" + i, translator.Get("Snapshot") + " " + (i + 1));
+		}
+	}
+
 
 	//
 	// Event Methods
 	//
 
+	private Coordinate contourSelectionCoords;
 	private void OnLeftMouseUp()
     {
         if (!inputHandler.IsDraggingLeft)
         {
-            Vector3 worldPos;
-            if (inputHandler.GetWorldPoint(Input.mousePosition, out worldPos))
+            if (inputHandler.GetWorldPoint(Input.mousePosition, out Vector3 worldPos))
             {
-                Coordinate coords = map.GetCoordinatesFromUnits(worldPos.x, worldPos.z);
-                var grid = contoursLayer.Grid;
-                if (grid.values != null && grid.IsInside(coords.Longitude, coords.Latitude))
-                {
-                    contoursLayer.SetSelectedContour((int)grid.GetValue(coords.Longitude, coords.Latitude));
-                }
+				contourSelectionCoords = map.GetCoordinatesFromUnits(worldPos.x, worldPos.z);
+				UpdateSelectedContour(true);
             }
         }
-
-		if (contoursLayer.grids.Count > 0)
-		{
-			contoursLayer.FetchGridValues();
-			contoursOutput.AddGroup("Selected Contours", contoursLayer, false, true);
-		}
     }
 
     private void OnShowGrid(GridMapLayer mapLayer, bool show)
@@ -458,66 +498,80 @@ public class ContoursTool : Tool
 			// Add to contours layer
 			if (contoursLayer.IsVisible())
 			{
+				// Temporarily disable updating info. Will be updated at the end of the method
+				allowInfoUpdate = false;
 				contoursLayer.Add(grid);
 				contoursLayer.Refresh();
+				allowInfoUpdate = true;
 			}
 			else
 				grids.Add(grid);
-
-            grid.OnFilterChange += OnGridFilterChange;
         }
         else
         {
-			grid.OnFilterChange -= OnGridFilterChange;
-
 			// Remove from contours layer
 			if (contoursLayer.IsVisible())
 			{
+				// Temporarily disable updating info. Will be updated at the end of the method
+				allowInfoUpdate = false;
 				contoursLayer.Remove(grid);
 				contoursLayer.Refresh();
+				allowInfoUpdate = true;
 			}
 			else
 				grids.Remove(grid);
-            grid.patch.dataLayer.SetToolOpacity(1);
+            grid.patch.DataLayer.SetToolOpacity(1);
         }
 
-        if (contoursLayer.grids.Count > 0) 
-            contoursLayer.FetchGridValues();
+		UpdateContoursInfo();
 
-        contoursOutput.UpdateGroup("All Contours");
-        dataLayers.AutoReduceToolOpacity();
+		UpdateLayersOpacity();
     }
 
     private void OnContoursGridChange(GridData grid)
     {
-        if (analyzer != null && analyzer)
-        {
-            if (grid.values != null)
-            {
-                StartAnalysis();
-            }
-            else
-            {
-                StopAnalysis();
-            }
-        }
-    }
+		OnContoursChange();
+	}
 
-    private void OnAnalysisProgress(float progress)
+	private void OnContoursValuesChange(GridData grid)
+	{
+		OnContoursChange();
+	}
+
+	private void OnContoursChange()
+	{
+		if (analyzer != null)
+		{
+			if (contoursLayer.Grid.values != null)
+			{
+				StartAnalysis();
+			}
+			else
+			{
+				StopAnalysis();
+			}
+		}
+		else
+		{
+			UpdateContoursInfo();
+		}
+	}
+
+	private void OnAnalysisProgress(float progress)
     {
         if (progress >= 1)
         {
             // Hide progress
             analysisProgress.gameObject.SetActive(false);
 
-            if (contoursLayer)
+            if (contoursLayer != null)
             {
-                contoursLayer.Grid.OnGridChange -= OnContoursGridChange;
-                contoursLayer.Grid.ValuesChanged();
-				contoursLayer.Grid.OnGridChange += OnContoursGridChange;
-            }
-        }
-        else
+				contoursLayer.SubmitGridValues();
+			}
+
+			UpdateSelectedContour(false);
+		}
+		else
         {
             analysisProgress.size = progress;
         }
@@ -541,13 +595,16 @@ public class ContoursTool : Tool
             if (lockedContours != null)
                 lockedContours.Show(true);
             else
-            {
+			{
                 contoursLayer.Show(true);
-                contoursLayer.Grid.OnGridChange += OnContoursGridChange;
-            }
 
-            // Update contours' data
-            contoursLayer.Refresh();
+				// Update contours' data
+				contoursLayer.Refresh();
+
+				// Add listeners after refreshing
+				contoursLayer.Grid.OnGridChange += OnContoursGridChange;
+				contoursLayer.Grid.OnValuesChange += OnContoursValuesChange;
+			}
 
 			dataLayers.AutoReduceToolOpacity();
 		}
@@ -556,9 +613,10 @@ public class ContoursTool : Tool
             // Hide at the beginning
             contoursLayer.Show(false);
             contoursLayer.Grid.OnGridChange -= OnContoursGridChange;
+			contoursLayer.Grid.OnValuesChange -= OnContoursValuesChange;
 
-            // Move visible grids from contours layer to list
-            if (contoursLayer.grids.Count > 0)
+			// Move visible grids from contours layer to list
+			if (contoursLayer.grids.Count > 0)
             {
                 grids.AddRange(contoursLayer.grids);
                 contoursLayer.Clear();
@@ -570,13 +628,22 @@ public class ContoursTool : Tool
 
     private void CreateSnapshot(int i, GridData gridData = null)
     {
-		var snapshot = new Snapshot();
-		snapshot.name = "Snapshot" + runningSnapshotCounter;
-        emptySnapshots[i].gameObject.SetActive(false);
+		var id = i + 1;
+		var snapshotLabel = Translator.Get("Snapshot") + "\n" + id;
+		var snapshotName = Regex.Replace(snapshotLabel, @"\n|\r", "");
+
+		emptySnapshots[i].gameObject.SetActive(false);
+		emptySnapshots[i].SetAsLastSibling();
 
 		// Create Snapshot
+		var snapshot = new Snapshot
+		{
+			id = "S" + i,
+			name = snapshotName
+		};
 		snapshot.uiTransform = Instantiate(snapshotPrefab, SnapshotList, false);
-        snapshot.uiTransform.SetSiblingIndex(i);
+		snapshot.uiTransform.name = snapshotName;
+		snapshot.uiTransform.SetSiblingIndex(i);
 
 		// Setup toggle button
 		var toggleButton = snapshot.uiTransform.GetComponentInChildren<Toggle>();
@@ -588,11 +655,11 @@ public class ContoursTool : Tool
 		deleteButton.onClick.AddListener(() => OnRemoveSnapshot(snapshot));
 
 		// Setup label
-		snapshot.uiTransform.GetComponentInChildren<Text>().text = runningSnapshotCounter.ToString();
+		snapshot.uiTransform.GetComponentInChildren<Text>().text = id.ToString();
 
 		// Setup intput text
 		var input = snapshot.uiTransform.GetComponentInChildren<InputField>();
-		input.text = "Snapshot\n" + runningSnapshotCounter;
+		input.text = snapshotLabel;
 		input.onEndEdit.AddListener((value) => OnEndEdit(value, input, snapshot));
 
 		// Create snapshot's map layer
@@ -602,9 +669,14 @@ public class ContoursTool : Tool
 		SetColorsToSnapshot(snapshot.mapLayer, toggleButton, deleteButton);
 
 		// Update output
-		contoursOutput.AddGroup(snapshot.name, contoursLayer, false, false);
+		if (gridData != null)
+		{
+			var sqm = ContourUtils.GetContoursSquareMeters(gridData);
+			infoPanel.UpdateEntry(snapshot.id, sqm);
+		}
 
-		snapshots.Add(snapshot);
+		snapshots[i] = snapshot;
+		usedSnapshots++;
 
 		runningSnapshotCounter++;
 	}
@@ -617,10 +689,20 @@ public class ContoursTool : Tool
         // Delete the map layer
         DeleteMapLayer(ref snapshot.mapLayer);
 
-        contoursOutput.RemoveGroup(snapshot.name);
+		infoPanel.ClearEntry(snapshot.id);
 
-		snapshots.Remove(snapshot);
-    }
+		for (int i = 0; i < snapshotCount; i++)
+		{
+			if (snapshots[i] == snapshot)
+			{
+				snapshots[i] = null;
+				emptySnapshots[i].gameObject.SetActive(true);
+				emptySnapshots[i].SetSiblingIndex(i);
+				usedSnapshots--;
+				break;
+			}
+		}
+	}
 
     private T CreateMapLayer<T>(T prefab, string layerName, GridData gridData = null) where T : GridMapLayer
     {
@@ -633,7 +715,8 @@ public class ContoursTool : Tool
     private void DeleteAllLayers()
     {
         contoursLayer.Grid.OnGridChange -= OnContoursGridChange;
-        contoursLayer.Clear();
+		contoursLayer.Grid.OnValuesChange -= OnContoursValuesChange;
+		contoursLayer.Clear();
 
         var layer = contoursLayer as GridMapLayer;
         DeleteMapLayer(ref layer);
@@ -643,9 +726,9 @@ public class ContoursTool : Tool
             DeleteMapLayer(ref lockedContours);
         }
 
-		for (int i = 0; i < snapshots.Count; ++i)
+		for (int i = 0; i < snapshotCount; ++i)
         {
-            if (snapshots[i].mapLayer != null)
+            if (snapshots[i] != null && snapshots[i].mapLayer != null)
             {
                 // Delete the map layer
                 DeleteMapLayer(ref snapshots[i].mapLayer);
@@ -686,16 +769,49 @@ public class ContoursTool : Tool
         analysisProgress.size = 0;
         analysisProgress.gameObject.SetActive(true);
 
-		contoursLayer.FetchGridValues();
-		analyzer.Analyze(contoursLayer.Grid, OnAnalysisProgress);
+		analyzer.Analyze(contoursLayer, OnAnalysisProgress);
     }
 
     private void StopAnalysis()
     {
         analyzer.Stop();
         analysisProgress.gameObject.SetActive(false);
-        contoursOutput.RemoveGroup("Selected Contours");
-    }
+	}
+
+	private void UpdateSelectedContour(bool updateInfo)
+	{
+		var grid = contoursLayer.Grid;
+
+		if (grid.values != null && grid.IsInside(contourSelectionCoords.Longitude, contourSelectionCoords.Latitude))
+		{
+			int index = (int)grid.GetValue(contourSelectionCoords.Longitude, contourSelectionCoords.Latitude);
+			if (index > 0)
+			{
+				contoursLayer.SetSelectedContour(index);
+
+				if (isActive && updateInfo)
+				{
+					var sqm = ContourUtils.GetContoursSquareMeters(grid, true, index);
+					infoPanel.UpdateEntry("SC", sqm);
+				}
+				return;
+			}
+		}
+
+		DeselectContour();
+	}
+
+	private void DeselectContour()
+	{
+		if (contoursLayer.SelectedContour > 0)
+		{
+			contoursLayer.DeselectContour();
+			if (isActive)
+			{
+				infoPanel.ClearEntry("SC");
+			}
+		}
+	}
 
 	private void SetColorsToSnapshot(GridMapLayer mapLayer, Toggle toggle, Button deleteButton)
 	{
@@ -714,5 +830,80 @@ public class ContoursTool : Tool
 	{
 		if (deleteToggle.isOn)
 			deleteToggle.isOn = false;
+	}
+
+	private void UpdateLayersOpacity()
+	{
+		if (showContoursToggle.isOn)
+			dataLayers.AutoReduceToolOpacity();
+	}
+
+	private int nextUpdateFrame = 0;
+	private Coroutine contoursInfoCoroutine = null;
+	private bool needsUpdate = false;
+
+	private void UpdateContoursInfo()
+	{
+		if (contoursInfoCoroutine == null)
+		{
+			if (Time.frameCount >= nextUpdateFrame)
+			{
+				_UpdateContoursInfo();
+			}
+			else
+			{
+				contoursInfoCoroutine = StartCoroutine(ContoursInfoDeferredUpdate());
+			}
+		}
+		else
+		{
+			needsUpdate = true;
+		}
+	}
+
+	private IEnumerator ContoursInfoDeferredUpdate()
+	{
+		do
+		{
+			nextUpdateFrame = Time.frameCount + 10;
+			do yield return null; while (Time.frameCount < nextUpdateFrame);
+			_UpdateContoursInfo();
+		}
+		while (needsUpdate);
+
+		contoursInfoCoroutine = null;
+	}
+
+	private void _UpdateContoursInfo()
+	{
+		// Contours can change while the tool is not active (e.g. by changing a data layer's filter)
+		// Check if tool is still active (could have been deactivated while creating analysis)
+		if (isActive && allowInfoUpdate)
+		{
+			if (showContoursToggle.isOn && (contoursLayer.grids.Count > 0 || lockedContours != null))
+			{
+				// Avoid doing multiple updates per frame
+				nextUpdateFrame = Time.frameCount + 1;
+
+				contoursLayer.FetchGridValues();
+				var sqm = ContourUtils.GetContoursSquareMeters(contoursLayer.Grid);
+
+				// Show the stats FIRST to ensure proper UI colors
+				infoPanel.ShowStats(true);
+				infoPanel.UpdateEntry("CC", sqm);
+			}
+			else if (grids.Count > 0)
+			{
+				// Show the stats FIRST to ensure proper UI colors
+				infoPanel.ShowStats(true);
+				infoPanel.ClearEntry("CC");
+			}
+			else
+			{
+				// Show the stats LAST to ensure proper UI colors
+				infoPanel.ClearEntry("CC");
+				infoPanel.ShowStats(false);
+			}
+		}
 	}
 }

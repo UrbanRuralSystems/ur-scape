@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -6,27 +6,7 @@
 //
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 
-public class Metadata
-{
-    public string name = string.Empty;
-    public string date = string.Empty;
-    public string source = string.Empty;
-    public string accuracy = string.Empty;
-    public float? mean;
-    public float? stdDeviation;
-
-    public Metadata() { }
-
-    public Metadata(Metadata other)
-    {
-        name = other.name;
-        date = other.date;
-        source = other.source;
-        accuracy = other.accuracy;
-        mean = other.mean;
-        stdDeviation = other.stdDeviation;
-    }
-}
+using System.Collections.Generic;
 
 public abstract class PatchData
 {
@@ -39,15 +19,7 @@ public abstract class PatchData
     public double south;
 
 	// Optional
-    public string units = "";
-    public Metadata metadata;
-	public Category[] categories;
-
-	public uint categoryMask = 0xFFFFFFFF;
-    public bool IsCategorized
-    {
-        get { return categories != null && categories.Length > 0; }
-    }
+    public List<MetadataPair> metadata;
 
     public delegate void BoundsChangeDelegate(PatchData patchData);
     public event BoundsChangeDelegate OnBoundsChange;
@@ -59,7 +31,6 @@ public abstract class PatchData
         east = other.east;
         north = other.north;
         south = other.south;
-		units = other.units;
 
 		if (other.metadata == null)
         {
@@ -67,17 +38,11 @@ public abstract class PatchData
         }
         else
         {
-            metadata = new Metadata(other.metadata);
-        }
-
-        categoryMask = other.categoryMask;
-        if (other.categories != null)
-        {
-            categories = (Category[])other.categories.Clone();
+            metadata = new List<MetadataPair>(other.metadata);
         }
     }
 
-    public void ChangeBounds(double w, double e, double n, double s)
+	public void ChangeBounds(double w, double e, double n, double s)
     {
         west = w;
         east = e;
@@ -105,4 +70,11 @@ public abstract class PatchData
 
 	public abstract bool IsLoaded();
 	public abstract void UnloadData();
+
+	public void AddMetadata(string key, string value)
+	{
+		if (metadata == null)
+			metadata = new List<MetadataPair>();
+		metadata.Add(key, value);
+	}
 }

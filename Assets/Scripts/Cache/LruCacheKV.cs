@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -6,12 +6,42 @@
 //
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 
+#if UNITY_EDITOR
+#define SAFETY_CHECK
+#endif
+
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class LruCacheKV<K, V>
+public class LruCacheKV<K, V> : IEnumerable
 {
-    private class Node<TK, TV>
+	public class LruCacheEnumerator<TK, TV> : IEnumerator
+	{
+		private readonly int count;
+		private int index;
+		private Node<TK, TV> current;
+
+		public LruCacheEnumerator(Node<TK, TV> first, int count)
+		{
+			this.count = count;
+			index = -1;
+			current = first.Previous;
+		}
+
+		public bool MoveNext()
+		{
+			current = current.Next;
+			return ++index < count;
+		}
+
+		public void Reset() { index = -1; }
+		object IEnumerator.Current { get { return current.Value; } }
+		public TV Current { get { return current.Value; } }
+	}
+
+	public class Node<TK, TV>
     {
         public TK Key;
         public TV Value;
@@ -32,23 +62,27 @@ public class LruCacheKV<K, V>
 
     public LruCacheKV(int capacity)
     {
-        this.capacity = capacity;
-        map = (capacity > 0) ?
-            new Dictionary<K, Node<K, V>>(capacity) :
-            new Dictionary<K, Node<K, V>>();
+		this.capacity = Math.Max(1, capacity);
+        map = new Dictionary<K, Node<K, V>>(this.capacity);
     }
 
-    /// <summary>
-    /// If the LRU already has that key, it returns the previous value.
-    /// If the LRU is already full, it returns the oldest value.
-    /// It returns null otherwise.
-    /// </summary>
-    public V Add(K key, V value)
+	public IEnumerator GetEnumerator()
+	{
+		return head == null ? EmptyEnumerator.Instance : new LruCacheEnumerator<K, V>(head, map.Count);
+	}
+
+
+	/// <summary>
+	/// If the LRU already has that key, it returns the previous value.
+	/// If the LRU is already full, it returns the oldest value.
+	/// It returns null otherwise.
+	/// </summary>
+	public V Add(K key, V value)
     {
-        V oldValue = default(V);
-        if (map.ContainsKey(key))
+        V oldValue = default;
+
+        if (map.TryGetValue(key, out Node<K, V> node))
         {
-            Node<K, V> node = map[key];
             oldValue = node.Value;
 
             node.Value = value;
@@ -84,7 +118,10 @@ public class LruCacheKV<K, V>
             map.Add(key, head);
         }
 
-        return oldValue;
+#if SAFETY_CHECK
+		CheckIntegrity();
+#endif
+		return oldValue;
     }
 
     public bool Has(K key)
@@ -92,32 +129,51 @@ public class LruCacheKV<K, V>
         return map.ContainsKey(key);
     }
 
-    public V this[K key]
+	public void Bump(K key)
+	{
+		List_MoveToHead(map[key]);
+
+#if SAFETY_CHECK
+		CheckIntegrity();
+#endif
+	}
+
+	public V this[K key]
     {
         get
         {
             Node<K, V> node = map[key];
             List_MoveToHead(node);
-            return node.Value;
+
+#if SAFETY_CHECK
+		CheckIntegrity();
+#endif
+			return node.Value;
         }
     }
 
     public bool TryGet(K key, out V value)
     {
-        Node<K, V> node;
-        if (map.TryGetValue(key, out node))
-        {
-            List_MoveToHead(node);
-            value = node.Value;
-            return true;
-        }
+		if (map.TryGetValue(key, out Node<K, V> node))
+		{
+			List_MoveToHead(node);
+			value = node.Value;
 
-        value = default(V);
+#if SAFETY_CHECK
+		CheckIntegrity();
+#endif
+			return true;
+		}
+
+		value = default;
         return false;
     }
 
     public void Clear()
     {
+		if (head == null)
+			return;
+
         Node<K, V> node = head;
         Node<K, V> next;
         do
@@ -129,14 +185,24 @@ public class LruCacheKV<K, V>
 
         head = null;
         tail = null;
-    }
 
-    public V RemoveLast()
+		map.Clear();
+
+#if SAFETY_CHECK
+		CheckIntegrity();
+#endif
+	}
+
+	public V RemoveLast()
     {
         var value = tail.Value;
         map.Remove(tail.Key);
         List_Remove(tail);
-        return value;
+
+#if SAFETY_CHECK
+		CheckIntegrity();
+#endif
+		return value;
     }
 
     public V Remove(K key)
@@ -145,20 +211,27 @@ public class LruCacheKV<K, V>
         V value = node.Value;
         map.Remove(key);
         List_Remove(node);
-        return value;
+
+#if SAFETY_CHECK
+		CheckIntegrity();
+#endif
+		return value;
     }
 
     public bool TryRemove(K key, out V value)
     {
-        Node<K, V> node;
-        if (map.TryGetValue(key, out node))
-        {
-            value = node.Value;
-            map.Remove(key);
-            List_Remove(node);
-            return true;
-        }
-        value = default(V);
+		if (map.TryGetValue(key, out Node<K, V> node))
+		{
+			value = node.Value;
+			map.Remove(key);
+			List_Remove(node);
+
+#if SAFETY_CHECK
+		CheckIntegrity();
+#endif
+			return true;
+		}
+		value = default;
         return false;
     }
 
@@ -178,8 +251,6 @@ public class LruCacheKV<K, V>
             head = node;
             head.Previous = tail;
             tail.Next = head;
-
-            // CheckIntegrity();
         }
     }
 
@@ -200,8 +271,6 @@ public class LruCacheKV<K, V>
             head.Previous = tail;
             tail.Next = head;
         }
-
-        // CheckIntegrity();
     }
 
     private void List_Remove(Node<K, V> node)
@@ -223,14 +292,15 @@ public class LruCacheKV<K, V>
         }
         node.Previous = null;
         node.Next = null;
-
-        // CheckIntegrity();
     }
 
     private void CheckIntegrity()
     {
-        if (head == null || tail == null || head.Previous != tail || tail.Next != head)
-        {
+		if (head == null && tail == null && map.Count == 0)
+			return;
+
+		if (head.Previous != tail || tail.Next != head)
+		{
             Debug.LogError("LRU is broken!");
             return;
         }
@@ -248,7 +318,7 @@ public class LruCacheKV<K, V>
             }
             node = next;
             counter++;
-        } while (node != head && counter < capacity);
+        } while (node != head && counter <= capacity);
 
         if (counter != map.Count)
         {
@@ -256,7 +326,7 @@ public class LruCacheKV<K, V>
             return;
         }
 
-        if (counter >= capacity)
+        if (counter > capacity)
         {
             Debug.LogError("LRU is broken!");
             return;
@@ -274,7 +344,7 @@ public class LruCacheKV<K, V>
             }
             node = next;
             counter++;
-        } while (node != tail && counter < capacity);
+        } while (node != tail && counter <= capacity);
 
         if (counter != map.Count)
         {
@@ -282,7 +352,7 @@ public class LruCacheKV<K, V>
             return;
         }
 
-        if (counter >= capacity)
+        if (counter > capacity)
         {
             Debug.LogError("LRU is broken!");
             return;

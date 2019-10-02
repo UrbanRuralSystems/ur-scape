@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -11,8 +11,7 @@ using UnityEngine.UI;
 
 public class ToggleButton : Toggle
 {
-	public Text label;
-	public Color textColor = Color.white;
+	public bool pressedHasHighlight = true;
 
 	private Color onColor;
     private Color offColor;
@@ -49,31 +48,8 @@ public class ToggleButton : Toggle
 
 
 	//
-	// Inheritance Methods
-	//
-
-	protected override void DoStateTransition(SelectionState state, bool instant)
-	{
-		base.DoStateTransition(state, instant);
-
-		if (label != null)
-		{
-			if (interactable)
-				label.color = isOn || state != SelectionState.Normal? textColor : textColor * 0.9f;
-			else
-				label.color = textColor * colors.disabledColor;
-		}
-	}
-
-
-	//
 	// Public Methods
 	//
-
-	public void SetText(string text)
-	{
-		transform.GetChild(0).GetComponent<Text>().text = text;
-	}
 
 	public void SetColor(Color newColor)
 	{
@@ -98,7 +74,9 @@ public class ToggleButton : Toggle
             case Transition.ColorTint:
                 var newColors = colors;
                 newColors.normalColor = value ? onColor : offColor;
-                newColors.highlightedColor = newColors.normalColor + hightlightOffset;
+				newColors.highlightedColor = newColors.normalColor;
+				if (!value || pressedHasHighlight)
+					newColors.highlightedColor += hightlightOffset;
                 newColors.pressedColor = newColors.highlightedColor;
                 colors = newColors;
                 break;

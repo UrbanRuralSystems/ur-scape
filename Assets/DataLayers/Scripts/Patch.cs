@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -15,7 +15,7 @@ using System.IO;
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
-using ExtensionMethods;
+using System;
 
 public enum PatchDataFormat
 {
@@ -23,58 +23,93 @@ public enum PatchDataFormat
     BIN
 }
 
+// Callback executed after a patch request has finished
+public delegate void PatchLoadRequestCallback(Patch patch, bool isInView);
+
 // Callback executed after a patch has been loaded
 public delegate void PatchLoadedCallback(Patch patch);
 
-// Callback executed after a patch has been created
-public delegate void PatchCreatedCallback(Patch patch);
-
 // Delegate for creating a Patch
-public delegate P CreatePatch<P, D>(DataLayer dataLayer, string site, int level, int year, D data, string filename) where P : Patch where D : PatchData;
+public delegate P CreatePatch<P, D>(DataLayer dataLayer, int level, int year, D data, string filename) where P : Patch where D : PatchData;
 
 public abstract class Patch
 {
     public const string CSV_EXTENSION = "csv";
     public const string BIN_EXTENSION = "bin";
 
-    public readonly DataLayer dataLayer;
-	public SiteRecord siteRecord;
-	public readonly string name;
-    public readonly int level;
-    public readonly int year;
-    private string filename;
-	public string Filename { get { return filename; } protected set { filename = value; } }
+    public int Level { get; }
+	public int Year { get; private set; }
+	public string Filename { get; private set; }
 
-	protected MapLayer mapLayer;
+	// Link to parent SiteRecord
+	public SiteRecord SiteRecord { get; private set; }
+	// Link to grand-grand-grand-parent DataLayer
+	public DataLayer DataLayer { get; }
 
     public abstract PatchData Data { get; }
 
+	protected MapLayer mapLayer;
 
-    public Patch(DataLayer dataLayer, string name, int level, int year, string filename)
+
+	public Patch(DataLayer dataLayer, int level, int year, string filename)
     {
-		this.dataLayer = dataLayer;
-		this.name = name;
-        this.level = level;
-        this.year = year;
-        this.filename = filename;
+		DataLayer = dataLayer;
+        Level = level;
+		Year = year;
+        Filename = filename;
     }
 
-    public void SetMapLayer(MapLayer mapLayer)
+	public void SetSiteRecord(SiteRecord siteRecord)
+	{
+		SiteRecord = siteRecord;
+	}
+
+	public void ChangeSiteName(string newSiteName, string siteDir)
+	{
+		UpdateFilenameSite(newSiteName, siteDir);
+	}
+
+	public void ChangeYear(int year)
+	{
+		Year = year;
+		UpdateFilenameYear(year);
+	}
+
+	public void RenameFile(string newFilename)
+	{
+#if !UNITY_WEBGL
+		IOUtils.SafeMove(Filename, newFilename);
+		if (Filename.EndsWith(BIN_EXTENSION))
+		{
+			var oldBinFile = Path.ChangeExtension(Filename, CSV_EXTENSION);
+			var newBinFile = Path.ChangeExtension(newFilename, CSV_EXTENSION);
+			IOUtils.SafeMove(oldBinFile, newBinFile);
+		}
+#endif
+		SetFilename(newFilename);
+	}
+
+	public string GetSiteName()
+	{
+		return SiteRecord.layerSite.Site.Name;
+	}
+
+	public virtual void SetMapLayer(MapLayer mapLayer)
     {
         this.mapLayer = mapLayer;
     }
 
-    public MapLayer GetMapLayer()
+	public virtual MapLayer GetMapLayer()
     {
         return mapLayer;
     }
 
-    public bool IsVisible()
+    public virtual bool IsVisible()
     {
         return mapLayer != null;
     }
 
-    public static IEnumerator Create<P, D>(DataLayer dataLayer, string file, CreatePatch<P, D> create, GetPatchLoader<P, D> getLoader, PatchCreatedCallback callback)
+    public static IEnumerator Create<P, D>(DataLayer dataLayer, string file, CreatePatch<P, D> create, GetPatchLoader<P, D> getLoader, Action<Patch, string> callback)
         where P : Patch
         where D: PatchData
     {
@@ -107,12 +142,10 @@ public abstract class Patch
 			yield break;
 		}
 
-		int level, patch, year;
-        string site, type, subtype;
-        SplitFileName(file, out level, out site, out patch, out type, out year, out subtype);
+        SplitFileName(file, out int level, out string site, out int patch, out int year, out int month, out int day, out string type);
 
         // Create the patch based on the file name
-        P newPatch = create(dataLayer, site, level, year, data, file);
+        P newPatch = create(dataLayer, level, year, data, file);
 
 #if !UNITY_WEBGL
         // Create binary file if data was loaded from different format
@@ -123,7 +156,7 @@ public abstract class Patch
 		}
 #endif
 
-		callback(newPatch);
+		callback(newPatch, site);
 
 #if !UNITY_WEBGL
 		// Take a break (wait for next frame) since loading CSVs is quite slow
@@ -136,24 +169,80 @@ public abstract class Patch
     public abstract void UnloadData();
     public abstract void Save(string filename, PatchDataFormat format = PatchDataFormat.BIN);
 
+	protected void SetFilename(string filename)
+	{
+		Filename = filename;
+	}
+
+	private void UpdateFilenameSite(string newSiteName, string siteDir)
+	{
+		if (Filename == null)
+			return;
+
+		var fi = new FileInfo(Filename);
+
+		string layerName = SplitFileName(fi.Name, out int level, out string siteName, out int patch, out int year, out int month, out int day, out string type);
+		string newFilename = GetFileName(layerName, level, newSiteName, patch, year, month, day, type);
+
+		RenameFile(Path.Combine(siteDir, newFilename + fi.Extension));
+	}
+
+	private void UpdateFilenameYear(int newYear)
+	{
+		if (Filename == null)
+			return;
+
+		var fi = new FileInfo(Filename);
+
+		string layerName = SplitFileName(fi.Name, out int level, out string siteName, out int patch, out int year, out int month, out int day, out string type);
+		string newFilename = GetFileName(layerName, level, siteName, patch, newYear, month, day, type);
+
+		RenameFile(Path.Combine(fi.DirectoryName, newFilename + fi.Extension));
+	}
+
 
 	//
 	// Static helpers
 	//
 
-	public static string SplitFileName(string file, out int level, out string site, out int patch, out string type, out int year, out string subtype)
+	public static string GetFileName(string layer, int level, string site, int patch, int year, string type)
+	{
+		return GetFileName(layer, level, site, patch, year, 0, 0, type);
+	}
+
+	public static string GetFileName(string layer, int level, string site, int patch, int year, int month, string type)
+	{
+		return GetFileName(layer, level, site, patch, year, month, 0, type);
+	}
+
+	public static string GetFileName(string layer, int level, string site, int patch, int year, int month, int day, string type)
+	{
+		string date = year.ToString("D4");
+		if (month > 0)
+		{
+			date += month.ToString("D2");
+			if (day > 0)
+				date += day.ToString("D2");
+		}
+		return layer + "_" + (char)('A' + level) + "_" + site + "@" + patch + "_" + date + "_" + type;
+	}
+
+	public static string SplitFileName(string file, out int level, out string site, out int patch, out int year, out int month, out int day, out string type)
     {
         string[] parts = Path.GetFileNameWithoutExtension(file).Split('_');
+
+		year = 0;
+		month = 0;
+		day = 0;
+
 #if SAFETY_CHECK
-        if (parts.Length < 5)
+		if (parts.Length < 5)
         {
             Debug.LogError("Found file with wrong name: " + file);
             level = -1;
             site = "";
             patch = 0;
-            year = 0;
-            type = "";
-            subtype = "";
+			type = "";
             return null;
         }
 #endif
@@ -170,21 +259,40 @@ public abstract class Patch
             patch = 0;
         }
 
-        if (parts[3].Length == 2)
-        {
-            year = int.Parse(parts[3]);
-        }
-        else
-        {
-            string[] dateTemp = Split(parts[3], 2).ToArray();
-            year = int.Parse(dateTemp[0]);
-            //int month = int.Parse(dateTemp[1]);
-            //date = new DateTime(year > 50 ? 1900 + year : 2000 + year, month, 1);
-        }
-        year = year > 50 ? 1900 + year : 2000 + year;
+		try
+		{
+			var dateLength = parts[3].Length;
+			if (dateLength == 2)
+			{
+				year = int.Parse(parts[3]);
+				year = year > 50 ? 1900 + year : 2000 + year;
+			}
+			else if (dateLength == 4)
+			{
+				year = int.Parse(parts[3]);
+			}
+			else if (dateLength == 6)
+			{
+				year = int.Parse(parts[3].Substring(0, 4));
+				month = int.Parse(parts[3].Substring(4, 2));
+			}
+			else if (dateLength == 8)
+			{
+				year = int.Parse(parts[3].Substring(0, 4));
+				month = int.Parse(parts[3].Substring(4, 2));
+				day = int.Parse(parts[3].Substring(6, 2));
+			}
+			else
+			{
+				Debug.LogError("Invalid year found in filename: " + file);
+			}
+		}
+		catch (Exception)
+		{
+			Debug.LogError("Invalid year found in filename: " + file);
+		}
 
-        type = parts[4];
-        subtype = (parts.Length == 6) ? parts[5] : null;
+		type = parts[4];
 
         return parts[0];
     }
@@ -202,7 +310,42 @@ public abstract class Patch
         return parts[4];
     }
 
-    static IEnumerable<string> Split(string str, int chunkSize)
+	public static string GetFileNameLayer(string file)
+	{
+		string[] parts = Path.GetFileNameWithoutExtension(file).Split('_');
+
+#if SAFETY_CHECK
+		if (parts.Length < 5)
+		{
+			Debug.LogError("Found file with wrong name: " + file);
+			return null;
+		}
+#endif
+
+		return parts[0];
+	}
+
+	public static string GetFileNameSite(string file)
+	{
+		string[] parts = Path.GetFileNameWithoutExtension(file).Split('_');
+
+#if SAFETY_CHECK
+		if (parts.Length < 5)
+		{
+			Debug.LogError("Found file with wrong name: " + file);
+			return null;
+		}
+#endif
+
+		var site = parts[2];
+		int index = site.IndexOf('@');
+		if (index > 0)
+			site = site.Substring(0, index);
+
+		return site;
+	}
+
+	static IEnumerable<string> Split(string str, int chunkSize)
     {
         return System.Linq.Enumerable.Range(0, str.Length / chunkSize)
             .Select(i => str.Substring(i * chunkSize, chunkSize));

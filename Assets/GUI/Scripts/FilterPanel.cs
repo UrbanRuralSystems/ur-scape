@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -35,9 +35,13 @@ public class FilterPanel : LayerOptionsPanel
     private float siteMinValue;
     private float siteMaxValue;
 	private float siteMean;
-	private float minFilter;
+    private float siteMaxPercent;
+    private float siteMinPercent;
+	private float siteMeanPercent;
+    private float minFilter;
     private float maxFilter;
     private bool avoidSliderUpdate = false;
+    private static bool filterValsInPercent = false;
 
 	private float nextDoubleClickTime;
 
@@ -68,7 +72,7 @@ public class FilterPanel : LayerOptionsPanel
         chartValues = new float[chartSize];
         maxChartValue = 0;
 
-        chart.Init(dataLayer.color);
+        chart.Init(dataLayer.Color);
 
 		if (IsActive)
 		{
@@ -82,11 +86,11 @@ public class FilterPanel : LayerOptionsPanel
 		{
 			minSlider.value = GetLinearValue(dataLayer.MinFilter);
 			maxSlider.value = GetLinearValue(dataLayer.MaxFilter);
-		}
+        }
 
-		base.Show(show);
+        base.Show(show);
 
-		if (IsActive)
+        if (IsActive)
 		{
 			ResetUI();
         }
@@ -156,7 +160,7 @@ public class FilterPanel : LayerOptionsPanel
 
 		if (visible)
         {
-			bool changedLevel = patch.level != currentLevel;
+			bool changedLevel = patch.Level != currentLevel;
 
 			ResetUI(patch);
 
@@ -213,7 +217,10 @@ public class FilterPanel : LayerOptionsPanel
 
 		normalizedMin = GetNonlinearValue(normalizedMin);
 
-        minFilter = Mathf.Lerp(siteMinValue, siteMaxValue, normalizedMin);
+        float minVal = (filterValsInPercent) ? siteMinPercent : siteMinValue;
+        float maxVal = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
+
+        minFilter = Mathf.Lerp(minVal, maxVal, normalizedMin);
 
         SetMinMaxFilters(normalizedMin, GetNonlinearValue(maxSlider.value));
 
@@ -235,7 +242,10 @@ public class FilterPanel : LayerOptionsPanel
 
 		normalizedMax = GetNonlinearValue(normalizedMax);
 
-        maxFilter = Mathf.Lerp(siteMinValue, siteMaxValue, normalizedMax);
+        float minVal = (filterValsInPercent) ? siteMinPercent : siteMinValue;
+        float maxVal = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
+
+        maxFilter = Mathf.Lerp(minVal, maxVal, normalizedMax);
 
         SetMinMaxFilters(GetNonlinearValue(minSlider.value), normalizedMax);
 
@@ -247,14 +257,16 @@ public class FilterPanel : LayerOptionsPanel
 	private void OnInputMinChanged(string minString)
     {
         float min = float.Parse(minString);
+        float minVal = (filterValsInPercent) ? siteMinPercent : siteMinValue;
+        float maxVal = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
 
-        minFilter = Mathf.Clamp(min, siteMinValue, maxFilter);
+        minFilter = Mathf.Clamp(min, minVal, maxFilter);
         if (minFilter != min)
         {
 			UpdateInputField(inputMin, minFilter);
         }
 
-        float normalizedMin = Mathf.InverseLerp(siteMinValue, siteMaxValue, minFilter);
+        float normalizedMin = Mathf.InverseLerp(minVal, maxVal, minFilter);
 
         SetMinMaxFilters(normalizedMin, GetNonlinearValue(maxSlider.value));
 
@@ -267,15 +279,17 @@ public class FilterPanel : LayerOptionsPanel
     private void OnInputMaxChanged(string maxString)
     {
         float max = float.Parse(maxString);
+        float minVal = (filterValsInPercent) ? siteMinPercent : siteMinValue;
+        float maxVal = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
 
-        maxFilter = Mathf.Clamp(max, minFilter, siteMaxValue);
+        maxFilter = Mathf.Clamp(max, minFilter, maxVal);
 
         if (maxFilter != max)
         {
 			UpdateInputField(inputMax, maxFilter);
         }
 
-        float normalizedMax = Mathf.InverseLerp(siteMinValue, siteMaxValue, maxFilter);
+        float normalizedMax = Mathf.InverseLerp(minVal, maxVal, maxFilter);
 
         SetMinMaxFilters(GetNonlinearValue(minSlider.value), normalizedMax);
 
@@ -285,19 +299,54 @@ public class FilterPanel : LayerOptionsPanel
         avoidSliderUpdate = false;
     }
 
+    private void UpdateValueType()
+    {
+        float min = (filterValsInPercent) ? (minFilter / siteMaxValue * 100.0f) : (minFilter * siteMaxValue / 100.0f);
+        float max = (filterValsInPercent) ? (maxFilter / siteMaxValue * 100.0f) : (maxFilter * siteMaxValue / 100.0f);
+
+        minFilter = min;
+        maxFilter = max;
+
+        UpdateInputField(inputMin, min);
+        UpdateInputField(inputMax, max);
+    }
+
     //
     // Public Methods
     //
+
+    public void RefreshValueType(bool percent)
+    {
+        filterValsInPercent = percent;
+
+        UpdateValueType();
+
+        // Update the position of the sliders
+        avoidSliderUpdate = true;
+
+        float minVal = (filterValsInPercent) ? siteMinPercent : siteMinValue;
+        float maxVal = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
+
+        float normalizedMin = Mathf.InverseLerp(minVal, maxVal, minFilter);
+        minSlider.value = GetLinearValue(normalizedMin);
+
+        float normalizedMax = Mathf.InverseLerp(minVal, maxVal, maxFilter);
+        maxSlider.value = GetLinearValue(normalizedMax);
+        avoidSliderUpdate = false;
+    }
 
     public void RefreshDistributionChart()
     {
 		UpdateDistributionPower();
 
-		// Update the position of the sliders
-		avoidSliderUpdate = true;
-        float normalizedMin = Mathf.InverseLerp(siteMinValue, siteMaxValue, minFilter);
+        float minVal = (filterValsInPercent) ? siteMinPercent : siteMinValue;
+        float maxVal = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
+
+        // Update the position of the sliders
+        avoidSliderUpdate = true;
+        float normalizedMin = Mathf.InverseLerp(minVal, maxVal, minFilter);
         minSlider.value = GetLinearValue(normalizedMin);
-        float normalizedMax = Mathf.InverseLerp(siteMinValue, siteMaxValue, maxFilter);
+        float normalizedMax = Mathf.InverseLerp(minVal, maxVal, maxFilter);
         maxSlider.value = GetLinearValue(normalizedMax);
 		avoidSliderUpdate = false;
 	}
@@ -325,11 +374,11 @@ public class FilterPanel : LayerOptionsPanel
 
 	private void ResetUI(Patch patch)
 	{
-		currentLevel = patch.level;
+		currentLevel = patch.Level;
 
-		unitsLabel.text = patch.Data.units;
+		unitsLabel.text = (patch.Data as GridData).units;
 
-        UpdateValueRange(patch);
+		UpdateValueRange(patch);
 		UpdateFilters();
 		UpdateChart();
     }
@@ -346,33 +395,41 @@ public class FilterPanel : LayerOptionsPanel
 
 	private void UpdateValueRange(Patch patch)
     {
-		var layerSite = patch.siteRecord.layerSite;
+		var layerSite = patch.SiteRecord.layerSite;
 		siteMinValue = layerSite.minValue;
 		siteMaxValue = layerSite.maxValue;
 		siteMean = layerSite.mean;
-	}
+
+        siteMaxPercent = 100.0f;
+        siteMinPercent = siteMinValue / siteMaxValue * 100.0f;
+        siteMeanPercent = siteMean / siteMaxValue * 100.0f;
+    }
 
 	private void UpdateInputField(InputField input, float value)
 	{
-		float range = siteMaxValue - siteMinValue;
-		float epsilon = range * 0.001f;
+        float range = (filterValsInPercent) ? (siteMaxPercent - siteMinPercent) :
+                                              (siteMaxValue - siteMinValue);
+        float epsilon = range * 0.001f;
 
-		if (value + range <= siteMinValue)
-			input.text = siteMinValue.ToString("0.##");
-		else if (value - epsilon >= siteMaxValue)
-			input.text = siteMaxValue.ToString("0.##");
-		else
-		{
-			int iValue = Mathf.FloorToInt(value);
-			if (iValue == value || range > 10f)
-				input.text = iValue.ToString();
-			else if (range > 1f)
-				input.text = value.ToString("0.0");
-			else if (range > 0.1f)
-				input.text = value.ToString("0.00");
-			else
-				input.text = value.ToString("0.000");
-		}
+        float siteMin = (filterValsInPercent) ? siteMinPercent : siteMinValue;
+        float siteMax = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
+
+        if (value + range <= siteMin)
+            input.text = siteMin.ToString("0.##");
+        else if (value - epsilon >= siteMax)
+            input.text = siteMax.ToString("0.##");
+        else
+        {
+            int iValue = Mathf.FloorToInt(value);
+            if (iValue == value || range > 10f)
+                input.text = iValue.ToString();
+            else if (range > 1f)
+                input.text = value.ToString("0.0");
+            else if (range > 0.1f)
+                input.text = value.ToString("0.00");
+            else
+                input.text = value.ToString("0.000");
+        }
 	}
 
 	private void UpdateFilters()
@@ -382,8 +439,11 @@ public class FilterPanel : LayerOptionsPanel
 		float normalizedMin = GetNonlinearValue(minSlider.value);
 		float normalizedMax = GetNonlinearValue(maxSlider.value);
 
-		minFilter = Mathf.Lerp(siteMinValue, siteMaxValue, normalizedMin);
-        maxFilter = Mathf.Lerp(siteMinValue, siteMaxValue, normalizedMax);
+        float minVal = (filterValsInPercent) ? siteMinPercent : siteMinValue;
+        float maxVal = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
+
+        minFilter = Mathf.Lerp(minVal, maxVal, normalizedMin);
+        maxFilter = Mathf.Lerp(minVal, maxVal, normalizedMax);
         UpdateInputField(inputMin, minFilter);
 		UpdateInputField(inputMax, maxFilter);
 
@@ -455,10 +515,12 @@ public class FilterPanel : LayerOptionsPanel
         float maxValue = float.MinValue;
 		float minRange;
 		float maxRange;
+        float minVal = (filterValsInPercent) ? siteMinPercent : siteMinValue;
+        float maxVal = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
 
-		for (int i = 0; i < dataLayer.loadedPatchesInView.Count; i++)
+        for (int i = 0; i < dataLayer.loadedPatchesInView.Count; i++)
         {
-            GridedPatch patch = dataLayer.loadedPatchesInView[i] as GridedPatch;
+            GridPatch patch = dataLayer.loadedPatchesInView[i] as GridPatch;
             if (patch == null)
                 continue;
 
@@ -468,8 +530,8 @@ public class FilterPanel : LayerOptionsPanel
 			{
 				minValue = Mathf.Min(minValue, grid.minValue);
 				maxValue = Mathf.Max(maxValue, grid.maxValue);
-				minRange = Mathf.InverseLerp(siteMinValue, siteMaxValue, grid.minValue);
-				maxRange = Mathf.InverseLerp(siteMinValue, siteMaxValue, grid.maxValue);
+                minRange = Mathf.InverseLerp(minVal, maxVal, grid.minValue);
+				maxRange = Mathf.InverseLerp(minVal, maxVal, grid.maxValue);
 			}
 			else
 			{
@@ -526,8 +588,8 @@ public class FilterPanel : LayerOptionsPanel
             }
         }
 
-		chart.SetMinRange(Mathf.InverseLerp(siteMinValue, siteMaxValue, minValue));
-		chart.SetMaxRange(Mathf.InverseLerp(siteMinValue, siteMaxValue, maxValue));
+        chart.SetMinRange(Mathf.InverseLerp(minVal, maxVal, minValue));
+		chart.SetMaxRange(Mathf.InverseLerp(minVal, maxVal, maxValue));
 		chart.SetData(chartValues, maxChartValue);
 	}
 

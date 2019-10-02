@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -6,7 +6,7 @@
 //
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 
-using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PatchBoundaryLayerController : MapLayerControllerT<PatchMapLayer>
@@ -14,24 +14,36 @@ public class PatchBoundaryLayerController : MapLayerControllerT<PatchMapLayer>
 	[Header("Prefabs")]
     public PatchMapLayer layerPrefab;
 
-	private int boundariesLevel;
+	[Header("Settings")]
+	public bool allowMultiple = false;
+
+	private DataLayer highlightedLayer;
+
+	private bool showBoundaries = false;
+	public bool IsShowingBoundaries { get { return showBoundaries; } }
+
+	private readonly Dictionary<DataLayer, int> layerPatchCount = new Dictionary<DataLayer, int>();
 
 
 	//
 	// Unity Methods
 	//
 
-	private IEnumerator Start()
+	private void Start()
 	{
-		yield return WaitFor.Frames(WaitFor.InitialFrames);
+		ComponentManager.Instance.OnRegistrationFinished += OnRegistrationFinished;
+	}
 
-		map = ComponentManager.Instance.Get<MapController>();
-		map.OnLevelChange += OnMapLevelChange;
 
-		var dataLayers = ComponentManager.Instance.Get<DataLayers>();
-		dataLayers.OnLayerVisibilityChange += OnLayerVisibilityChange;
+	//
+	// Inheritance Methods
+	//
 
-		boundariesLevel = map.CurrentLevel + 1;
+	public override void UpdateLayers()
+	{
+		base.UpdateLayers();
+
+		UpdateMapLayerZ();
 	}
 
 
@@ -39,22 +51,55 @@ public class PatchBoundaryLayerController : MapLayerControllerT<PatchMapLayer>
 	// Event Methods
 	//
 
-	private void OnMapLevelChange(int level)
+	private void OnRegistrationFinished()
 	{
-		RemoveAllBoundaries();
-		boundariesLevel = level + 1;
-		CreateBoundaries(boundariesLevel);
+		var dataLayers = ComponentManager.Instance.Get<DataLayers>();
+		dataLayers.OnLayerVisibilityChange += OnLayerVisibilityChange;
 	}
 
 	private void OnLayerVisibilityChange(DataLayer dataLayer, bool visible)
 	{
 		if (visible)
 		{
-			CreateBoundaries(dataLayer, boundariesLevel);
+			dataLayer.OnPatchVisibilityChange += OnPatchVisibilityChange;
 		}
 		else
 		{
-			RemoveBoundaries(dataLayer, boundariesLevel);
+			dataLayer.OnPatchVisibilityChange -= OnPatchVisibilityChange;
+		}
+	}
+
+	private void OnPatchVisibilityChange(DataLayer dataLayer, Patch patch, bool visible)
+	{
+		if (visible)
+		{
+			int count;
+			if (layerPatchCount.TryGetValue(dataLayer, out count))
+				layerPatchCount[dataLayer] = ++count;
+			else
+				layerPatchCount.Add(dataLayer, ++count);
+
+			if (allowMultiple || count == 1)
+			{
+				// Only add the first patch if multiple patches are not allowed
+				Add(patch.Data, dataLayer.Color);
+				UpdateMapLayerZ();
+			}
+			else if (count == 2)
+			{
+				// Remove all patches from this layer if multiple patches are not allowed
+				RemovePatchesForLayer(dataLayer);
+			}
+		}
+		else
+		{
+			int count = layerPatchCount[dataLayer];
+			if (count == 1)
+				layerPatchCount.Remove(dataLayer);
+			else
+				layerPatchCount[dataLayer] = count - 1;
+
+			Remove(patch.Data);
 		}
 	}
 
@@ -63,25 +108,76 @@ public class PatchBoundaryLayerController : MapLayerControllerT<PatchMapLayer>
 	// Public Methods
 	//
 
-	public PatchMapLayer Add(PatchData patch, Color color)
-    {
-        PatchMapLayer layer = Instantiate(layerPrefab);
-		Add(layer, patch, color);
-		return layer;
-    }
-
-	public void Add(PatchMapLayer layer, PatchData patch, Color color)
+	public void ShowBoundaries(bool show)
 	{
+		showBoundaries = show;
+		foreach (var layer in mapLayers)
+		{
+			layer.Show(show);
+		}
+	}
+
+	public void HighlightBoundary(DataLayer layer, bool show)
+	{
+		int count = mapLayers.Count;
+		int last = count - 1;
+		for (int i = 0; i < count; i++)
+		{
+			var mapLayer = mapLayers[i];
+			if (mapLayer.PatchData.patch.DataLayer == layer)
+			{
+				if (show)
+				{
+					if (!mapLayer.IsVisible())
+						mapLayer.Show(true);
+
+					if (i < last)
+					{
+						mapLayers[i] = mapLayers[last];
+						mapLayers[last] = mapLayer;
+						last--;
+						count--;
+						i--;
+					}
+				}
+				else
+				{
+					if (!showBoundaries && mapLayer.IsVisible())
+						mapLayer.Show(false);
+				}
+			}
+		}
+
+		if (show)
+		{
+			UpdateMapLayerZ();
+		}
+
+		highlightedLayer = show ? layer : null;
+	}
+
+	//
+	// Private Methods
+	//
+
+	private PatchMapLayer Add(PatchData patch, Color color)
+    {
+		PatchMapLayer layer = Instantiate(layerPrefab);
 		layer.Init(map, patch);
 		layer.SetColor(color);
 		layer.transform.SetParent(transform, false);
+		if (!showBoundaries && patch.patch.DataLayer != highlightedLayer)
+			layer.Show(false);
+
 		mapLayers.Add(layer);
+
+		return layer;
 	}
 
-    public void Remove(PatchData siteData)
+	private void Remove(PatchData siteData)
     {
-        int count = mapLayers.Count;
-        for (int i = 0; i < count; i++)
+		int count = mapLayers.Count;
+        for (int i = 0; i < count; ++i)
         {
             if (mapLayers[i].PatchData == siteData)
             {
@@ -90,63 +186,40 @@ public class PatchBoundaryLayerController : MapLayerControllerT<PatchMapLayer>
                 break;
             }
         }
-    }
+	}
 
-    public void Clear()
+	private void RemovePatchesForLayer(DataLayer layer)
+	{
+		int last = mapLayers.Count - 1;
+		for (int i = last; i >= 0; --i)
+		{
+			if (mapLayers[i].PatchData.patch.DataLayer == layer)
+			{
+				Destroy(mapLayers[i].gameObject);
+				mapLayers[i] = mapLayers[last];
+				mapLayers.RemoveAt(last--);
+			}
+		}
+	}
+
+	private void Clear()
     {
         foreach (var layer in mapLayers)
         {
             Destroy(layer.gameObject);
         }
         mapLayers.Clear();
-    }
-
-
-	//
-	// Private Methods
-	//
-
-	private void CreateBoundaries(int level)
-	{
-		var dataLayers = ComponentManager.Instance.Get<DataLayers>();
-		foreach (var layerPanel in dataLayers.activeLayerPanels)
-		{
-			CreateBoundaries(layerPanel.DataLayer, level);
-		}
+		layerPatchCount.Clear();
 	}
 
-	private void RemoveAllBoundaries()
+	private void UpdateMapLayerZ()
 	{
-		Clear();
-	}
-
-	private void CreateBoundaries(DataLayer dataLayer, int level)
-	{
-		if (level < dataLayer.levels.Length)
+		int index = 0;
+		foreach (var layer in mapLayers)
 		{
-			var lowerSites = dataLayer.levels[level].layerSites;
-			foreach (var site in lowerSites)
-			{
-				foreach (var patch in site.lastRecord.patches)
-				{
-					Add(patch.Data, dataLayer.color);
-				}
-			}
-		}
-	}
-
-	private void RemoveBoundaries(DataLayer dataLayer, int level)
-	{
-		if (level < dataLayer.levels.Length)
-		{
-			var lowerSites = dataLayer.levels[level].layerSites;
-			foreach (var site in lowerSites)
-			{
-				foreach (var patch in site.lastRecord.patches)
-				{
-					Remove(patch.Data);
-				}
-			}
+			var pos = layer.transform.localPosition;
+			pos.z = -0.001f - 0.0001f * index++;
+			layer.transform.localPosition = pos;
 		}
 	}
 

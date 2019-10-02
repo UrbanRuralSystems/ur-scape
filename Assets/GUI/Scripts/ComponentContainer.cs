@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -36,12 +36,11 @@ public class ComponentContainer : MonoBehaviour
             }
         }
 
-        yield return WaitFor.Frames(WaitFor.InitialFrames);
-
-        var mapViewArea = ComponentManager.Instance.Get<MapViewArea>();
-
-        if (colapseTogglePrefab != null && mapViewArea != null)
+        if (colapseTogglePrefab != null)
         {
+            yield return WaitFor.Frames(WaitFor.InitialFrames);
+            var mapViewArea = ComponentManager.Instance.Get<MapViewArea>();
+
             var toggle = Instantiate(colapseTogglePrefab, mapViewArea.transform, false);
             toggle.name = colapseTogglePrefab.name;
             toggle.onValueChanged.AddListener((on) => gameObject.SetActive(on));

@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -10,7 +10,6 @@
 #define SAFETY_CHECK
 #endif
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -20,31 +19,25 @@ using UnityEngine.Events;
 #if UNITY_WEBGL
 using System.Runtime.InteropServices;
 #endif
-using ExtensionMethods;
 
 public class DataManager : UrsComponent
 {
+	[Header("Debug")]
+	public bool findUnusedLayers;
+	public bool findUnusedPatches;
+
 	// Component references
 	private DataLayers dataLayers;
     private MapController map;
-    private MessageController messageController;
+	private ModalDialogManager dialogManager;
+	private ProgressDialog progressDialog;
     private LoadingComponent loadingComponent;
 
-    private List<LayerGroup> groups = new List<LayerGroup>();
-    public List<LayerGroup> Groups { get { return groups; } }
-
-#if UNITY_WEBGL
-	private List<string> allPatchFiles = new List<string>();
-	public List<string> AllPatchFiles { get { return allPatchFiles; } }
-#else
-	public string[] DataDirs { get; private set; }
-#endif
-
+    public readonly List<LayerGroup> groups = new List<LayerGroup>();
 
 	public readonly List<Site> sites = new List<Site>();
-	private Dictionary<string, Site> nameToSite = new Dictionary<string, Site>();
+	private readonly Dictionary<string, Site> nameToSite = new Dictionary<string, Site>();
 
-	private Dictionary<string, DataLayer> layers = new Dictionary<string, DataLayer>();
     private List<GridMapLayer> visibleGrids = new List<GridMapLayer>();
     private Dictionary<Patch, PatchRequest> requestedPatches = new Dictionary<Patch, PatchRequest>();
 
@@ -55,6 +48,8 @@ public class DataManager : UrsComponent
 
 	public event UnityAction OnDataLoaded;
 
+	public Site ActiveSite { get; private set; }
+
 
 	//
 	// Unity Methods
@@ -62,14 +57,18 @@ public class DataManager : UrsComponent
 
 	private IEnumerator Start()
     {
-		messageController = FindObjectOfType<MessageController>();
-        if (messageController != null)
-        {
-            messageController.Show(true);
-            messageController.SetMessage("Loading ...");
-        }
+		dialogManager = FindObjectOfType<ModalDialogManager>();
 
-        yield return WaitFor.Frames(WaitFor.InitialFrames - 1);     // -1 to initialize before all other components
+		progressDialog = dialogManager.NewProgressDialog();
+		progressDialog.SetMessage(Translator.Get("Loading") + " ...");
+		progressDialog.SetProgress(0);
+
+#if UNITY_WEBGL
+		// Show welcome screen for online version
+		dialogManager.ShowWebWelcomeMessage();
+#endif
+
+		yield return WaitFor.Frames(WaitFor.InitialFrames - 1);     // -1 to initialize before all other components
 
         // Mandatory components
         var componentManager = ComponentManager.Instance;
@@ -77,10 +76,12 @@ public class DataManager : UrsComponent
         loadingComponent = componentManager.Get<LoadingComponent>();
         map = componentManager.Get<MapController>();
 
-        InitMapControllers();
+		dialogManager.UpdateUI();
 
-        // Load config (groups & layers)
-        StartCoroutine(Init());
+		InitMapControllers();
+
+		// Load config (groups & layers)
+		StartCoroutine(Init());
 	}
 
 
@@ -88,43 +89,225 @@ public class DataManager : UrsComponent
     // Public Methods
     //
 
-    public void EnableSiteFilters(bool enable)
+    public void ShowOnlyFilteredData(bool show)
     {
-        if (showFilteredDataOnly != enable)
+        if (showFilteredDataOnly != show)
         {
-            showFilteredDataOnly = enable;
+            showFilteredDataOnly = show;
 
             foreach (var g in visibleGrids)
             {
-                g.EnableFilters(enable);
+                g.EnableFilters(show);
             }
         }
     }
 
-	public bool HasSite(string siteName)
+	public void ChangeActiveSite(Site site)
 	{
-		return nameToSite.ContainsKey(siteName);
+		ActiveSite = site;
 	}
 
-	public Site GetSite(string siteName)
+	public bool HasSite(string siteName) => nameToSite.ContainsKey(siteName);
+	public Site GetSite(string siteName) => nameToSite[siteName];
+	public bool TryGetSite(string siteName, out Site site) => nameToSite.TryGetValue(siteName, out site);
+	public bool TryGetSiteIgnoreCase(string siteName, out Site site)
 	{
-		return nameToSite[siteName];
-	}
+		if (TryGetSite(siteName, out site))
+			return true;
 
-	public GridPatch CreateGridPatch(DataLayer layer, string name, int level, int year, GridData data)
-	{
-		var newPatch = layer.CreateGridPatch(name, level, year, data);
-
-		foreach (var layerSite in layer.levels[newPatch.level].layerSites)
+		foreach (var pair in nameToSite)
 		{
-			if (layerSite.name.Equals(newPatch.name))
+			if (pair.Key.EqualsIgnoreCase(siteName))
 			{
-				layerSite.site = nameToSite[layerSite.name];
-				break;
+				site = pair.Value;
+				return true;
 			}
 		}
-		return newPatch;
+		site = null;
+		return false;
 	}
+
+	public Site GetOrAddSite(string siteName)
+	{
+		if (!TryGetSite(siteName, out Site site))
+			site = AddSite(siteName);
+		return site;
+	}
+
+	public void RemoveSite(Site site)
+	{
+		nameToSite.Remove(site.Name);
+		sites.Remove(site);
+	}
+
+	public void RenameSite(Site site, string newSiteName)
+	{
+		if (nameToSite.ContainsKey(newSiteName))
+		{
+			Debug.LogError("Can't rename site " + site.Name + ". New site name already exists: " + newSiteName);
+			return;
+		}
+
+		nameToSite.Remove(site.Name);
+		nameToSite.Add(newSiteName, site);
+
+		site.ChangeName(newSiteName);
+	}
+
+	public void RemoveEmptySites()
+	{
+		for (int i = sites.Count - 1; i >= 0; --i)
+		{
+			if (sites[i].layers.Count == 0)
+			{
+				nameToSite.Remove(sites[i].Name);
+				sites.RemoveAt(i);
+			}
+		}
+	}
+
+	public LayerGroup AddLayerGroup(string groupName)
+	{
+		var group = new LayerGroup(groupName);
+		groups.Add(group);
+		return group;
+	}
+
+	public void RemoveLayerGroup(LayerGroup group)
+	{
+		group.layers.Clear();
+		groups.Remove(group);
+	}
+
+	public bool HasLayerGroup(string groupName)
+	{
+		return GetLayerGroup(groupName) != null;
+	}
+
+	public LayerGroup GetLayerGroup(string groupName)
+	{
+		return groups.Find((g) => g.name.EqualsIgnoreCase(groupName));
+	}
+
+	public int IndexOf(LayerGroup group)
+	{
+		return groups.IndexOf(group);
+	}
+
+#if !UNITY_WEBGL
+	public List<string> GetDataDirectories()
+	{
+		List<string> dataDirs = new List<string>();
+		int index = Paths.Sites.Length;
+		var dirs = Directory.GetDirectories(Paths.Sites);
+		foreach (var dir in dirs)
+		{
+			// Ignore site directories that start with an underscore
+			if (dir[index] != '_')
+				dataDirs.Add(dir);
+		}
+		return dataDirs;
+	}
+#endif
+
+	// Called from DataLayer. Don't call directly
+	public void ShowPatch(Patch patch)
+	{
+		if (patch.Data is GridData)
+		{
+			CreateGridMapLayer(patch.Data as GridData);
+		}
+		else if (patch.Data is MultiGridData)
+		{
+			CreateMultiGridMapLayer(patch.Data as MultiGridData);
+		}
+
+		RemoveFromCache(patch);
+	}
+
+	// Called from DataLayer. Don't call directly
+	public void HidePatch(Patch patch)
+	{
+		CancelRequest(patch);
+
+		// Add it to cache
+		if (patch.Data.IsLoaded())
+			AddToCache(patch);
+
+		// Remove map layer
+		if (patch is GridedPatch)
+		{
+			var gridMapLayer = patch.GetMapLayer() as GridMapLayer;
+			if (gridMapLayer != null)
+			{
+				gridLayers.Remove(gridMapLayer);
+				visibleGrids.Remove(gridMapLayer);
+			}
+			patch.SetMapLayer(null);
+		}
+		else if (patch is MultiGridPatch)
+		{
+			var multigrid = patch as MultiGridPatch;
+			var mapLayers = new List<GridMapLayer>(multigrid.GetMapLayers());
+			foreach (var mapLayer in mapLayers)
+			{
+				gridLayers.Remove(mapLayer);
+				visibleGrids.Remove(mapLayer);
+			}
+			multigrid.ClearMapLayers();
+		}
+	}
+
+	public bool IsRequesting(Patch patch)
+	{
+		return requestedPatches.ContainsKey(patch);
+	}
+
+	public void RequestPatch(Patch patch, PatchLoadRequestCallback callback)
+	{
+#if SAFETY_CHECK
+		if (requestedPatches.ContainsKey(patch))
+		{
+			Debug.LogWarning("This shouldn't happen: this patch is already being requested: " + patch.Filename);
+			return;
+		}
+#endif
+
+		var request = new PatchRequest(patch, (r) => RequestFinished(r, callback));
+		requestedPatches.Add(patch, request);
+
+		// Queue the patch request
+		map.patchRequestHandler.Add(request);
+
+		UpdatePatchLoadingMessage();
+		if (map.patchRequestHandler.TotalCount == 1)
+			loadingComponent.Show(true);
+	}
+
+	public void UpdateLayerConfig()
+	{
+#if !UNITY_WEBGL
+		LayerConfig.Save(groups);
+#endif
+	}
+
+	public void ReloadPatches(DataLayer layer, string siteName, int level, int year)
+	{
+		var site = GetSite(siteName);
+		layer.RemovePatches(site, level, year);
+		ClearPatchCache();
+
+		if (dataLayers.IsLayerActive(layer))
+		{
+			layer.UpdatePatches(ActiveSite, map.CurrentLevel, map.MapCoordBounds);
+		}
+	}
+
+	public void ClearPatchCache()
+	{
+		map.patchRequestHandler.cache.Clear();
+	}
+
 
 	//
 	// Private Methods
@@ -133,170 +316,176 @@ public class DataManager : UrsComponent
 	private IEnumerator Init()
     {
 		// Load groups
-		yield return LayerConfig.Load(Paths.Data + "layers.csv", (g) => groups = g);
+		yield return LayerConfig.Load((g) => groups.AddRange(g));
 
 		// Rebuild data layer GUI
 		yield return InitLayers();
-    }
+	}
 
-    private IEnumerator InitLayers()
+	private const float MaxProcessingTimePerFrame = 0.03f;
+	private IEnumerator InitLayers()
     {
         if (dataLayers == null)
         {
-            messageController.Show(false);
-            yield break;
+			CloseProgressDialog();
+			yield break;
         }
 
 #if !UNITY_WEBGL
 		if (!Directory.Exists(Paths.Sites))
 		{
 			Debug.LogError("Data path '" + Paths.Sites + "' doesn't exist");
-			messageController.Show(false);
+			CloseProgressDialog();
 			yield break;
 		}
 #endif
 
-		// Show Message
-		messageController.Show(true);
-        messageController.SetProgress(0);
 
 #if UNITY_WEBGL
-        messageController.SetMessage("Downloading database ...");
+		// Show progress message
+		progressDialog.SetMessage(Translator.Get("Downloading data") + "...");
+		progressDialog.SetProgress(0);
 
         yield return PatchDataIO.StartReadingHeaders();
 
-		messageController.SetProgress(0.5f);
+		progressDialog.SetProgress(0.5f);
 		yield return null;
 
-		allPatchFiles.Clear();
+		var paths = new List<string>();
 		yield return FileRequest.GetText(Paths.DataWebDBPatches, (tr) =>
         {
 			string line;
             while ((line = tr.ReadLine()) != null)
-                allPatchFiles.Add(line);
+                paths.Add(line);
         });
 #else
-		// Find valid data directories
-		InitValidDataDirs();
+        // Find valid data directories
+        var paths = GetDataDirectories();
 #endif
 
-		messageController.SetMessage("Initializing database ...");
-        messageController.SetProgress(0);
-		yield return null;
+		// Show progress message
+        progressDialog.SetMessage(Translator.Get("Loading") + " ...");
+        progressDialog.SetProgress(0);
+
+        yield return null;
+
+		// Count the layers
+        int layerCount = 0;
+		foreach (var group in groups)
+			foreach (var layer in group.layers)
+				layerCount++;
 
 		// Rebuild the UI
-		int groupCount = 0;
-        int layerCount = 0;
-        dataLayers.Show(false);
-        foreach (var group in groups)
-        {
-            var groupController = dataLayers.AddLayerGroup(group.name);
-            foreach (var layer in group.layers)
-            {
-                dataLayers.AddLayer(layer, groupController);
-                layer.BuildFileList();
-                layerCount++;
-			}
-			groupCount++;
-        }
-        dataLayers.Show(true);
+		dataLayers.Show(false);
 
-		yield return null;
-
-        // Create the patches/sites for each layer
-        float index = 0;
-        int counter = 0;
+		// Create the patches/sites for each layer
+		float index = 0;
+        float time = 0;
         float invLayerCount = 1f / layerCount;
         var bounds = map.MapCoordBounds;
-        foreach (var group in groups)
+		foreach (var group in groups)
         {
+			var groupController = dataLayers.AddLayerGroup(group.name);
 			foreach (var layer in group.layers)
             {
-                if (layer.PatchCount > 0)
+				dataLayers.AddLayer(layer, groupController);
+
+				List<string> patchFiles = null;
+				var filesIt = layer.GetPatchFiles(paths, (pf) => patchFiles = pf);
+				if (filesIt.MoveNext())
+				{
+					do { yield return null; } while (filesIt.MoveNext());
+					time = Time.realtimeSinceStartup + MaxProcessingTimePerFrame;
+				}
+#if UNITY_EDITOR
+				if (findUnusedLayers && patchFiles.Count == 0)
+				{
+					Debug.LogWarning("Layer " + layer.Name + " doesn't have any files.");
+				}
+#endif
+
+				if (patchFiles.Count > 0)
                 {
 					int patchCount = 0;
-                    float invPatchCount = 1f / layer.PatchCount;
-                    var patches = layer.CreatePatches();
+                    float invPatchCount = 1f / patchFiles.Count;
+                    var patches = layer.CreatePatches(patchFiles);
                     while (patches.MoveNext())
                     {
                         patchCount++;
-						messageController.SetProgress((index + (patchCount * invPatchCount)) * invLayerCount);
-						while (patches.RunThruChildren())
+						progressDialog.SetProgress((index + (patchCount * invPatchCount)) * invLayerCount);
+						if (patches.RunThruChildren())
                         {
-                            counter = 0;
-							yield return null;
-						}
-                        if (++counter % 50 == 0)
+                            do
+							{
+								if (Time.realtimeSinceStartup > time)
+								{
+									yield return null;
+									time = Time.realtimeSinceStartup + MaxProcessingTimePerFrame;
+								}
+							}
+							while (patches.RunThru());
+                        }
+                        else if (Time.realtimeSinceStartup > time)
                         {
                             yield return null;
+							time = Time.realtimeSinceStartup + MaxProcessingTimePerFrame;
                         }
                     }
                 }
+				else if (Time.realtimeSinceStartup > time)
+				{
+					yield return null;
+					time = Time.realtimeSinceStartup + MaxProcessingTimePerFrame;
+				}
+				index++;
+			}
+		}
 
-#if SAFETY_CHECK
-                if (layers.ContainsKey(layer.name))
-                    Debug.LogError(layer.name + " layer already exists. Looks like a duplicate line in layers.csv");
-                else
+		PatchDataIO.StopParsingThread();
+
+#if UNITY_EDITOR && !UNITY_WEBGL
+		if (findUnusedPatches)
+		{
+			var dirs = GetDataDirectories();
+			foreach (var dir in dirs)
+			{
+				var files = Directory.GetFiles(dir, "*.csv");
+				foreach (var file in files)
+				{
+					var layerName = Patch.GetFileNameLayer(file);
+					if (!dataLayers.HasLayer(layerName))
+						Debug.LogWarning("Patch is being ignored: " + file);
+				}
+			}
+		}
 #endif
-                    layers.Add(layer.name, layer);
 
-                index++;
-            }
-        }
-
-		CreateSitesList();
+		dataLayers.Show(true);
+        yield return null;
 
         // Update DataLayers UI (activate those layers that have sites/patches within view bounds)
         dataLayers.UpdateLayers();
 
-        // Hide Message
-        messageController.Show(false);
+		// Hide Message
+		CloseProgressDialog();
 
-		// Clean up the cached files & directories
+		// Clean up
 #if UNITY_WEBGL
 		PatchDataIO.FinishReadingHeaders();
-		allPatchFiles.Clear();
-		allPatchFiles = null;
-#else
-		DataDirs = null;
 #endif
 
-		if (OnDataLoaded != null)
-			OnDataLoaded();
+		OnDataLoaded?.Invoke();
+	}
+
+	private void CloseProgressDialog()
+	{
+		progressDialog.Close();
+		progressDialog = null;
 	}
 
 	private void InitMapControllers()
     {
         gridLayers = map.GetLayerController<GridLayerController>();
-    }
-
-    public void ShowPatch(Patch patch)
-    {
-		var gridData = patch.Data as GridData;
-		if (gridData != null)
-        {
-			CreateGridMapLayer(gridData);
-        }
-
-		RemoveFromCache(patch);
-	}
-
-	public void HidePatch(Patch patch)
-    {
-        CancelRequest(patch);
-
-		// Add it to cache
-		if (patch.Data.IsLoaded())
-			AddToCache(patch);
-
-		// Remove map layer
-		var mapLayer = patch.GetMapLayer() as GridMapLayer;
-		if (mapLayer != null)
-		{
-			gridLayers.Remove(mapLayer);
-			visibleGrids.Remove(mapLayer);
-		}
-		patch.SetMapLayer(null);
     }
 
     private void CreateGridMapLayer(GridData grid)
@@ -308,7 +497,22 @@ public class DataManager : UrsComponent
 		mapLayer.EnableFilters(showFilteredDataOnly);
 	}
 
-	public void AddToCache(Patch patch)
+	private void CreateMultiGridMapLayer(MultiGridData multigrid)
+	{
+		int count = multigrid.categories.Length;
+		for (int i = 0; i < count; i++)
+		{
+			if (multigrid.gridFilter.IsSet(i))
+			{
+				CreateGridMapLayer(multigrid.categories[i].grid);
+
+				// Change the map layer's color to the category's one (by default it will have the datalayer's color)
+				visibleGrids[visibleGrids.Count - 1].SetColor(multigrid.categories[i].color);
+			}
+		}
+	}
+
+	private void AddToCache(Patch patch)
     {
 		map.patchRequestHandler.cache.Add(patch);
 	}
@@ -319,33 +523,7 @@ public class DataManager : UrsComponent
         map.patchRequestHandler.cache.TryRemove(patch);
     }
 
-	public bool IsRequesting(Patch patch)
-	{
-		return requestedPatches.ContainsKey(patch);
-	}
-
-	public void RequestPatch(Patch patch, PatchLoadedCallback callback)
-    {
-#if SAFETY_CHECK
-        if (requestedPatches.ContainsKey(patch))
-        {
-            Debug.LogWarning("This shouldn't happen: this patch is already being requested: " + patch.Filename);
-            return;
-        }
-#endif
-
-		var request = new PatchRequest(patch, (r) => RequestFinished(r, callback));
-        requestedPatches.Add(patch, request);
-
-		// Queue the patch request
-		map.patchRequestHandler.Add(request);
-
-		UpdatePatchLoadingMessage();
-		if (map.patchRequestHandler.TotalCount == 1)
-			loadingComponent.Show(true);
-	}
-
-	private void RequestFinished(ResourceRequest r, PatchLoadedCallback callback)
+	private void RequestFinished(ResourceRequest r, PatchLoadRequestCallback callback)
     {
         var request = r as PatchRequest;
 
@@ -361,7 +539,10 @@ public class DataManager : UrsComponent
 
 			if (request.State == RequestState.Succeeded)
 			{
-				callback(request.patch);
+				var bounds = map.MapCoordBounds;
+				var patch = request.patch;
+				bool isInView = patch.Level == map.CurrentLevel && patch.Data.Intersects(bounds.west, bounds.east, bounds.north, bounds.south);
+				callback(patch, isInView);
 			}
 #if SAFETY_CHECK
 			else
@@ -384,10 +565,9 @@ public class DataManager : UrsComponent
 		}
 	}
 
-    public void CancelRequest(Patch patch)
+	private void CancelRequest(Patch patch)
     {
-        PatchRequest request;
-        if (requestedPatches.TryGetValue(patch, out request))
+        if (requestedPatches.TryGetValue(patch, out PatchRequest request))
         {
 			requestedPatches.Remove(patch);
             map.patchRequestHandler.Cancel(request);
@@ -409,121 +589,107 @@ public class DataManager : UrsComponent
 		loadingComponent.SetProgress((float)finished / maxRequests);
 
 #if UNITY_EDITOR
-		loadingComponent.SetLabel("          Loading ...  (" + finished + " / " + maxRequests + ")");
+		// This is only for debuging purposes. Non-editor builds will only see "Loading ..."
+		loadingComponent.SetLabel(Translator.Get("Loading") + " ...  (" + finished + " / " + maxRequests + ")");
 #endif
 	}
 
-#if !UNITY_WEBGL
-	private void InitValidDataDirs()
+	private Site AddSite(string siteName)
 	{
-		List<string> dataDirs = new List<string>();
-		int index = Paths.Sites.Length;
-		var dirs = Directory.GetDirectories(Paths.Sites);
-		foreach (var dir in dirs)
+		if (TryGetSite(siteName, out Site site))
 		{
-			// Ignore directories that start with an underscore
-			if (dir[index] != '_')
-				dataDirs.Add(dir);
-		}
-		DataDirs = dataDirs.ToArray();
-	}
-#endif
-
-	private void CreateSitesList()
-	{
-		var siteCreators = new Dictionary<string, SiteCreator>();
-
-		foreach (var group in groups)
-		{
-			foreach (var layer in group.layers)
-			{
-				foreach (var level in layer.levels)
-				{
-					foreach (var layerSite in level.layerSites)
-					{
-						string siteName = layerSite.name;
-
-						SiteCreator site;
-						if (!siteCreators.TryGetValue(siteName, out site))
-						{
-							site = new SiteCreator();
-							site.name = siteName;
-							site.bounds = new AreaBounds(float.MaxValue, float.MinValue, float.MinValue, float.MaxValue);
-							siteCreators.Add(siteName, site);
-						}
-
-						foreach (var patch in layerSite.lastRecord.patches)
-						{
-							site.bounds.east = Math.Max(site.bounds.east, patch.Data.east);
-							site.bounds.west = Math.Min(site.bounds.west, patch.Data.west);
-							site.bounds.north = Math.Max(site.bounds.north, patch.Data.north);
-							site.bounds.south = Math.Min(site.bounds.south, patch.Data.south);
-						}
-
-						if (!site.layers.Contains(layer))
-						{
-							site.layers.Add(layer);
-						}
-
-						site.layerSites.Add(layerSite);
-					}
-				}
-			}
-		}
-
-		// Check if a site is inside another
-		foreach (var site1 in siteCreators)
-		{
-			var b1 = site1.Value.bounds;
-
-			double minArea = double.MaxValue;
-			foreach (var site2 in siteCreators)
-			{
-				var b2 = site2.Value.bounds;
-
-				// Is Site2 larger than Site1?
-				if (b2.west < b1.west && b2.east > b1.east && b2.north > b1.north && b2.south < b1.south)
-				{
-					double area = (b2.east - b2.west) * (b2.north - b2.south);
-					if (area < minArea)
-					{
-						minArea = area;
-						site1.Value.parent = site2.Key;
-					}
-				}
-			}
-		}
-
-		foreach (var creator in siteCreators.Values)
-		{
-			CreateSite(creator, siteCreators);
-		}
-	}
-
-	private Site CreateSite(SiteCreator creator, Dictionary<string, SiteCreator> siteCreators)
-	{
-		Site site;
-
-		if (nameToSite.TryGetValue(creator.name, out site))
+			Debug.LogWarning("Trying to add site that already exists: " + siteName);
 			return site;
-
-		Site parent = null;
-		if (!string.IsNullOrEmpty(creator.parent))
-		{
-			parent = CreateSite(siteCreators[creator.parent], siteCreators);
 		}
 
-		site = new Site(creator.name, parent, creator.bounds, creator.layers);
-
+		site = new Site(siteName);
+		nameToSite.Add(siteName, site);
 		sites.Add(site);
-		nameToSite.Add(site.name, site);
 
-		foreach (var layerSite in creator.layerSites)
-		{
-			layerSite.site = site;
-		}
+		// Sort the list alphabetically 
+		sites.Sort((site1, site2) => site1.Name.CompareTo(site2.Name));
 
 		return site;
 	}
 
+#if UNITY_EDITOR
+	private class ReportSite
+	{
+		public readonly Dictionary<string, ReportLayer> layers = new Dictionary<string, ReportLayer>();
+	}
+
+	private class ReportLayer
+	{
+		public HashSet<string> sources = new HashSet<string>();
+	}
+
+	private static void Debug_GenerateReport()
+	{
+		var sites = new Dictionary<string, ReportSite>();
+		var folders = Directory.GetDirectories(Path.Combine(Paths.Sites, "_all"));
+		foreach (var folder in folders)
+		{
+			var files = Directory.GetFiles(folder, "*.csv");
+			foreach (var file in files)
+			{
+				var layerName = Patch.SplitFileName(file, out _, out string siteName, out _, out _, out _, out _, out _);
+				if (!sites.TryGetValue(siteName, out ReportSite site))
+				{
+					site = new ReportSite();
+					sites.Add(siteName, site);
+				}
+
+				if (!site.layers.TryGetValue(layerName, out ReportLayer layer))
+				{
+					layer = new ReportLayer();
+					site.layers.Add(layerName, layer);
+				}
+
+				using (var sr = new StreamReader(file))
+				{
+					for (int i = 0; i < 100; i++)
+					{
+						var line = sr.ReadLine();
+						if (string.IsNullOrWhiteSpace(line))
+							break;
+						else if (line.StartsWithIgnoreCase("Source,"))
+						{
+							var source = line.Substring(7).Trim();
+							if (!string.IsNullOrWhiteSpace(source))
+								layer.sources.AddOnce(source);
+						}
+						else if (line.StartsWithIgnoreCase("Author,"))
+						{
+							var author = line.Substring(7).Trim();
+							if (!string.IsNullOrWhiteSpace(author))
+								layer.sources.AddOnce(author);
+						}
+					}
+				}
+			}
+		}
+
+		using (var sw = new StreamWriter("report.csv", false, System.Text.Encoding.Unicode))
+		{
+			var siteNames = new List<string>(sites.Keys);
+			siteNames.Sort();
+			foreach (var siteName in siteNames)
+			{
+				sw.WriteLine(siteName);
+
+				var site = sites[siteName];
+
+				var layerNames = new List<string>(site.layers.Keys);
+				layerNames.Sort();
+				foreach (var layerName in layerNames)
+				{
+					var layer = site.layers[layerName];
+					sw.WriteLine("\t" + layerName + "\t\"" + string.Join(",", layer.sources) + "\"");
+				}
+
+				sw.WriteLine();
+			}
+		}
+	}
+#endif
 }

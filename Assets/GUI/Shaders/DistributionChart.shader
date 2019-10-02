@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -59,7 +59,7 @@ Shader "URS/DistributionChart"
 			#pragma vertex vert
 			#pragma fragment frag
 
-			#if SHADER_API_MOBILE
+			#if SHADER_API_MOBILE || SHADER_API_GLES3 || SHADER_API_GLES
 			#define SHADER_USE_TEXTURE
 			#endif
 
@@ -117,7 +117,7 @@ Shader "URS/DistributionChart"
 				float y = pow(val, 0.4) * InvMaxValue;
 				float Min = max(MinFilter, MinRange);
 				float Max = min(MaxFilter, MaxRange);
-				float4 color = Tint * lerp(Filtered, Line, step(Min, p.uv.x) * step(p.uv.x, Max));
+				float4 color = lerp(Filtered, Tint * Line, step(Min, p.uv.x) * step(p.uv.x, Max));
 				color.a *= step(p.uv.y, max(y, InvHeight));
 
 				return color;

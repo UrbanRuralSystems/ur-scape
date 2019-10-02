@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -19,20 +19,20 @@ public class CategoryPanel : LayerOptionsPanel
     private List<Toggle> toggles = new List<Toggle>();
     private Toggle lastToggle;
     private float doubleClickTime = 0;
-    private uint mask = 0xFFFFFFFF;
+	private readonly CategoryFilter newFilter = new CategoryFilter();
 
 
-    //
-    // Inheritance Methods
-    //
+	//
+	// Inheritance Methods
+	//
 
-    public override void Init(DataLayer dataLayer)
+	public override void Init(DataLayer dataLayer)
     {
         base.Init(dataLayer);
 
-        if (dataLayer.HasLoadedPatchesInView() && AllSitesHaveSameCategories())
+        if (dataLayer.HasLoadedPatchesInView() && AllPatchesHaveSameCategories())
         {
-            UpdateList();
+			UpdateList();
         }
 
 		LayoutRebuilder.ForceRebuildLayoutImmediate(transform.GetComponent<RectTransform>());
@@ -43,7 +43,7 @@ public class CategoryPanel : LayerOptionsPanel
         base.Show(show);
 
         ClearList();
-        if (show && dataLayer.HasLoadedPatchesInView() && AllSitesHaveSameCategories())
+        if (show && dataLayer.HasLoadedPatchesInView() && AllPatchesHaveSameCategories())
         {
             UpdateList();
         }
@@ -56,7 +56,7 @@ public class CategoryPanel : LayerOptionsPanel
         bool rebuildLayout = false;
         if (visible)
         {
-            if (AllSitesHaveSameCategories())
+            if (AllPatchesHaveSameCategories())
             {
                 if (toggles.Count == 0)
                 {
@@ -65,8 +65,14 @@ public class CategoryPanel : LayerOptionsPanel
                 }
                 else
                 {
-                    GridedPatch gridedPatch = patch as GridedPatch;
-                    gridedPatch.SetCategoryMask(mask);
+					if (patch is GridPatch)
+					{
+						(patch as GridPatch).SetCategoryFilter(newFilter);
+					}
+					else if (patch is MultiGridPatch)
+					{
+						(patch as MultiGridPatch).SetCategoryFilter(newFilter);
+					}
                 }
             }
             else
@@ -75,11 +81,18 @@ public class CategoryPanel : LayerOptionsPanel
                 rebuildLayout = true;
             }
 
-            (patch.Data as GridData).OnGridChange += OnGridChange;
+			if (patch.Data is GridData)
+			{
+				(patch.Data as GridData).OnGridChange += OnGridChange;
+			}
+			else if (patch.Data is MultiGridData)
+			{
+				(patch.Data as MultiGridData).OnGridChange += OnMultiGridChange;
+			}
         }
         else
         {
-            if (dataLayer.HasLoadedPatchesInView() && AllSitesHaveSameCategories())
+            if (dataLayer.HasLoadedPatchesInView() && AllPatchesHaveSameCategories())
             {
                 if (toggles.Count == 0)
                 {
@@ -93,8 +106,15 @@ public class CategoryPanel : LayerOptionsPanel
                 rebuildLayout = true;
             }
 
-            (patch.Data as GridData).OnGridChange -= OnGridChange;
-        }
+			if (patch.Data is GridData)
+			{
+				(patch.Data as GridData).OnGridChange -= OnGridChange;
+			}
+			else if (patch.Data is MultiGridData)
+			{
+				(patch.Data as MultiGridData).OnGridChange -= OnMultiGridChange;
+			}
+		}
 
         if (rebuildLayout)
         {
@@ -108,53 +128,64 @@ public class CategoryPanel : LayerOptionsPanel
 
     private void OnGridChange(GridData grid)
     {
-        if (grid.categories.Length != toggles.Count)
-        {
-            ClearList();
-            UpdateList();
-            GuiUtils.RebuildLayout(transform);
-        }
+		OnCategoriesChange(grid.categories);
     }
 
-    private bool avoidToggleChange = false;
-    private void OnToggleChange(Toggle toggle, uint bitIndex)
+	private void OnMultiGridChange(MultiGridData grid)
+	{
+		OnCategoriesChange(grid.categories);
+	}
+
+	private void OnCategoriesChange<T>(T[] categories) where T : Category
+	{
+		if (categories.Length != toggles.Count)
+		{
+			ClearList();
+			UpdateList();
+			GuiUtils.RebuildLayout(transform);
+		}
+	}
+
+
+	private bool avoidToggleChange = false;
+    private void OnToggleChange(Toggle toggle, int bitIndex)
     {
         if (avoidToggleChange)
             return;
 
-        uint newMask = toggle.isOn? mask | bitIndex : mask & ~bitIndex;
+		if (toggle.isOn)
+			newFilter.Set(bitIndex);
+		else
+			newFilter.Remove(bitIndex);
 
-        if (lastToggle == toggle && doubleClickTime >= Time.time)
+		if (lastToggle == toggle && doubleClickTime >= Time.time)
         {
             avoidToggleChange = true;
-            if (newMask == bitIndex)
+            if (newFilter.IsOnlySet(bitIndex))
             {
-                foreach (var t in toggles)
-                {
-                    t.isOn = true;
-                }
-                mask = 0xFFFFFFFF;
-            }
-            else
+				foreach (var t in toggles)
+				{
+					t.isOn = true;
+				}
+				newFilter.ResetToDefault();
+			}
+			else
             {
-                foreach (var t in toggles)
-                {
-                    t.isOn = false;
-                }
-                toggle.isOn = true;
-                mask = bitIndex;
-            }
-            avoidToggleChange = false;
-        }
-        else
-        {
-            mask = newMask;
+				foreach (var t in toggles)
+				{
+					t.isOn = false;
+				}
+				toggle.isOn = true;
+				newFilter.RemoveAll();
+				newFilter.Set(bitIndex);
+			}
+			avoidToggleChange = false;
         }
 
-        lastToggle = toggle;
+		lastToggle = toggle;
         doubleClickTime = Time.time + 0.25f;
 
-        UpdateSitesMask();
+		UpdateSitesMask();
     }
 
     //
@@ -170,48 +201,58 @@ public class CategoryPanel : LayerOptionsPanel
         toggles.Clear();
     }
 
-    private void UpdateList()
-    {
-        // List categories
-        Patch patch = dataLayer.loadedPatchesInView[0];
-        var categories = patch.Data.categories;
-        int count = (categories == null) ? 0 : categories.Length;
+	private void UpdateList()
+	{
+		Patch patch = dataLayer.loadedPatchesInView[0];
+		var patchData = patch.Data;
+		if (patchData is GridData)
+		{
+			var gridData = patch.Data as GridData;
+			UpdateCategories(gridData.categories, gridData.categoryFilter);
+		}
+		else if (patchData is MultiGridData)
+		{
+			var multigrid = patchData as MultiGridData;
+			UpdateCategories(multigrid.categories, multigrid.gridFilter);
+		}
+	}
 
-        if (count > 0)
-        {
-            mask = 0xFFFFFFFF;
-            uint bitIndex = 1;
-            for (int i = 0; i < count; i++, bitIndex <<= 1)
-            {
-                var cat = categories[i];
+	private void UpdateCategories<T>(T[] categories, CategoryFilter filter) where T : Category
+	{
+		int count = (categories == null) ? 0 : categories.Length;
+		newFilter.CopyFrom(filter);
 
-                bool isOn = (patch.Data.categoryMask & bitIndex) != 0;
+		if (count > 0)
+		{
+			for (int i = 0; i < count; i++)
+			{
+				UpdateCategory(categories[i], newFilter, i);
+			}
 
-                uint bIndex = bitIndex;
+			UpdateSitesMask();
+		}
+	}
 
-                var newToggle = Instantiate(classTogglePrefab, transform, false);
-                newToggle.isOn = isOn;
-                newToggle.onValueChanged.AddListener(delegate { OnToggleChange(newToggle, bIndex); });
-				newToggle.graphic.color = cat.color;
-				var label = newToggle.GetComponentInChildren<Text>();
-				if (string.IsNullOrEmpty(cat.name))
-					label.text = "N/A";
-                else
-					label.text = cat.name;
+	private void UpdateCategory(Category cat, CategoryFilter filter, int index)
+	{
+		bool isOn = filter.IsSet(index);
 
-				AddHoverEvent(newToggle.transform.GetChild(0).gameObject, i);
+		int bIndex = index;
 
-				toggles.Add(newToggle);
+		var newToggle = Instantiate(classTogglePrefab, transform, false);
+		newToggle.isOn = isOn;
+		newToggle.onValueChanged.AddListener(delegate { OnToggleChange(newToggle, bIndex); });
+		newToggle.graphic.color = cat.color;
+		var label = newToggle.GetComponentInChildren<Text>();
+		if (string.IsNullOrEmpty(cat.name))
+			label.text = "N/A";
+		else
+			label.text = cat.name;
 
-                if (!isOn)
-                {
-                    mask &= ~(1U << i);
-                }
-            }
+		AddHoverEvent(newToggle.transform.GetChild(0).gameObject, index);
 
-            UpdateSitesMask();
-        }
-    }
+		toggles.Add(newToggle);
+	}
 
 	private void AddHoverEvent(GameObject go, int index)
 	{
@@ -224,11 +265,15 @@ public class CategoryPanel : LayerOptionsPanel
 
 		for (int i = 0; i < dataLayer.loadedPatchesInView.Count; i++)
 		{
-			GridedPatch patch = dataLayer.loadedPatchesInView[i] as GridedPatch;
-			if (patch != null)
+			var patch = dataLayer.loadedPatchesInView[i];
+			if (patch is GridPatch)
 			{
 				var mapLayer = patch.GetMapLayer() as GridMapLayer;
 				mapLayer.HighlightCategory(index);
+			}
+			else if (patch is MultiGridPatch)
+			{
+				(patch as MultiGridPatch).HighlightCategory(index);
 			}
 		}
 	}
@@ -237,17 +282,21 @@ public class CategoryPanel : LayerOptionsPanel
     {
         for (int i = 0; i < dataLayer.loadedPatchesInView.Count; i++)
         {
-            GridedPatch patch = dataLayer.loadedPatchesInView[i] as GridedPatch;
-            if (patch != null)
+			var patch = dataLayer.loadedPatchesInView[i];
+            if (patch is GridPatch)
             {
-                patch.SetCategoryMask(mask);
+				(patch as GridPatch).SetCategoryFilter(newFilter);
             }
-        }
+			else if (patch is MultiGridPatch)
+			{
+				(patch as MultiGridPatch).SetCategoryFilter(newFilter);
+			}
+		}
 
 		// Also update other patches from the same site but different record
 		if (dataLayer.loadedPatchesInView.Count > 0)
 		{
-			var siteRecord = dataLayer.loadedPatchesInView[0].siteRecord;
+			var siteRecord = dataLayer.loadedPatchesInView[0].SiteRecord;
 			foreach (var record in siteRecord.layerSite.records)
 			{
 				if (record.Value == siteRecord)
@@ -255,32 +304,66 @@ public class CategoryPanel : LayerOptionsPanel
 
 				foreach (var patch in record.Value.patches)
 				{
-					(patch as GridedPatch).SetCategoryMask(mask);
+					(patch as GridPatch).SetCategoryFilter(newFilter);
 				}
 			}
 		}
 	}
 
-    private bool AllSitesHaveSameCategories()
+    private bool AllPatchesHaveSameCategories()
     {
         int count = dataLayer.loadedPatchesInView.Count;
         if (count == 0)
             return false;
 
-        Category[] categories;
-        categories = dataLayer.loadedPatchesInView[0].Data.categories;
-        if (categories == null)
-            return false;
+		var patchData = dataLayer.loadedPatchesInView[0].Data;
+		if (patchData == null)
+			return false;
 
-        for (int i = 1; i < count; i++)
-        {
-            var otherCategories = dataLayer.loadedPatchesInView[i].Data.categories;
-            if (otherCategories == null || categories.Length != otherCategories.Length || !categories[0].name.Equals(otherCategories[0].name))
-            {
-                return false;
-            }
-        }
+		if (patchData is GridData)
+		{
+			var gridData = patchData as GridData;
 
-        return true;
+			var categories = gridData.categories;
+			if (categories == null)
+				return false;
+
+			for (int i = 1; i < count; i++)
+			{
+				gridData = dataLayer.loadedPatchesInView[i].Data as GridData;
+				if (gridData == null)
+					return false;
+
+				var otherCategories = gridData.categories;
+				if (otherCategories == null || categories.Length != otherCategories.Length || !categories[0].name.Equals(otherCategories[0].name))
+				{
+					return false;
+				}
+			}
+		}
+		else if (patchData is MultiGridData)
+		{
+			var multigrid = patchData as MultiGridData;
+
+			var categories = multigrid.categories;
+			if (categories == null)
+				return false;
+
+			for (int i = 1; i < count; i++)
+			{
+				multigrid = dataLayer.loadedPatchesInView[i].Data as MultiGridData;
+				if (multigrid == null)
+					return false;
+
+				var otherCategories = multigrid.categories;
+				if (otherCategories == null || categories.Length != otherCategories.Length || !categories[0].name.Equals(otherCategories[0].name))
+				{
+					return false;
+				}
+			}
+		}
+
+		return true;
     }
+
 }

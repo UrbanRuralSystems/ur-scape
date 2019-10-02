@@ -1,10 +1,14 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENSE file for details.
 //
 // Author:  Michael Joos  (joos@arch.ethz.ch)
+
+#if UNITY_EDITOR
+#define SAFETY_CHECK
+#endif
 
 using System;
 using System.Collections.Generic;
@@ -68,55 +72,23 @@ public class GraphNode
             {
                 AddLinkData(nodeA, nodeB, distance, classification);
             }
-            if (!nodeB.links.Contains(nodeA))
-            {
-                AddLinkData(nodeB, nodeA, distance, classification);
-            }
-        }
+			if (!nodeB.links.Contains(nodeA))
+			{
+				AddLinkData(nodeB, nodeA, distance, classification);
+			}
+		}
 
-        for (int i = 0; i < ClassificationIndex.Highway; i++) // seperate links with different classification
+		// Seperate links with different classification
+		for (int i = 0; i < ClassificationIndex.Highway; i++)
         {
 			int classificationMask = 1 << i;
 
 			if ((classification & classificationMask) > 0)
             {
-                if (nodeA.links.Count == 0)
-                {
-                    AddLinkData(nodeA, nodeB, distance, classificationMask);
-                }
-                else
-                {
-                    for (int j = 0; j < nodeA.links.Count; j++)
-                    {
-                        if (nodeA.links[j].Equals(nodeB) && nodeA.classifications[j] == classificationMask)
-                            break;
-                        if (j == nodeA.links.Count - 1)
-                        {
-                            AddLinkData(nodeA, nodeB, distance, classificationMask);
-                            break;
-                        }
-                    }
-                }
-
-                if (nodeB.links.Count == 0)
-                {
-                    AddLinkData(nodeB, nodeA, distance, classificationMask);
-                }
-                else
-                {
-                    for (int j = 0; j < nodeB.links.Count; j++)
-                    {
-                        if (nodeB.links[j].Equals(nodeA) && nodeB.classifications[j] == classificationMask)
-                            break;
-                        if (j == nodeB.links.Count - 1)
-                        {
-                            AddLinkData(nodeB, nodeA, distance, classificationMask);
-                            break;
-                        }
-                    }
-                }                
-            }
-        }            
+				AddLinkData(nodeA, nodeB, distance, classificationMask);
+				AddLinkData(nodeB, nodeA, distance, classificationMask);
+			}
+		}            
     }
 
     public static void RemoveLink(GraphNode nodeA, GraphNode nodeB, int classification)
@@ -131,22 +103,39 @@ public class GraphNode
             }
         }
 
-        for (int i = 0; i < nodeB.links.Count; i++)
-        {
-            if (nodeB.links[i].Equals(nodeA) && nodeB.classifications[i] == classification)
-            {
-                nodeB.links.RemoveAt(i);
-                nodeB.distances.RemoveAt(i);
-                nodeB.classifications.RemoveAt(i);
-            }
-        }
-    }
+		for (int i = 0; i < nodeB.links.Count; i++)
+		{
+			if (nodeB.links[i].Equals(nodeA) && nodeB.classifications[i] == classification)
+			{
+				nodeB.links.RemoveAt(i);
+				nodeB.distances.RemoveAt(i);
+				nodeB.classifications.RemoveAt(i);
+			}
+		}
+	}
 
     private static void AddLinkData(GraphNode node, GraphNode link, float distance, int classification)
     {
-        node.links.Add(link);
-        node.distances.Add(distance);
-        node.classifications.Add(classification);
+#if SAFETY_CHECK
+		if (node.Equals(link) || node.index == link.index)
+		{
+			Debug.LogError("A node can't have a link to itself!  Node: " + node.index);
+			return;
+		}
+#endif
+		for (int i = 0; i < node.links.Count; i++)
+		{
+			if (node.links[i].Equals(link) && node.classifications[i] == classification)
+			{
+				Debug.LogWarning("Duplicate link found between node " + node.index + " and " + link.index + " with classification: " + classification);
+				node.distances[i] = Mathf.Min(node.distances[i], distance);
+				return;
+			}
+		}
+
+		node.links.Add(link);
+		node.distances.Add(distance);
+		node.classifications.Add(classification);
     }
 }
 

@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -16,33 +16,26 @@ using System.Collections;
 public class SiteBrowser : UrsComponent
 {
 	[Header("Prefabs")]
-	public Toggle siteGroupPrefab;
+	public Toggle siteTogglePrefab;
 
 	[Header("UI References")]
 	public Transform sitesContainer;
 	public GameObject message;
-	public Toggle visibilityToggle;
 
 	[Header("Settings")]
 	public string defaultSiteName = "World";
 
-	[Header("Selected Font Settings")]
-	public Font font;
-
 	public event UnityAction<Site, Site> OnBeforeActiveSiteChange;
 	public event UnityAction<Site, Site> OnAfterActiveSiteChange;
 
-    private Site activeSite;
 	private Toggle selectedToggle;
-	private Font originalFont;
 
-	private Site defaultSite;
-	public Site DefaultSite { get { return defaultSite; } }
-
-	public Site ActiveSite { get { return activeSite; } }
+	public Site DefaultSite { get; private set; }
+    public Site ActiveSite { get; private set; }
 
 	private DataManager dataManager;
 	private MapController map;
+	private SiteBoundaryLayerController boundariesController;
 
 	private readonly Dictionary<Site, Toggle> siteToToggle = new Dictionary<Site, Toggle>();
 
@@ -54,13 +47,11 @@ public class SiteBrowser : UrsComponent
 	{
 		yield return WaitFor.Frames(WaitFor.InitialFrames);
 
-		originalFont = siteGroupPrefab.GetComponentInChildren<Text>().font;
-
         dataManager = ComponentManager.Instance.Get<DataManager>();
 		map = ComponentManager.Instance.Get<MapController>();
+		boundariesController = map.GetLayerController<SiteBoundaryLayerController>();
 
 		dataManager.OnDataLoaded += OnDataLoaded;
-		visibilityToggle.onValueChanged.AddListener(OnVisibilityChanged);
 	}
 
 
@@ -73,39 +64,21 @@ public class SiteBrowser : UrsComponent
 		dataManager.OnDataLoaded -= OnDataLoaded;
 
 		BuildSitesList();
-
-		if (defaultSite != null)
-		{
-			SetActiveSite(defaultSite);
-		}
-		else
-		{
-			// Couldn't find default site, try to load the first one on the list
-			if (dataManager.sites.Count > 0)
-			{
-				Debug.LogWarning("Couldn't find default site " + defaultSiteName);
-				SetActiveSite(dataManager.sites[0]);
-			}
-			else
-			{
-				Debug.LogWarning("No sites were found!");
-			}
-		}
+		ActivateDefaultSite();
 	}
 
-	private void OnSiteButtonPressed(Site site, bool isOn)
+	private void OnSiteToggleHover(Site site, bool isHovering)
+	{
+		boundariesController.HighlightBoundary(site, isHovering);
+	}
+
+	private void OnSiteTogglePressed(Site site, bool isOn)
 	{
 		if (isOn)
 		{
 			SetActiveSite(site);
 		}
 	}
-
-	private void OnVisibilityChanged(bool isOn)
-	{
-		map.GetLayerController<SiteBoundaryLayerController>().ShowBoundaries(isOn);
-	}
-
 
 
 	//
@@ -114,9 +87,9 @@ public class SiteBrowser : UrsComponent
 
 	public void ChangeActiveSite(string siteName)
 	{
-		if (dataManager.HasSite(siteName))
+		if (dataManager.TryGetSite(siteName, out Site site))
 		{
-			ChangeActiveSite(dataManager.GetSite(siteName));
+			ChangeActiveSite(site);
 		}
 		else
 		{
@@ -126,46 +99,91 @@ public class SiteBrowser : UrsComponent
 
 	public void ChangeActiveSite(Site site)
 	{
-		Toggle siteToggle;
-		if (!siteToToggle.TryGetValue(site, out siteToggle))
+		if (!siteToToggle.TryGetValue(site, out Toggle siteToggle))
 			return;
 
 		siteToggle.isOn = true;
+	}
+
+	public void UpdateMinMaxLevels()
+	{
+		if (ActiveSite != null)
+			UpdateMinMaxLevels(ActiveSite);
 	}
 
 	private void SetActiveSite(Site site)
 	{
 		if (selectedToggle != null)
 		{
-			selectedToggle.GetComponentInChildren<Text>().font = originalFont;
-			selectedToggle = null;
+            selectedToggle.GetComponentInChildren<Text>().fontStyle = FontStyle.Normal;
+            selectedToggle = null;
 		}
 
-		Toggle siteToggle;
-		if (!siteToToggle.TryGetValue(site, out siteToggle))
+		if (!siteToToggle.TryGetValue(site, out Toggle siteToggle))
 			return;
 
 		selectedToggle = siteToggle;
-		selectedToggle.GetComponentInChildren<Text>().font = font;
+        selectedToggle.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
 
-		var previousSite = activeSite;
-		activeSite = site;
+        var previousSite = ActiveSite;
+        ActiveSite = site;
 
-		if (OnBeforeActiveSiteChange != null)
-			OnBeforeActiveSiteChange(site, previousSite);
+		if (site != previousSite)
+		{
+			dataManager.ChangeActiveSite(ActiveSite);
 
-		GoToSite(site);
+			if (OnBeforeActiveSiteChange != null)
+				OnBeforeActiveSiteChange(site, previousSite);
+
+		}
 
 		UpdateMinMaxLevels(site);
 
-		if (OnAfterActiveSiteChange != null)
-			OnAfterActiveSiteChange(site, previousSite);
+		if (site != previousSite)
+		{
+			GoToSite(site);
+
+			if (OnAfterActiveSiteChange != null)
+				OnAfterActiveSiteChange(site, previousSite);
+		}
+	}
+
+	public void RebuildList()
+	{
+		var oldActiveSite = ActiveSite;
+
+		Clear();
+		BuildSitesList();
+
+		if (oldActiveSite != null && siteToToggle.ContainsKey(oldActiveSite))
+		{
+			ActiveSite = oldActiveSite;
+			ChangeActiveSite(oldActiveSite);
+		}
+		else
+		{
+			ActivateDefaultSite();
+		}
 	}
 
 
 	//
 	// Private Methods
 	//
+
+	private void Clear()
+	{
+		siteToToggle.Clear();
+
+		DefaultSite = null;
+		ActiveSite = null;
+		selectedToggle = null;
+
+		for (int i = sitesContainer.childCount - 1; i >= 0; i--)
+		{
+			Destroy(sitesContainer.GetChild(i).gameObject);
+		}
+	}
 
 	private void BuildSitesList()
 	{
@@ -176,20 +194,19 @@ public class SiteBrowser : UrsComponent
 		}
         else
 		{
+			message.SetActive(false);
+
 			var toggleGroup = GetComponent<ToggleGroup>();
 
-			if (dataManager.HasSite(defaultSiteName))
+			if (dataManager.TryGetSiteIgnoreCase(defaultSiteName, out Site defaultSite))
 			{
-				defaultSite = dataManager.GetSite(defaultSiteName);
-				AddSiteToList(defaultSite, toggleGroup);
+                DefaultSite = defaultSite;
+				AddSiteToList(DefaultSite, toggleGroup);
 			}
-
-			// Sort the list alphabetically 
-			sites.Sort((site1, site2) => site1.name.CompareTo(site2.name));
 
 			foreach (var site in sites)
 			{
-				if (site != defaultSite)
+				if (site != DefaultSite)
 					AddSiteToList(site, toggleGroup);
 			}
 		}
@@ -199,19 +216,30 @@ public class SiteBrowser : UrsComponent
 
 	private void AddSiteToList(Site site, ToggleGroup toggleGroup)
 	{
-		var siteToggle = Instantiate(siteGroupPrefab);
+		var siteToggle = Instantiate(siteTogglePrefab);
 		siteToggle.group = toggleGroup;
 		siteToggle.transform.SetParent(sitesContainer, false);
-		siteToggle.GetComponentInChildren<Text>().text = site.name;
-
-		if (site == defaultSite)
-			siteToggle.isOn = true;
-		else
-			siteToggle.isOn = false;
-
-		siteToggle.onValueChanged.AddListener((isOn) => OnSiteButtonPressed(site, isOn));
+		siteToggle.GetComponentInChildren<Text>().text = site.Name;
+		siteToggle.GetComponent<HoverHandler>().OnHover += delegate (bool hover) { OnSiteToggleHover(site, hover); };
+		siteToggle.onValueChanged.AddListener((isOn) => OnSiteTogglePressed(site, isOn));
 
 		siteToToggle.Add(site, siteToggle);
+	}
+
+	private void ActivateDefaultSite()
+	{
+		if (DefaultSite != null)
+		{
+			ChangeActiveSite(DefaultSite);
+		}
+		else
+		{
+			// Couldn't find default site, try to load the first one on the list
+			if (dataManager.sites.Count > 0)
+			{
+				ChangeActiveSite(dataManager.sites[0]);
+			}
+		}
 	}
 
 	private void UpdateMinMaxLevels(Site site)
@@ -219,14 +247,14 @@ public class SiteBrowser : UrsComponent
 		int min = map.dataLevels.levels.Length - 1;
 		int max = 0;
 
-		foreach (var layer in site.dataLayers)
+		foreach (var layer in site.layers)
 		{
 			int count = layer.levels.Length;
 			for (int l = 0; l < count; ++l)
 			{
 				foreach (var layerSite in layer.levels[l].layerSites)
 				{
-					if (layerSite.site == site)
+					if (layerSite.Site == site)
 					{
 						max = Math.Max(max, l);
 						min = Math.Min(min, l);
@@ -235,20 +263,15 @@ public class SiteBrowser : UrsComponent
 			}
 		}
 
-		map.SetMinMaxLevels(min, max);
+		map.SetMinMaxLevels(min, max, false);
 	}
 
 	private void GoToSite(Site site)
 	{
-		var bounds = site.bounds;
+		var bounds = site.Bounds;
 		if (bounds.east > bounds.west && bounds.north > bounds.south)
 		{
-			var max = GeoCalculator.LonLatToMeters(bounds.east, bounds.north);
-			var min = GeoCalculator.LonLatToMeters(bounds.west, bounds.south);
-			var center = GeoCalculator.MetersToLonLat((min.x + max.x) * 0.5, (min.y + max.y) * 0.5);
-
-			map.SetCenter(center.Longitude, center.Latitude);
-			map.ZoomToBounds(bounds, site != defaultSite);
+			map.ZoomToBounds(bounds);
 		}
 		else
 		{

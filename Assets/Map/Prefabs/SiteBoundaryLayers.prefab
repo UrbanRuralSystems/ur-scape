@@ -55,3 +55,4 @@ MonoBehaviour:
     type: 2}
   defaultMaterial: {fileID: 2100000, guid: 8531e4253ce5c9a4488df00ee1766ff8, type: 2}
   selectedMaterial: {fileID: 2100000, guid: aea212a8c75569e41a0d816ab1b473c9, type: 2}
+  highlightMaterial: {fileID: 2100000, guid: e1e4c4dc93a4e3745a5c0a97fa006516, type: 2}

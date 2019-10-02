@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -183,7 +183,7 @@ public class MapboxLayerController : MapLayerControllerT<MapboxLayer>
 		backgrounds.Add(defaultBackground);
 
 #if UNITY_STANDALONE
-		using (var sw = new StreamWriter(File.Open(filename, FileMode.Create)))
+		using (var sw = new StreamWriter(File.Open(filename, FileMode.Create), System.Text.Encoding.UTF8))
 		{
 			sw.WriteLine("Name,StyleURL");
 			sw.WriteLine(defaultBackground.name + "," + defaultBackground.styleUrl);

@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -15,12 +15,21 @@
 #pragma kernel CSContinuous_Unmasked_Exclude CONTINUOUS UNMASKED EXCLUDE_CELLS_WITH_NO_DATA
 #pragma kernel CSCategorized_Unmasked_Include CATEGORIZED UNMASKED 
 #pragma kernel CSCategorized_Unmasked_Exclude CATEGORIZED UNMASKED EXCLUDE_CELLS_WITH_NO_DATA
+#pragma kernel CSClipViewArea_Include INCLUDE_CELLS_WITH_NO_DATA
+#pragma kernel CSClipViewArea_Exclude EXCLUDE_CELLS_WITH_NO_DATA
 
 #if SHADER_API_METAL 
 #define CC_THREAD_COUNT 256
 #else
 #define CC_THREAD_COUNT 1024
 #endif
+
+//#define MAX_CATEGORIES 128
+//#define MAX_CATEGORY_INDEX MAX_CATEGORIES - 1;
+
+static const int MAX_CATEGORIES = 128;
+static const int MAX_CATEGORY_INDEX = MAX_CATEGORIES - 1;
+static const int CATEGORY_FILTER_ARRAY_SIZE = (MAX_CATEGORIES + 31) / 32;
 
 
 //
@@ -36,16 +45,29 @@ uint contourValueCount;
 uint contourCountX;
 uint croppedContourCountX;
 uint gridCountX;
-uint categoryMask;
+//+ uint categoryFilter[CATEGORY_FILTER_ARRAY_SIZE];
+int4 categoryFilter;	//- Temp fix for Unity bug (Case 1167093) http://fogbugz.unity3d.com/default.asp?1167093_vvaqd0gbhgo3cmr5
 float2 minmax;
 float2 offset;
 float2 scale;
 uint startX;
 uint startY;
+float2 pt0;
+float2 pt1;
+float2 pt2;
+float2 pt3;
 
 //
 // Helper Functions
 //
+
+int IsCategoryVisible(int bitIndex)
+{
+	int arrIndex = bitIndex >> 5;
+	int shift = bitIndex - arrIndex * 32;
+	// return (categoryFilter[arrIndex] >> shift) & 1;
+	return step(bitIndex, MAX_CATEGORY_INDEX) * ((categoryFilter[arrIndex] >> shift) & 1);
+}
 
 void Compute(uint i)
 {
@@ -63,8 +85,7 @@ void Compute(uint i)
 	uint patchIndex = pY * gridCountX + pX;
 
 #ifdef CATEGORIZED
-	int value = (int)patchValues[patchIndex];
-	value = ((categoryMask >> value) & 1);
+	int value = IsCategoryVisible((int)patchValues[patchIndex]);
 #else
 	float value = patchValues[patchIndex];
 	value = step(minmax.x, value) * step(value, minmax.y);
@@ -89,6 +110,68 @@ void Compute(uint i)
 #endif
 }
 
+static const float EarthRadius = 6378137.0;
+static const float Deg2HalfRad = 0.00872664625997164788461845384244; // (PI / 360)
+float LatitudeToMeters(float lat)
+{
+	return log(tan((90.0 + lat) * Deg2HalfRad)) * EarthRadius;
+}
+
+void CSClipViewArea(uint i)
+{
+	if (i >= contourValueCount)
+		return;
+
+	uint y = i / contourCountX;
+	uint x = i - y * contourCountX;
+
+	float2 meters = float2(offset.x + x * scale.x, LatitudeToMeters(offset.y + y * scale.y));
+
+	int mask = 0;
+
+#ifdef EXCLUDE_CELLS_WITH_NO_DATA
+	mask = !mask;
+#endif
+
+	float2 pA = pt0;
+	float2 pB = pt3;
+	//if (((pA.y > meters.y) != (pB.y > meters.y)) &&
+	if (((pA.y >= meters.y && pB.y < meters.y) || (pA.y < meters.y && pB.y >= meters.y)) &&
+		(meters.x >(pB.x - pA.x) * (meters.y - pA.y) / (pB.y - pA.y) + pA.x))
+		mask = !mask;
+
+	pA = pt1;
+	pB = pt0;
+	//if (((pA.y > meters.y) != (pB.y > meters.y)) &&
+	if (((pA.y >= meters.y && pB.y < meters.y) || (pA.y < meters.y && pB.y >= meters.y)) &&
+		(meters.x >(pB.x - pA.x) * (meters.y - pA.y) / (pB.y - pA.y) + pA.x))
+		mask = !mask;
+
+	pA = pt2;
+	pB = pt1;
+	//if (((pA.y > meters.y) != (pB.y > meters.y)) &&
+	if (((pA.y >= meters.y && pB.y < meters.y) || (pA.y < meters.y && pB.y >= meters.y)) &&
+		(meters.x >(pB.x - pA.x) * (meters.y - pA.y) / (pB.y - pA.y) + pA.x))
+		mask = !mask;
+
+	pA = pt3;
+	pB = pt2;
+	//if (((pA.y > meters.y) != (pB.y > meters.y)) &&
+	if (((pA.y >= meters.y && pB.y < meters.y) || (pA.y < meters.y && pB.y >= meters.y)) &&
+		(meters.x >(pB.x - pA.x) * (meters.y - pA.y) / (pB.y - pA.y) + pA.x))
+		mask = !mask;
+
+	// Force it to be 0 or 1 (fast version of saturate())
+	mask = 0x00000001 & mask;
+
+#ifdef EXCLUDE_CELLS_WITH_NO_DATA
+	contourValues[i] = initialValue - mask;
+#else
+	contourValues[i] = mask * initialValue;
+#endif
+}
+
+
 //
 // Kernels
 //
@@ -98,6 +181,18 @@ void CSReset(uint3 id : SV_DispatchThreadID)
 {
 	if (id.x < contourValueCount)
 		contourValues[id.x] = initialValue;
+}
+
+[numthreads(CC_THREAD_COUNT, 1, 1)]
+void CSClipViewArea_Include(uint3 id : SV_DispatchThreadID)
+{
+	CSClipViewArea(id.x);
+}
+
+[numthreads(CC_THREAD_COUNT, 1, 1)]
+void CSClipViewArea_Exclude(uint3 id : SV_DispatchThreadID)
+{
+	CSClipViewArea(id.x);
 }
 
 [numthreads(CC_THREAD_COUNT, 1, 1)]

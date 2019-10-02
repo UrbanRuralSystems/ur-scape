@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -9,7 +9,7 @@
 using UnityEngine;
 
 [System.Serializable]
-public class DataLevel
+public class DataLevelInfo
 {
     public string name;
     public float minZoom;
@@ -20,7 +20,7 @@ public class DataLevel
 public class DataLevels : ScriptableObject
 {
 
-    public DataLevel[] levels;
+    public DataLevelInfo[] levels;
 
 	private void OnEnable()
 	{
@@ -45,7 +45,7 @@ public class DataLevels : ScriptableObject
         return (zoom < levels[0].minZoom)? 0 : levels.Length - 1;
     }
 
-    public DataLevel GetDataLevel(float zoom)
+    public DataLevelInfo GetDataLevel(float zoom)
     {
         for (int i = levels.Length - 1; i >= 0; i--)
         {

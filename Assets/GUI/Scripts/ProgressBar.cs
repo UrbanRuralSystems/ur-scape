@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -11,36 +11,28 @@ using UnityEngine.UI;
 
 public class ProgressBar : Scrollbar
 {
-
     public Text percentageText;
 
-    //
-    // Unity Methods
-    //
-	
-	protected override void OnEnable()
+	//
+	// Unity Methods
+	//
+#if UNITY_EDITOR
+	protected override void OnValidate()
 	{
-        base.OnEnable();
+		base.OnValidate();
 
-        if (percentageText != null)
-        {
-            onValueChanged.AddListener(OnPercentageChange);
-        }
-    }
+		if (Application.isPlaying)
+			SetProgess(size);
+	}
+#endif
 
-    public void SetProgess(float p)
+	//
+	// Public Methods
+	//
+
+	public void SetProgess(float p)
     {
         size = p;
-        OnPercentageChange(p);
-    }
-
-    //
-    // UI Events
-    //
-
-    public void OnPercentageChange(float p)
-    {
-        percentageText.text = Mathf.RoundToInt(size * 100f) + " %";
-    }
-
+		percentageText.text = Mathf.RoundToInt(size * 100f) + " %";
+	}
 }

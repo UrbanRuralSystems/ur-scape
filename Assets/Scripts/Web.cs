@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -41,6 +41,16 @@ public class Web
         return (WebHelper.url + path).Replace('\\', '/');
 #endif
     }
+
+	[DllImport("__Internal")]
+	public static extern void GoFullScreen();
+
+	[DllImport("__Internal")]
+	public static extern void OpenUrlInTab(string url);
+
+	[DllImport("__Internal")]
+	public static extern void DownloadFile(string filename, byte[] data, int size);
+
 }
 
 #endif

@@ -1,11 +1,10 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENSE file for details.
 //
 // Author:  Michael Joos  (joos@arch.ethz.ch)
-// Summary:	TODO
 
 Shader "URS/GridLayer-MarchingSquares"
 {
@@ -44,7 +43,7 @@ Shader "URS/GridLayer-MarchingSquares"
 
 				#pragma multi_compile _ BLINK
 
-				#if SHADER_API_MOBILE
+				#if SHADER_API_MOBILE || SHADER_API_GLES3 || SHADER_API_GLES
 				#define SHADER_USE_TEXTURE
 				#endif
 

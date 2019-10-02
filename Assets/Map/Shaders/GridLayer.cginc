@@ -1,4 +1,4 @@
-// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -10,7 +10,7 @@
 #ifndef GRIDLAYER_INCLUDED
 #define GRIDLAYER_INCLUDED
 
-#if SHADER_API_MOBILE
+#if SHADER_API_MOBILE || SHADER_API_GLES3 || SHADER_API_GLES
 #define SHADER_USE_TEXTURE
 #endif
 
@@ -39,7 +39,7 @@ sampler1D Projection;
 
 #if CATEGORIZED
 	// Categorized Grid Only Properties
-	fixed4 CategoryColors[32];
+	fixed4 CategoryColors[128];
 #else
 	// Default Grid Only Properties
 	float FilterMinValue;

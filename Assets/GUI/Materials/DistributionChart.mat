@@ -31,5 +31,5 @@ Material:
     - _StencilReadMask: 255
     - _StencilWriteMask: 255
     m_Colors:
-    - Filtered: {r: 0.2509804, g: 0.25098038, b: 0.25098038, a: 1}
+    - Filtered: {r: 0.1882353, g: 0.1882353, b: 0.1882353, a: 1}
     - Line: {r: 1, g: 1, b: 1, a: 1}

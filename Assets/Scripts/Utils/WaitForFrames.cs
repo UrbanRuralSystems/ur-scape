@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -7,6 +7,7 @@
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 
 using System.Collections;
+using UnityEngine;
 
 public static class WaitFor
 {
@@ -18,6 +19,31 @@ public static class WaitFor
         {
             frameCount--;
             yield return null;
+        }
+    }
+}
+
+public class WaitForFrames : CustomYieldInstruction
+{
+    private readonly int frameCount;
+    private int elapsed = 0;
+
+    public WaitForFrames(int frameCount)
+    {
+        this.frameCount = frameCount;
+    }
+
+    public WaitForFrames Wait()
+    {
+        elapsed = 0;
+        return this;
+    }
+
+    public override bool keepWaiting
+    {
+        get
+        {
+            return elapsed++ < frameCount;
         }
     }
 }

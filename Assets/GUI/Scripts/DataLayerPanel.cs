@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -12,35 +12,27 @@ using UnityEngine.UI;
 
 public class DataLayerPanel : MonoBehaviour
 {
-    [Header("Color Setup")]
-    public float layerColorDim = 0.7f;
-    public float filterIconDim = 0.6f;
-
-    [Header("UI References")]
-    public ToggleButton layerToggle;
-	public ToggleButton filterToggle;
+	[Header("UI References")]
+    public Toggle layerToggle;
+	public Toggle filterToggle;
+	public Button infoButton;
+	public Text label;
+	public Image dot;
 	public Image stripe;
-    public Image icon;
-
-    [Header("Sprites")]
-    public Sprite categorySprite;
-    public Sprite filterSprite;
+	public Image filterIcon;
 
     [Header("Prefabs")]
     public LayerOptionsPanel continuousPanelPrefab;
     public LayerOptionsPanel categorizedPanelPrefab;
 
-    //Component reference
-    private MapController map;
-
     private DataLayer dataLayer;
     private LayerOptionsPanel filterPanel;
     private bool categorizedPanel;
 
-    // Misc
-    private Color iconColor;
+	private static InfoPanel infoPanel;
+	private static PatchBoundaryLayerController patchBoundaries;
 
-    public DataLayer DataLayer
+	public DataLayer DataLayer
     {
         get { return dataLayer; }
     }
@@ -55,20 +47,31 @@ public class DataLayerPanel : MonoBehaviour
         get { return layerToggle.isOn; }
     }
 
-    public bool IsOptionsToggleOn
+    public bool IsFilterToggleOn
     {
         get { return filterToggle.isOn; }
     }
+	
 
-    //
-    // Unity Methods
-    //
+	//
+	// Unity Methods
+	//
 
-    private void Awake()
+	private void Awake()
     {
-        map = ComponentManager.Instance.Get<MapController>();
         layerToggle.onValueChanged.AddListener(OnLayerToggleChanged);
-    }
+		infoButton.onClick.AddListener(OnInfoButtonClick);
+		infoButton.GetComponent<HoverHandler>().OnHover += OnInfoButtonHover;
+
+		if (infoPanel == null)
+		{
+			var componentManager = ComponentManager.Instance;
+
+			infoPanel = componentManager.Get<InfoPanel>();
+			patchBoundaries = componentManager.Get<MapController>().GetLayerController<PatchBoundaryLayerController>();
+		}
+	}
+
 
 	//
 	// Event Methods
@@ -76,19 +79,19 @@ public class DataLayerPanel : MonoBehaviour
 
 	private void OnLayerToggleChanged(bool isOn)
 	{
-		filterToggle.interactable = isOn;
-        icon.color = iconColor * filterIconDim;
+		filterToggle.gameObject.SetActive(isOn);
+		infoButton.gameObject.SetActive(isOn);
 
-        if (isOn)
+		stripe.gameObject.SetActive(isOn);
+
+		if (isOn)
         {
             EnableHoverEvents();
-            icon.color = iconColor;
-        }
-        else
+		}
+		else
         {
             DisableHoverEvents();
-            icon.color = iconColor * filterIconDim;
-        }
+		}
 	}
 
 	private void OnLayerToggleHover(bool hover)
@@ -96,26 +99,51 @@ public class DataLayerPanel : MonoBehaviour
 		if (hover)
 			dataLayer.SetUserOpacity(1f / dataLayer.ToolOpacity);
 		else
-			dataLayer.SetUserOpacity(1);
+			dataLayer.SetUserOpacity(1f);
+
+		if (!hover || dataLayer.loadedPatchesInView.Count <= 1)
+			patchBoundaries.HighlightBoundary(dataLayer, hover);
 	}
 
 	private void OnPatchVisibilityChange(DataLayer dataLayer, Patch patch, bool visible)
     {
         if (visible && filterPanel != null)
         {
-            bool categorizedPatch = patch.Data.IsCategorized;
-            if (categorizedPatch ^ categorizedPanel)
-            {
-                Destroy(filterPanel.gameObject);
-                CreateFilterPanel(categorizedPatch);
-            }
-        }
+			if (patch.Data is GridData)
+			{
+				bool categorizedPatch = (patch.Data as GridData).IsCategorized;
+				if (categorizedPatch ^ categorizedPanel)
+				{
+					Destroy(filterPanel.gameObject);
+					filterPanel = null;
+
+					if (IsFilterToggleOn)
+						CreateFilterPanel(categorizedPatch);
+				}
+			}
+		}
     }
 	
-	private void OnLevelChange(int level)
+	private void OnInfoButtonClick()
 	{
-		UpdateFilterIcon();
+		infoPanel.ShowData(dataLayer, infoButton.GetComponent<RectTransform>());
 	}
+
+	private void OnInfoButtonHover(bool isHovering)
+	{
+		if (isHovering)
+		{
+			infoPanel.ShowData(dataLayer, infoButton.GetComponent<RectTransform>());
+		}
+		else
+		{
+			if (!infoPanel.IsMouseInside())
+			{
+				infoPanel.Hide();
+			}
+		}
+	}
+
 
 	//
 	// Public Methods
@@ -124,52 +152,22 @@ public class DataLayerPanel : MonoBehaviour
 	public void Init(DataLayer dataLayer)
     {
         this.dataLayer = dataLayer;
-        gameObject.name = dataLayer.name;
 
-        layerToggle.SetText(dataLayer.name);
-        layerToggle.SetColor(dataLayer.color * layerColorDim);
-		filterToggle.SetColor(dataLayer.color);
-        stripe.color = dataLayer.color;
-        iconColor = icon.color;
-        icon.color = iconColor * filterIconDim;
+		UpdateNameAndColor();
 
-        layerToggle.interactable = false;
-		filterToggle.interactable = false;
+		layerToggle.interactable = false;
+		filterToggle.gameObject.SetActive(false);
+		infoButton.gameObject.SetActive(false);
 
-        dataLayer.OnPatchVisibilityChange += OnPatchVisibilityChange;
-        map.OnLevelChange += OnLevelChange;
+		dataLayer.OnPatchVisibilityChange += OnPatchVisibilityChange;
     }
 
-    private void EnableHoverEvents()
-    {
-		layerToggle.gameObject.AddComponent<HoverHandler>().OnHover += OnLayerToggleHover;
-    }
-
-	private void DisableHoverEvents()
+	public void UpdateNameAndColor()
 	{
-		var hoverHandler = layerToggle.gameObject.GetComponent<HoverHandler>();
-		if (hoverHandler != null)
-		{
-			hoverHandler.OnHover -= OnLayerToggleHover;
-			Destroy(hoverHandler);
-		}
-		dataLayer.SetUserOpacity(1);
+		gameObject.name = dataLayer.Name;
+		label.text = dataLayer.Name;
+		dot.color = dataLayer.Color;
 	}
-
-	public void UpdateFilterIcon()
-    {
-        bool isCategorized = false;
-        var currentLevel = dataLayer.levels[map.CurrentLevel];
-		if (currentLevel.layerSites.Count > 0)
-        {
-			isCategorized = currentLevel.layerSites[0].lastRecord.patches[0].Data.IsCategorized;
-        }
-
-        if (isCategorized)
-            icon.sprite = categorySprite;
-        else
-            icon.sprite = filterSprite;
-    } 
 
 	// Helper function to switch from one mode to another
 	public void UpdateBehaviour(bool hideInactive)
@@ -192,8 +190,10 @@ public class DataLayerPanel : MonoBehaviour
         if (layerToggle.interactable != enable)
         {
             layerToggle.interactable = enable;
-			filterToggle.interactable = enable && layerToggle.isOn;
-        }
+			var showToggles = enable && layerToggle.isOn;
+			filterToggle.gameObject.SetActive(showToggles);
+			infoButton.gameObject.SetActive(showToggles);
+		}
     }
 
 	// Show/hide the layer panel
@@ -201,31 +201,39 @@ public class DataLayerPanel : MonoBehaviour
     {
 		if (gameObject.activeSelf != enable)
         {
-			// Hide the filter panel BEFORE the layer panel is hidden
-			if (filterToggle.isOn && filterPanel != null && !enable)
+            // Hide the filter panel BEFORE the layer panel is hidden
+            if (IsFilterToggleOn && filterPanel != null && !enable)
 				filterPanel.Show(false);
 
 			gameObject.SetActive(enable);
 
 			// Show the filter panel AFTER the layer panel is shown
-			if (filterToggle.isOn && filterPanel != null && enable)
+			if (IsLayerToggleOn && IsFilterToggleOn && filterPanel != null && enable)
 				filterPanel.Show(true);
 
-			GuiUtils.RebuildLayout(transform);
+            GuiUtils.RebuildLayout(transform);
 			return true;
 		}
-		return false;
+        return false;
     }
 
-    public void ShowOptionsPanel(bool show)
+    public void ShowFilterPanel(bool show)
     {
-        if (show)
+		if (show)
         {
             bool categorized = false;
             if (dataLayer.loadedPatchesInView.Count > 0)
             {
-                categorized = dataLayer.loadedPatchesInView[0].Data.IsCategorized;
-            }
+				var data = dataLayer.loadedPatchesInView[0].Data;
+				if (data is GridData)
+				{
+					categorized = (data as GridData).IsCategorized;
+				}
+				else if (data is MultiGridData)
+				{
+					categorized = true;
+				}
+			}
 
             if (filterPanel == null || categorized ^ categorizedPanel)
             {
@@ -244,30 +252,40 @@ public class DataLayerPanel : MonoBehaviour
             filterPanel.Show(false);
         }
 
-        GuiUtils.RebuildLayout(transform);
-    }
+		GuiUtils.RebuildLayout(transform);
+	}
 
 
-    //
-    // Private Methods
-    //
+	//
+	// Private Methods
+	//
 
-    private void CreateFilterPanel(bool categorized)
+	private void CreateFilterPanel(bool categorized)
     {
         categorizedPanel = categorized;
 
         if (categorized)
         {
             filterPanel = Instantiate(categorizedPanelPrefab, transform, false);
-            icon.sprite = categorySprite;
         }
         else
         {
             filterPanel = Instantiate(continuousPanelPrefab, transform, false);
-            icon.sprite = filterSprite;
         }
         filterPanel.Init(dataLayer);
     }
+
+	private void EnableHoverEvents()
+	{
+		layerToggle.GetComponent<HoverHandler>().OnHover += OnLayerToggleHover;
+		OnLayerToggleHover(true);
+	}
+
+	private void DisableHoverEvents()
+	{
+		layerToggle.GetComponent<HoverHandler>().OnHover -= OnLayerToggleHover;
+		dataLayer.SetUserOpacity(1);
+	}
 
 }
 

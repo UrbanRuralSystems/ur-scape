@@ -4,8 +4,9 @@
 Material:
   serializedVersion: 6
   m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
   m_Name: SiteBoundary
   m_Shader: {fileID: 4800000, guid: e440f940c73c57441912275cf6cdebc9, type: 3}
   m_ShaderKeywords: SHAPE_NONE
@@ -56,17 +57,9 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - Alpha: 1
-    - CellHalfSize: 0.4
-    - CountX: 60
-    - CountY: 10
-    - Inset: 0
-    - Interpolate: 0
-    - Lenght: 0.04
-    - OpacityAdjust: 1
-    - Shape: 0
+    - Length: 0.05
     - Smoothness: 0.003
-    - Thickness: 0.008
-    - UnitSize: 100
+    - Thickness: 0.006
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1

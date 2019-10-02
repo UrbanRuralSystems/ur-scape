@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -9,6 +9,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+[ExecuteInEditMode]
+[RequireComponent(typeof(Toggle))]
 public class ToggleTint : MonoBehaviour
 {
 	public Graphic graphic;
@@ -19,22 +21,27 @@ public class ToggleTint : MonoBehaviour
 	// Unity Methods
 	//
 
-	void Awake()
+	private void Awake()
     {
 		GetComponent<Toggle>().onValueChanged.AddListener(OnToggleValueChanged);
 	}
 
-    void OnEnable()
+	private void OnEnable()
     {
 		OnToggleValueChanged(GetComponent<Toggle>().isOn);
     }
+
+	private void OnValidate()
+	{
+		OnToggleValueChanged(GetComponent<Toggle>().isOn);
+	}
 
 
 	//
 	// Private Methods
 	//
 
-    private void OnToggleValueChanged(bool on)
+	private void OnToggleValueChanged(bool on)
     {
 		graphic.color = on ? colorOn : colorOff;
 	}

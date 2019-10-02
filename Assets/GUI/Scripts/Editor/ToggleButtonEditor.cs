@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -8,7 +8,6 @@
 
 using UnityEditor;
 using UnityEditor.UI;
-using UnityEngine.UI;
 
 [CustomEditor(typeof(ToggleButton))]
 public class ToggleButtonEditor : ToggleEditor
@@ -27,7 +26,6 @@ public class ToggleButtonEditor : ToggleEditor
 
 		EditorGUILayout.Space();
 
-		toggle.label = EditorGUILayout.ObjectField("Label", toggle.label, typeof(Text), true) as Text;
-		toggle.textColor = EditorGUILayout.ColorField("Label Color", toggle.textColor);
+		toggle.pressedHasHighlight = EditorGUILayout.Toggle("Pressed Has Highlight", toggle.pressedHasHighlight);
 	}
 }

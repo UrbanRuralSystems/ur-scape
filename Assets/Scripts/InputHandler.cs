@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -65,7 +65,7 @@ public class InputHandler : UrsComponent
     public InputEvent<OnMouseWheelEvent> OnMouseWheel = new InputEvent<OnMouseWheelEvent>();
 
     private EventSystem eventSystem;
-    private bool isPointerInUI;
+    public bool IsPointerInUI { get; private set; }
 	private bool ignoreIU;
 	private Vector3 lastMousePosition;
     private float longPressTimeout;
@@ -130,14 +130,14 @@ public class InputHandler : UrsComponent
             }
         }
 
-        isPointerInUI = eventSystem.IsPointerOverGameObject() && !ignoreIU;
+        IsPointerInUI = eventSystem.IsPointerOverGameObject() && !ignoreIU;
         for (int i = 0; i < Input.touchCount; i++)
         {
-            isPointerInUI |= eventSystem.IsPointerOverGameObject(Input.GetTouch(i).fingerId);
+            IsPointerInUI |= eventSystem.IsPointerOverGameObject(Input.GetTouch(i).fingerId);
         }
 
         // Can only click or start a drag when the cursor is outside the UI
-        if (!isPointerInUI)
+        if (!IsPointerInUI)
         {
             if (IsLeftMouseDown)
             {
@@ -268,7 +268,7 @@ public class InputHandler : UrsComponent
 
     private void HandleLeftMouseUp()
     {
-        if (!isPointerInUI || IsDraggingLeft)
+        if (!IsPointerInUI || IsDraggingLeft)
         {
             OnLeftMouseUp.LastHandler();
         }
@@ -283,7 +283,7 @@ public class InputHandler : UrsComponent
 
     private void HandleRightMouseUp()
     {
-        if (!isPointerInUI || IsDraggingRight)
+        if (!IsPointerInUI || IsDraggingRight)
         {
             OnRightMouseUp.LastHandler();
         }

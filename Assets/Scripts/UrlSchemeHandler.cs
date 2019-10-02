@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -35,7 +35,7 @@ public class UrlSchemeHandler : MonoBehaviour
 			return;
 		}
 
-		OnDataLoaded (url);
+		OnDataLoaded(url);
 	}
 
 	private void ParseUrl(string url)
@@ -71,6 +71,7 @@ public class UrlSchemeHandler : MonoBehaviour
 
 	private IEnumerator DelayedParse(string url)
 	{
+        // Wait half a second after data is loaded and then parse url
 		yield return new WaitForSeconds(0.5f);
 		ParseUrl(url);
 	}

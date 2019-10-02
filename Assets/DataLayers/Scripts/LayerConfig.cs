@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -6,16 +6,24 @@
 //
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 
-using ExtensionMethods;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using UnityEngine;
 
 
 public static class LayerConfig
 {
-    public delegate void OnConfigLoadedCallback(List<LayerGroup> groups);
+	public static readonly string Filename = "layers.csv";
+
+	public delegate void OnConfigLoadedCallback(List<LayerGroup> groups);
+
+	public static IEnumerator Load(OnConfigLoadedCallback callback)
+	{
+		return Load(Paths.Data + Filename, callback);
+	}
 
     public static IEnumerator Load(string filename, OnConfigLoadedCallback callback)
     {
@@ -32,31 +40,47 @@ public static class LayerConfig
         // Read/skip header
         string line = sr.ReadLine();
 
-        int id = 0;
+		var groupNames = new Dictionary<string, LayerGroup>(StringComparer.CurrentCultureIgnoreCase);
+		var layerNames = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
 
-        // Read one line at a time
-        Color groupColor = Color.gray;
-        while ((line = sr.ReadLine()) != null)
+		var dataManager = ComponentManager.Instance.Get<DataManager>();
+
+		// Read one line at a time
+		while ((line = sr.ReadLine()) != null)
         {
             string[] cells = line.Split(',');
             if (!string.IsNullOrEmpty(cells[0]))
             {
-                if (cells[0].Equals("Group"))
-                {
-                    if (group.layers.Count > 0)
-                    {
-                        groups.Add(group);
-                    }
+				string name = cells[1].Trim();
 
-                    group = new LayerGroup(cells[1].Trim());
-                    groupColor = ReadColorCells(cells, Color.gray);
-                }
-				else if (cells[0].Equals("Layer"))
+				if (cells[0].Equals("Layer"))
 				{
-                    string name = cells[1].Trim();
-					DataLayer layer = new DataLayer(name, ReadColorCells(cells, groupColor), id++);
-                    group.layers.Add(layer);
-                }
+					if (layerNames.Contains(name))
+					{
+						Debug.LogError(name + " layer already exists. Looks like a duplicate line in " + Filename);
+					}
+					else
+					{
+						new DataLayer(dataManager, name, ReadColorCells(cells, Color.gray), group);
+						layerNames.Add(name);
+					}
+				}
+				else if (cells[0].Equals("Group"))
+                {
+					if (groups.Count > 0 || groupNames.Count > 0 || group.layers.Count > 0)
+						groups.Add(group);
+
+					if (groupNames.ContainsKey(name))
+					{
+						Debug.LogError(name + " group already exists. Looks like a duplicate line in " + Filename);
+						group = groupNames[name];
+					}
+					else
+					{
+						group = new LayerGroup(name);
+						groupNames.Add(name, group);
+					}
+				}
 				else
 				{
 					Debug.LogWarning("Layer type " + cells[0] + " is not supported");
@@ -65,24 +89,46 @@ public static class LayerConfig
 			}
 		}
 
-        if (group.layers.Count > 0)
-        {
-            groups.Add(group);
-        }
+		if (groups.Count > 0 || groupNames.Count > 0 || group.layers.Count > 0)
+			groups.Add(group);
 
         return groups;
     }
 
     private static Color ReadColorCells(string[] cells, Color _default)
     {
-        int r, g, b;
-        if (int.TryParse(cells[2], out r) &&
-            int.TryParse(cells[3], out g) &&
-            int.TryParse(cells[4], out b))
+        if (int.TryParse(cells[2], out int r) &&
+            int.TryParse(cells[3], out int g) &&
+            int.TryParse(cells[4], out int b))
         {
             return ColorExtensions.FromRGB(r, g, b);
         }
 
         return _default;
     }
+
+#if !UNITY_WEBGL
+	public static void Save(List<LayerGroup> groups)
+	{
+		Save(Paths.Data + Filename, groups);
+	}
+
+	public static void Save(string filename, List<LayerGroup> groups)
+	{
+		using (var sw = new StreamWriter(filename, false, Encoding.UTF8))
+		{
+			sw.WriteLine("Type,Name,Color (red),Color (green),Color (blue)");
+			foreach (var group in groups)
+			{
+				sw.WriteLine("Group," + group.name + ",,,");
+				foreach (var layer in group.layers)
+				{
+					Color32 c = layer.Color;
+					sw.WriteLine("Layer," + layer.Name + "," + c.r + "," + c.g + "," + c.b);
+				}
+				sw.WriteLine(",,,,");
+			}
+		}
+	}
+#endif
 }

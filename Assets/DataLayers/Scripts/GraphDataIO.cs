@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -14,6 +14,8 @@ using System.IO;
 
 public static class GraphDataIO
 {
+	public static readonly string FileSufix = "graph";
+
     private static readonly LoadPatchData<GraphPatch, GraphData>[] headerLoader =
     {
         LoadCsv,
@@ -27,11 +29,11 @@ public static class GraphDataIO
 
     public static IEnumerator LoadCsv(string filename, PatchDataLoadedCallback<GraphData> callback)
     {
-        yield return FileRequest.GetText(filename, (sr) => callback(ParseCsv(sr)));
-    }
+		yield return FileRequest.GetText(filename, (sr) => PatchDataIO.ParseAsync(sr, filename, ParseCsv, callback));
+	}
 
-    private static GraphData ParseCsv(TextReader tr)
-    {
+	private static void ParseCsv(ParseTaskData data)
+	{
         GraphData graph = new GraphData();
         graph.cellSizeX = double.MaxValue;
         graph.cellSizeY = double.MaxValue;
@@ -43,10 +45,10 @@ public static class GraphDataIO
 		Dictionary<int, GraphNode> nodes = new Dictionary<int, GraphNode>();
 
 		// Read/skip header
-		string line = tr.ReadLine();
+		string line = data.sr.ReadLine();
 
 		// Read each data row at a time
-		while ((line = tr.ReadLine()) != null)
+		while ((line = data.sr.ReadLine()) != null)
         {
             string[] cells = line.Split(',');
 
@@ -99,34 +101,35 @@ public static class GraphDataIO
 
         graph.CreatePotentialNetwork(tempGrid);
 
-        return graph;
+		data.patch = graph;
     }
 
     public static IEnumerator LoadBinHeader(string filename, PatchDataLoadedCallback<GraphData> callback)
     {
 #if UNITY_WEBGL
-        callback(ParseBinHeader(PatchDataIO.brHeaders));
+        callback(ParseBinHeader(PatchDataIO.brHeaders, filename));
         yield break;
 #else
-        yield return FileRequest.GetBinary(filename, (br) => callback(ParseBinHeader(br)));
+        yield return FileRequest.GetBinary(filename, (br) => callback(ParseBinHeader(br, filename)));
 #endif
     }
 
-    private static GraphData ParseBinHeader(BinaryReader br)
+    public static GraphData ParseBinHeader(BinaryReader br, string filename)
     {
-        return ParseBinHeader(br, new GraphData());
+        return ParseBinHeader(br, filename, new GraphData());
     }
 
     public static IEnumerator LoadBin(this GraphData graph, string filename, PatchDataLoadedCallback<GraphData> callback)
     {
-		yield return FileRequest.GetBinary(filename, (br) => ParseBin(br, graph));
+		yield return FileRequest.GetBinary(filename, (br) => ParseBin(br, filename, graph));
 		callback(graph);
 	}
 
-    private static GraphData ParseBinHeader(BinaryReader br, GraphData graph)
+    private static GraphData ParseBinHeader(BinaryReader br, string filename, GraphData graph)
     {
 		// Read header
-		PatchDataIO.ReadBinBoundsHeader(br, graph);
+		PatchDataIO.SkipBinVersion(br);
+		PatchDataIO.ReadBinBoundsHeader(br, filename, graph);
 
 		// Read cell sizes
         graph.cellSizeX = br.ReadDouble();
@@ -135,10 +138,10 @@ public static class GraphDataIO
 		return graph;
     }
 
-    private static IEnumerator ParseBin(BinaryReader br, GraphData graph)
+    private static IEnumerator ParseBin(BinaryReader br, string filename, GraphData graph)
     {
-        // Read header
-        ParseBinHeader(br, graph);
+		// Read header
+		ParseBinHeader(br, filename, graph);
 
 		int count = br.ReadInt32();
         graph.indexToNode.Clear();
@@ -149,8 +152,7 @@ public static class GraphDataIO
             GraphNode node = new GraphNode(br.ReadDouble(), br.ReadDouble(), br.ReadInt32());
             node.index = br.ReadInt32();
             graph.nodes.Add(node);
-            if (!graph.indexToNode.ContainsKey(node.index))
-                graph.indexToNode.Add(node.index, node);
+			graph.indexToNode.Add(node.index, node);
 
 			if (++loop > 10000)
 			{
@@ -177,12 +179,10 @@ public static class GraphDataIO
     {
         using (var bw = new BinaryWriter(File.Open(filename, FileMode.Create)))
         {
-            // Write header
-            bw.Write(graph.west);
-            bw.Write(graph.east);
-            bw.Write(graph.north);
-            bw.Write(graph.south);
-            bw.Write(graph.cellSizeX);
+			PatchDataIO.WriteBinVersion(bw);
+			PatchDataIO.WriteBinBoundsHeader(bw, graph);
+
+			bw.Write(graph.cellSizeX);
             bw.Write(graph.cellSizeY);
 
             int count = graph.nodes.Count;
@@ -219,7 +219,8 @@ public static class GraphDataIO
     private static GraphNode CreateNode(Dictionary<int, GraphNode> nodes, int id, double lon, double lat, int value, GraphData graph)
     {
         GraphNode node = new GraphNode(lon, lat, value);
-        nodes.Add(id, node);
+		node.index = id;
+		nodes.Add(id, node);
         graph.nodes.Add(node);
 
         graph.west = Math.Min(graph.west, lon);

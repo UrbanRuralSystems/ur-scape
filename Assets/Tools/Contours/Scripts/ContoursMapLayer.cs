@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -11,6 +11,7 @@
 #endif
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -24,8 +25,16 @@ public class ContoursMapLayer : GridMapLayer
 	private readonly HashSet<DataLayer> layers = new HashSet<DataLayer>();
 	private bool layersNeedUpdate;
 
-	private int selectedContour = 0;
+	public int SelectedContour { get; private set; }
+
 	private ContoursGenerator generator;
+	private MapCamera mapCamera;
+	private bool cropWithViewArea = true;
+	public bool CropWithViewArea { get { return cropWithViewArea; } }
+	private readonly Vector2[] boundaryPoints = new Vector2[4] { Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero };
+	private Coroutine delayedUpdate;
+
+	public bool NeedsUpdate { get { return layersNeedUpdate; } }
 
 
 	//
@@ -36,7 +45,7 @@ public class ContoursMapLayer : GridMapLayer
     {
         base.Init(map, grid);
 
-        SetSelectedContour(selectedContour);
+        SetSelectedContour(SelectedContour);
 
 #if !USE_TEXTURE
 		if (SystemInfo.supportsComputeShaders && compute != null)
@@ -48,23 +57,56 @@ public class ContoursMapLayer : GridMapLayer
 		{
 			generator = new ContoursGenerator_CPU(this);
 		}
+
+		mapCamera = ComponentManager.Instance.Get<MapCamera>();
 	}
 
 	protected override void OnDestroy()
     {
         base.OnDestroy();
 
-        map.OnPostLevelChange -= OnPostLevelChange;
-    }
+		map.OnPreLevelChange -= OnPreLevelChange;
+		map.OnPostLevelChange -= OnPostLevelChange;
+		map.OnMapUpdate -= OnMapUpdate;
+	}
 
 	public override void Show(bool show)
 	{
 		base.Show(show);
 
 		if (show)
+		{
+			map.OnPreLevelChange += OnPreLevelChange;
 			map.OnPostLevelChange += OnPostLevelChange;
+			if (cropWithViewArea)
+			{
+				map.OnMapUpdate += OnMapUpdate;
+				UpdateBoundaryPoints();
+			}
+		}
 		else
+		{
+			map.OnPreLevelChange -= OnPreLevelChange;
 			map.OnPostLevelChange -= OnPostLevelChange;
+			map.OnMapUpdate -= OnMapUpdate;
+		}
+	}
+
+	public void SetCropWithViewArea(bool crop)
+	{
+		if (cropWithViewArea != crop)
+		{
+			cropWithViewArea = crop;
+			if (crop)
+			{
+				map.OnMapUpdate += OnMapUpdate;
+				UpdateBoundaryPoints();
+			}
+			else
+			{
+				map.OnMapUpdate -= OnMapUpdate;
+			}
+		}
 	}
 
 	public override void UpdateContent()
@@ -72,8 +114,7 @@ public class ContoursMapLayer : GridMapLayer
 		base.UpdateContent();
 		if (autoAdjustLineThickness)
 		{
-			float feather = Mathf.Clamp(0.002f * grid.countX / transform.localScale.x, 0.03f, 2f);
-			material.SetFloat("LineFeather", feather);
+			AdjustLineThickness();
 		}
 	}
 
@@ -81,10 +122,23 @@ public class ContoursMapLayer : GridMapLayer
 	// Event Methods
 	//
 
+	private bool avoidRefreshDuringLevelChange = false;
+	private void OnPreLevelChange(int level)
+	{
+		avoidRefreshDuringLevelChange = true;
+		StartDelayedUpdateData();
+	}
+
 	private void OnPostLevelChange(int level)
     {
-		Refresh();
+		avoidRefreshDuringLevelChange = false;
     }
+
+	private void OnMapUpdate()
+	{
+		UpdateBoundaryPoints();
+		Refresh();
+	}
 
 	private void OnOtherGridChange(GridData otherGrid)
 	{
@@ -122,7 +176,11 @@ public class ContoursMapLayer : GridMapLayer
 		otherGrid.OnFilterChange -= OnOtherGridFilterChange;
 
         grids.Remove(otherGrid);
-		layersNeedUpdate = true;
+
+		if (grids.Count == 0)
+			layers.Clear();
+		else
+			layersNeedUpdate = true;
 	}
 
 	public void Clear()
@@ -134,11 +192,14 @@ public class ContoursMapLayer : GridMapLayer
 			g.OnFilterChange -= OnOtherGridFilterChange;
         }
         grids.Clear();
-		layersNeedUpdate = true;
+		layers.Clear();
 	}
 
 	public void Refresh()
 	{
+		if (avoidRefreshDuringLevelChange)
+			return;
+
 		if (grids.Count > 0 && !UpdateBounds())
 		{
 			Debug.LogError("Invalid contour area!");
@@ -146,10 +207,27 @@ public class ContoursMapLayer : GridMapLayer
 		}
 
 		UpdateData();
+
+		if (autoAdjustLineThickness)
+		{
+			AdjustLineThickness();
+		}
 	}
 
 	public void CreateBuffer()
 	{
+#if SAFETY_CHECK
+		var count = grid.countX * grid.countY;
+		if (grid.values != null && grid.values.Length == count)
+			Debug.LogWarning("CreateBuffer: creating new buffer with same size!");
+#if USE_TEXTURE
+		if (valuesBuffer != null && grid.countX == valuesBuffer.width && grid.countY == valuesBuffer.height)
+#else
+        if (valuesBuffer != null && valuesBuffer.count == count)
+#endif
+			Debug.LogWarning("CreateBuffer: creating new buffer with same size!");
+#endif
+		grid.InitGridValues(false);
 		CreateValuesBuffer();
 	}
 
@@ -158,10 +236,15 @@ public class ContoursMapLayer : GridMapLayer
 		generator.excludeCellsWithNoData = exclude;
 	}
 
+	public void DeselectContour()
+	{
+		SetSelectedContour(0);
+	}
+
     public void SetSelectedContour(int index)
     {
-        selectedContour = index;
-        if (selectedContour > 1)
+		SelectedContour = index;
+        if (SelectedContour > 1)
         {
             material.EnableKeyword("BLINK");
         }
@@ -169,7 +252,7 @@ public class ContoursMapLayer : GridMapLayer
         {
             material.DisableKeyword("BLINK");
         }
-        material.SetInt("SelectedValue", selectedContour);
+        material.SetInt("SelectedValue", SelectedContour);
     }
 
     public int GetContoursCount(bool selected)
@@ -178,69 +261,27 @@ public class ContoursMapLayer : GridMapLayer
         if (grid.values != null)
         {
             int count = grid.values.Length;
-            int value = selected ? selectedContour : 1;
-            for (int i = 0; i < count; ++i)
-            {
-				if (grid.values[i] == value)
-                    ++sum;
-            }
-        }
-        return sum;
-    }
-
-	public float GetContoursSquareMeters()
-    {
-		if (grid.countX == 0)
-			return 0;
-
-		double x, y;
-		GeoCalculator.GetDistanceInMeters(grid.west, grid.south, grid.east, grid.north, out x, out y);
-		double xSize = x / grid.countX;
-		double ySize = y / grid.countY;
-		return (float)(xSize * ySize);
-    }
-
-    public float GetGridContouredData(GridData gridData, bool selected)
-    {
-		var contourGrid = grid;
-
-		double contoursDegreesPerCellX = (contourGrid.east - contourGrid.west) / contourGrid.countX;
-		double contoursDegreesPerCellY = (contourGrid.south - contourGrid.north) / contourGrid.countY;
-		double contoursCellsPerDegreeX = 1.0 / contoursDegreesPerCellX;
-		double contoursCellsPerDegreeY = 1.0 / contoursDegreesPerCellY;
-
-		var cellsPerDegreeX = gridData.countX / (gridData.east - gridData.west);
-		var cellsPerDegreeY = gridData.countY / (gridData.south - gridData.north);
-
-		double scaleX = cellsPerDegreeX * contoursDegreesPerCellX;
-		double scaleY = cellsPerDegreeY * contoursDegreesPerCellY;
-
-		double offsetX = (contourGrid.west - gridData.west) * cellsPerDegreeX + 0.5 * scaleX;
-		double offsetY = (contourGrid.north - gridData.north) * cellsPerDegreeY + 0.5 * scaleY;
-
-		int startX = (int)((gridData.west - contourGrid.west) * contoursCellsPerDegreeX + 0.5);
-		int startY = (int)((gridData.north - contourGrid.north) * contoursCellsPerDegreeY + 0.5);
-		int endX = (int)((gridData.east - contourGrid.west) * contoursCellsPerDegreeX + 0.5);
-		int endY = (int)((gridData.south - contourGrid.north) * contoursCellsPerDegreeY + 0.5);
-
-		float sum = 0;
-		int value = selected ? selectedContour : 1;
-		for (int y = startY; y < endY; y++)
-		{
-			int contourIndex = y * contourGrid.countX + startX;
-			for (int x = startX; x < endX; x++, contourIndex++)
+			if (selected)
 			{
-                if (contourGrid.values[contourIndex] == value)
+				if (SelectedContour == 0)
+					return 0;
+
+				for (int i = 0; i < count; ++i)
 				{
-					int pX = (int)(offsetX + x * scaleX);
-					int pY = (int)(offsetY + y * scaleY);
-					int patchIndex = pY * gridData.countX + pX;
-					sum += gridData.values[patchIndex];
+					if (grid.values[i] == SelectedContour)
+						++sum;
+				}
+			}
+			else
+			{
+				for (int i = 0; i < count; ++i)
+				{
+					if (grid.values[i] > 0)
+						++sum;
 				}
 			}
 		}
-
-		return sum;
+        return sum;
     }
 
 
@@ -275,8 +316,22 @@ public class ContoursMapLayer : GridMapLayer
 		grid.countX = (int)Math.Round((east - west) * dotsPerDegreeX);
 		grid.countY = (int)Math.Round((north - south) * dotsPerDegreeY);
 
-		// Update the material
-		UpdateResolution();
+		var count = grid.countX * grid.countY;
+		if (grid.values != null && grid.values.Length != count)
+		{
+			grid.values = null;
+		}
+
+#if USE_TEXTURE
+		if (valuesBuffer != null && (grid.countX != valuesBuffer.width || grid.countY != valuesBuffer.height))
+#else
+        if (valuesBuffer != null && valuesBuffer.count != count)
+#endif
+		{
+			ReleaseValuesBuffer();
+		}
+
+		// Don't update the material here. Material is updated later in the _UpdateData method
 
 		if (grid.west != west || grid.east != east || grid.north != north || grid.south != south)
 		{
@@ -288,26 +343,72 @@ public class ContoursMapLayer : GridMapLayer
 
 	private void UpdateData()
 	{
-		bool hasGrids = grids.Count > 0;
+		if (delayedUpdate == null)
+			_UpdateData();
+		else
+			lastDelayedFrame = Time.frameCount + 1;
+	}
 
+	private void StartDelayedUpdateData()
+	{
+		if (delayedUpdate != null)
+			return;
+
+		ShowRenderer(false);
+		delayedUpdate = StartCoroutine(DelayedUpdateData());
+	}
+
+	private int lastDelayedFrame = 0;
+	private IEnumerator DelayedUpdateData()
+	{
+		do
+		{
+			yield return null;
+		}
+		while (Time.frameCount <= lastDelayedFrame);
+		delayedUpdate = null;
+
+		Refresh();
+	}
+
+	private void _UpdateData()
+	{
+		bool hasGrids = grids.Count > 0;
 		if (hasGrids)
 		{
 			if (layersNeedUpdate)
+			{
 				UpdateLayerCount();
 
-			generator.InitializeValues(layers.Count);
+				// Update the material
+				UpdateResolution();
+			}
+
+			generator.InitializeValues(layers.Count, cropWithViewArea ? boundaryPoints : null);
 			generator.CalculateValues();
+
+			grid.OnValuesChange -= base.OnGridValuesChange;
+			grid.ValuesChanged();
+			grid.OnValuesChange += base.OnGridValuesChange;
+
 		}
 		else
 		{
+			layersNeedUpdate = false;
 			grid.values = null;
 			grid.countX = 0;
 			grid.countY = 0;
+			ReleaseValuesBuffer();
 		}
 
-		if (hasGrids ^ GetComponent<MeshRenderer>().enabled)
+		ShowRenderer(hasGrids);
+	}
+
+	private void ShowRenderer(bool show)
+	{
+		if (show ^ GetComponent<MeshRenderer>().enabled)
 		{
-			GetComponent<MeshRenderer>().enabled = hasGrids;
+			GetComponent<MeshRenderer>().enabled = show;
 		}
 	}
 	
@@ -316,9 +417,27 @@ public class ContoursMapLayer : GridMapLayer
 		layers.Clear();
 		foreach (var grid in grids)
 		{
-			if (!layers.Contains(grid.patch.dataLayer))
-				layers.Add(grid.patch.dataLayer);
+			if (!layers.Contains(grid.patch.DataLayer))
+				layers.Add(grid.patch.DataLayer);
 		}
 		layersNeedUpdate = false;
+	}
+
+	private void AdjustLineThickness()
+	{
+		float feather = Mathf.Clamp(0.002f * grid.countX / transform.localScale.x, 0.01f, 2f);
+		material.SetFloat("LineFeather", feather);
+	}
+
+	private void UpdateBoundaryPoints()
+	{
+		var currentMeters = map.MapCenterInMeters;
+		var unitsToMeters = map.UnitsToMeters;
+		var pts = mapCamera.BoundaryPoints;
+		for (int i = 0; i < pts.Length; i++)
+		{
+			boundaryPoints[i].x = (float)(currentMeters.x + pts[i].x * unitsToMeters);
+			boundaryPoints[i].y = (float)(currentMeters.y + pts[i].y * unitsToMeters);
+		}
 	}
 }

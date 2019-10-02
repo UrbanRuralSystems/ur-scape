@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -17,12 +17,14 @@ public class SiteBoundaryLayerController : MapLayerControllerT<AreaMapLayer>
 	[Header("Materials")]
 	public Material defaultMaterial;
 	public Material selectedMaterial;
-
-	private Transform selectedTransform;
-	private Color originalColor;
+	public Material highlightMaterial;
 
 	private readonly Dictionary<Site, AreaMapLayer> siteToMapLayer = new Dictionary<Site, AreaMapLayer>();
-	private AreaMapLayer currentSelected;
+	private AreaMapLayer selectedLayer;
+	private Site highlightedSite;
+
+	private bool showBoundaries = false;
+	public bool IsShowingBoundaries { get { return showBoundaries; } }
 
 
 	//
@@ -34,41 +36,6 @@ public class SiteBoundaryLayerController : MapLayerControllerT<AreaMapLayer>
 		ComponentManager.Instance.OnRegistrationFinished += OnRegistrationFinished;
 	}
 
-	/*private void Update()
-	{
-		Transform hitTransform = null;
-
-		Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-		RaycastHit hitInfo;
-		if (Physics.Raycast(ray, out hitInfo))
-		{
-			hitTransform = hitInfo.transform;
-		}
-
-		if (hitTransform != selectedTransform)
-		{
-			if (selectedTransform != null)
-			{
-				selectedTransform.GetComponent<MeshRenderer>().material.color = originalColor;
-			}
-
-			selectedTransform = hitTransform;
-
-			if (selectedTransform != null)
-			{
-				if (hitTransform.localScale.x > 0.09f && hitTransform.localScale.x < 2)
-				{
-					originalColor = selectedTransform.GetComponent<MeshRenderer>().material.color;
-					selectedTransform.GetComponent<MeshRenderer>().material.color = originalColor * 1.3f;
-				}
-				else
-				{
-					selectedTransform = null;
-				}
-			}
-		}
-	}*/
-
 
 	//
 	// Event Methods
@@ -76,8 +43,6 @@ public class SiteBoundaryLayerController : MapLayerControllerT<AreaMapLayer>
 
 	private void OnRegistrationFinished()
 	{
-		ComponentManager.Instance.OnRegistrationFinished -= OnRegistrationFinished;
-
 		var siteBrowser = ComponentManager.Instance.Get<SiteBrowser>();
 		siteBrowser.OnAfterActiveSiteChange += OnFirstSiteSelection;
 		siteBrowser.OnAfterActiveSiteChange += OnAfterActiveSiteChange;
@@ -88,7 +53,7 @@ public class SiteBoundaryLayerController : MapLayerControllerT<AreaMapLayer>
 		var siteBrowser = ComponentManager.Instance.Get<SiteBrowser>();
 		siteBrowser.OnAfterActiveSiteChange -= OnFirstSiteSelection;
 
-		CreateSiteBondaries();
+		CreateSiteBoundaries();
 	}
 
 	private void OnAfterActiveSiteChange(Site site, Site previousSite)
@@ -104,11 +69,15 @@ public class SiteBoundaryLayerController : MapLayerControllerT<AreaMapLayer>
 	public AreaMapLayer Add(Site site, AreaBounds bounds)
 	{
 		AreaMapLayer layer = Instantiate(sitePrefab);
-		layer.name = site.name;
+		layer.name = site.Name;
 		layer.Init(map, bounds.north, bounds.east, bounds.south, bounds.west);
 		layer.transform.SetParent(transform, false);
 		mapLayers.Add(layer);
 		siteToMapLayer.Add(site, layer);
+
+		if (!showBoundaries && site != highlightedSite)
+			layer.Show(false);
+
 		return layer;
 	}
 
@@ -136,7 +105,35 @@ public class SiteBoundaryLayerController : MapLayerControllerT<AreaMapLayer>
 
 	public void ShowBoundaries(bool show)
 	{
-		gameObject.SetActive(show);
+		showBoundaries = show;
+		foreach (var layer in mapLayers)
+		{
+			layer.Show(show);
+		}
+	}
+
+	public void HighlightBoundary(Site site, bool show)
+	{
+		AreaMapLayer mapLayer;
+		if (siteToMapLayer.TryGetValue(site, out mapLayer))
+		{
+			if (show)
+			{
+				if (!mapLayer.IsVisible())
+					mapLayer.Show(true);
+				SetMaterial(mapLayer, highlightMaterial);
+			}
+			else
+			{
+				var mat = mapLayer == selectedLayer ? selectedMaterial : defaultMaterial;
+				SetMaterial(mapLayer, mat);
+
+				if (!showBoundaries && mapLayer.IsVisible())
+					mapLayer.Show(false);
+			}
+		}
+
+		highlightedSite = show ? site : null;
 	}
 
 
@@ -146,29 +143,36 @@ public class SiteBoundaryLayerController : MapLayerControllerT<AreaMapLayer>
 
 	private void SetSelected(Site site)
 	{
-		if (currentSelected != null)
+		if (selectedLayer != null)
 		{
-			currentSelected.GetComponent<MeshRenderer>().material = defaultMaterial;
-			currentSelected = null;
+			SetMaterial(selectedLayer, defaultMaterial);
+			selectedLayer = null;
 		}
 
 		AreaMapLayer mapLayer;
 		if (siteToMapLayer.TryGetValue(site, out mapLayer))
 		{
-			mapLayer.GetComponent<MeshRenderer>().material = selectedMaterial;
-			currentSelected = mapLayer;
+			SetMaterial(mapLayer, selectedMaterial);
+			selectedLayer = mapLayer;
 		}
 	}
 
-	private void CreateSiteBondaries()
+	private void SetMaterial(MapLayer mapLayer, Material mat)
 	{
-		var dataManager = ComponentManager.Instance.Get<DataManager>();
-		var defaultSite = ComponentManager.Instance.Get<SiteBrowser>().DefaultSite;
+		mapLayer.GetComponent<MeshRenderer>().material = mat;
+	}
+
+	private void CreateSiteBoundaries()
+	{
+		var componentManager = ComponentManager.Instance;
+		var dataManager = componentManager.Get<DataManager>();
+		var defaultSite = componentManager.Get<SiteBrowser>().DefaultSite;
+
 		foreach (var site in dataManager.sites)
 		{
 			if (site != defaultSite)
 			{
-				Add(site, site.bounds);
+				Add(site, site.Bounds);
 			}
 		}
 	}

@@ -26,7 +26,7 @@ Material:
     - LineFeather: 0.1
     - OpacityAdjust: 1
     - Shape: 0
-    - Thickness: 0.03
+    - Thickness: 0.02
     m_Colors:
     - Tint: {r: 0.99264705, g: 0.13137977, b: 0.13137977, a: 1}
     - TransectTint: {r: 1, g: 1, b: 1, a: 1}

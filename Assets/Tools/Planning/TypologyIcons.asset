@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e88dbb5b8a909a48865c35d66e9cdf9, type: 3}
+  m_Name: TypologyIcons
+  m_EditorClassIdentifier: 
+  typologies:
+  - name: Panen Bernilai Rendah
+    icon: {fileID: 4924668603064106, guid: 6088f29631b4ca64ab62247887d9a803, type: 2}
+    strength: 40
+  - name: Panen Bernilai Tinggi
+    icon: {fileID: 4924668603064106, guid: 6088f29631b4ca64ab62247887d9a803, type: 2}
+    strength: 40
+  - name: Rumah Tinggal
+    icon: {fileID: 4300182633122236, guid: 744a3bc6f56b3b04c9b669aba6e8a194, type: 2}
+    strength: 15
+  - name: Ruko
+    icon: {fileID: 4300182633122236, guid: 744a3bc6f56b3b04c9b669aba6e8a194, type: 2}
+    strength: 15
+  - name: Rumah Tambah
+    icon: {fileID: 4300182633122236, guid: 744a3bc6f56b3b04c9b669aba6e8a194, type: 2}
+    strength: 15
+  - name: Apartemen Tingkat Rendah
+    icon: {fileID: 4688903655922632, guid: 268f6ebda22153c4a8250aefc9794ea5, type: 2}
+    strength: 6
+  - name: Apartemen Tingkat Tinggi
+    icon: {fileID: 4554645436709018, guid: 6a9bbe322a2f1094b9b1657c577a5df5, type: 2}
+    strength: 2
+  - name: Pedestrian Bioswale
+    icon: {fileID: 4924668603064106, guid: 6088f29631b4ca64ab62247887d9a803, type: 2}
+    strength: 20
+  - name: Ruang Terbuka
+    icon: {fileID: 4905871698875328, guid: 0c9fedef9dc110e458c36f07f0d614c1, type: 2}
+    strength: 50

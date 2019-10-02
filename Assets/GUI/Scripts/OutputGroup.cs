@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -25,12 +25,15 @@ public class OutputGroup : CollapsibleList
 
 	private readonly Dictionary<string, TextItem> textItems = new Dictionary<string, TextItem>();
 
-
+    public Dictionary<string, TextItem> TextItems
+    {
+        get { return textItems; }
+    }
     //
     // Public Methods
     //
 
-    private void AddItem(string itemLabel, float value)
+    private void AddItem(string itemLabel, double value)
     {
         TextItem textItem = new TextItem();
         var item = Instantiate(itemPrefab, container, false);
@@ -45,18 +48,20 @@ public class OutputGroup : CollapsibleList
         GuiUtils.RebuildLayout(container);
     }
 
-    public void UpdateItem(string name, float value)
+    public bool UpdateItem(string name, double value)
     {
         TextItem textItem = null;
         if (textItems.TryGetValue(name, out textItem))
         {
 			UpdateValue(textItem, value);
-        }
+			return false;
+		}
         else
         {
             AddItem(name, value);
-        }
-    }
+			return true;
+		}
+	}
 
     public void DeleteAllItems()
     {
@@ -65,12 +70,16 @@ public class OutputGroup : CollapsibleList
             Destroy(pair.Value.item.gameObject);
         }
         textItems.Clear();
-
-        GuiUtils.RebuildLayout(container);
     }
 
-	private void UpdateValue(TextItem textItem, float value)
+	private void UpdateValue(TextItem textItem, double value)
 	{
+		if (double.IsNaN(value))
+		{
+			textItem.itemValue.text = "N/A";
+			return;
+		}
+
 		var absValue = System.Math.Abs(value);
 		if (absValue > 1000)
 			textItem.itemValue.text = value.ToString("N0");

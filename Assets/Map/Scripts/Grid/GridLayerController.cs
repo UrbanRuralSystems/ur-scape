@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -45,8 +45,8 @@ public class GridLayerController : MapLayerControllerT<GridMapLayer>
 	{
 		layer.Init(map, grid);
 
-		var dataLayer = grid.patch.dataLayer;
-		layer.SetColor(dataLayer.color);
+		var dataLayer = grid.patch.DataLayer;
+		layer.SetColor(dataLayer.Color);
 		layer.transform.SetParent(transform, false);
 
 		mapLayers.Add(layer);
@@ -74,7 +74,7 @@ public class GridLayerController : MapLayerControllerT<GridMapLayer>
 		layer.Grid.patch.SetMapLayer(null);
 
 		// If it's the last patch then remove the data layer
-		var dataLayer = layer.Grid.patch.dataLayer;
+		var dataLayer = layer.Grid.patch.DataLayer;
 		if (!dataLayer.HasLoadedPatchesInView())
 		{
 			visibleDataLayers.Remove(dataLayer);
@@ -155,7 +155,7 @@ public class GridLayerController : MapLayerControllerT<GridMapLayer>
 		if (string.IsNullOrEmpty(patch.Filename))
 			return;
 
-		var layerSite = patch.siteRecord.layerSite;
+		var layerSite = patch.SiteRecord.layerSite;
 		if (layerSite.mean < MeanThreshold)
 		{
 			float autoGamma = Mathf.Log(layerSite.mean) * InvMeanThresholdLog;

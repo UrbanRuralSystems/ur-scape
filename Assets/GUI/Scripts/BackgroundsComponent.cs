@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -6,7 +6,6 @@
 //
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -16,6 +15,8 @@ using UnityEngine.UI;
 public class BackgroundsComponent : UrsComponent
 {
     [Header("UI References")]
+	public ToggleButton toggle;
+	public RectTransform panel;
 	public ToggleGroup backgroundsContainer;
 
 	[Header("Prefabs")]
@@ -23,6 +24,7 @@ public class BackgroundsComponent : UrsComponent
 
     private MapboxLayerController mapboxController;
     private int selectedIndex = -1;
+	private Coroutine mouseCoroutine;
 
     // Special background storage
     private Dictionary<string,GameObject> specialBackgrounds = new Dictionary<string, GameObject>(); 
@@ -33,7 +35,9 @@ public class BackgroundsComponent : UrsComponent
 
     private IEnumerator Start()
     {
-        yield return WaitFor.Frames(WaitFor.InitialFrames);
+		toggle.onValueChanged.AddListener((isOn) => OnShowBackgroundPanel(isOn));
+
+		yield return WaitFor.Frames(WaitFor.InitialFrames);
 
         // Get Mapbox layer controller
        var map = ComponentManager.Instance.Get<MapController>();
@@ -41,7 +45,7 @@ public class BackgroundsComponent : UrsComponent
         int selectedMapboxIndex = mapboxController.BackgroundIndex;
         bool mapboxEnabled = selectedMapboxIndex >= 0;
 
-        AddBackground(-1, "None", selectedMapboxIndex == -1);
+        AddBackground(-1, Translator.Get("None"), selectedMapboxIndex == -1);
 
 		// Check if Mapbox is ready
 		if (mapboxEnabled)
@@ -54,24 +58,8 @@ public class BackgroundsComponent : UrsComponent
 		{
 			mapboxController.OnReady += OnMapboxControllerReady;
 		}
-
 	}
 
-	private void OnMapboxControllerReady()
-    {
-        int selected = selectedIndex == -1? mapboxController.BackgroundIndex + 1 : 0;
-
-		AddBackgrounds();
-
-		var container = backgroundsContainer.transform;
-		var count = container.childCount;
-		for (int i = 0; i < count; ++i)
-        {
-            var toggle = container.GetChild(i).GetComponent<Toggle>();
-            if (i == selected)
-                toggle.isOn = true;
-        }
-    }
 
     //
     // Inheritance Methods
@@ -105,16 +93,48 @@ public class BackgroundsComponent : UrsComponent
             }
         }
     }
+
     // this can be called e.g. by prototype
     public void AddSpecialBackground(string name, Transform prefab)
     {
-            specialBackgrounds.Add(name,prefab.gameObject);
+		specialBackgrounds.Add(name,prefab.gameObject);
     }
 
-    //
-    // Event Methods
-    //
-    private void OnSpecialBackgroundChanged(string name, bool show)
+
+	//
+	// Event Methods
+	//
+
+	private void OnShowBackgroundPanel(bool isOn)
+	{
+		panel.gameObject.SetActive(isOn);
+
+		if (mouseCoroutine != null)
+		{
+			StopCoroutine(mouseCoroutine);
+			mouseCoroutine = null;
+		}
+		if (isOn)
+			mouseCoroutine = StartCoroutine(CheckMouseUsage());
+	}
+
+	private void OnMapboxControllerReady()
+	{
+		int selected = selectedIndex == -1 ? mapboxController.BackgroundIndex + 1 : 0;
+
+		AddBackgrounds();
+
+		var container = backgroundsContainer.transform;
+		var count = container.childCount;
+		for (int i = 0; i < count; ++i)
+		{
+			var toggle = container.GetChild(i).GetComponent<Toggle>();
+			if (i == selected)
+				toggle.isOn = true;
+		}
+	}
+
+	private void OnSpecialBackgroundChanged(string name, bool show)
     {
         // if index is in special Layers use the object and ignore the rest
         if (specialBackgrounds.ContainsKey(name))
@@ -126,7 +146,6 @@ public class BackgroundsComponent : UrsComponent
 
     private void OnBackgroundChanged(int index, bool show)
     {
-
         if (index >= 0)
         {
             if (show)
@@ -150,9 +169,14 @@ public class BackgroundsComponent : UrsComponent
     }
 
 
-    //
-    // Private Methods
-    //
+	//
+	// Private Methods
+	//
+
+	private void CloseBackgroundPanel()
+	{
+		toggle.isOn = false;
+	}
 
 	private void AddBackgrounds()
 	{
@@ -188,7 +212,7 @@ public class BackgroundsComponent : UrsComponent
     }
 
     private Toggle AddSpecialBackground(string name, bool isOn)
-    {
+	{
         var background = Instantiate(backgroundPrefab, backgroundsContainer.transform);
         background.isOn = isOn;
         background.name = name;
@@ -197,4 +221,20 @@ public class BackgroundsComponent : UrsComponent
         background.onValueChanged.AddListener((show) => OnSpecialBackgroundChanged(name, show));
         return background;
     }
+
+	private IEnumerator CheckMouseUsage()
+	{
+		while (panel.gameObject.activeSelf)
+		{
+			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.mouseScrollDelta.y != 0)
+			{
+				if (!panel.IsMouseInside() && !toggle.GetComponent<RectTransform>().IsMouseInside())
+				{
+					CloseBackgroundPanel();
+					break;
+				}
+			}
+			yield return null;
+		}
+	}
 }

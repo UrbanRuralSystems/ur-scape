@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -18,11 +18,16 @@ public class DataLayerGroupPanel : MonoBehaviour
 
     public void Init(string name)
     {
-		this.name = name;
-        title.text = name;
+		UpdateName(name);
 	}
 
-    public DataLayerPanel AddLayer(DataLayerPanel prefab, DataLayer layer)
+	public void UpdateName(string name)
+	{
+		this.name = name;
+		title.text = name;
+	}
+
+	public DataLayerPanel AddLayer(DataLayerPanel prefab, DataLayer layer)
     {
         // Create a new instance of the layer prefab and initialize it
         var layerCtrl = Instantiate(prefab);

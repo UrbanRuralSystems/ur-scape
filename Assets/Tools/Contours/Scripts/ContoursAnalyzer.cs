@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -12,11 +12,19 @@ using UnityEngine;
 
 public class ContoursAnalyzer : MonoBehaviour
 {
-    private Coroutine coroutine;
+	private static readonly float updateInterval = 0.15f;
+	private static readonly WaitForSeconds updateWait = new WaitForSeconds(updateInterval);
+	private float lastUpdateTime;
+	private Coroutine coroutine;
 
-    public delegate void ProgressCallback(float progress);
+	public delegate void ProgressCallback(float progress);
 
-    public void Stop()
+	private void OnDestroy()
+	{
+		Stop();
+	}
+
+	public void Stop()
     {
         if (coroutine != null)
         {
@@ -25,18 +33,37 @@ public class ContoursAnalyzer : MonoBehaviour
         }
     }
 
-    public void Analyze(GridData contours, ProgressCallback callback)
+    public void Analyze(ContoursMapLayer layer, ProgressCallback callback)
     {
-        Stop();
-        coroutine = StartCoroutine(Analyze(contours, 1000, callback));
+		if (Time.time >= lastUpdateTime)
+		{
+			// Stop the coroutine (if there is) because analysis would have already started
+			Stop();
+		}
+
+		lastUpdateTime = Time.time + updateInterval - 0.01f;
+		if (coroutine == null)
+		{
+			coroutine = StartCoroutine(DelayedAnalyze(layer, callback));
+		}
     }
 
-    private IEnumerator Analyze(GridData contours, int countPerFrame, ProgressCallback callback)
+	private IEnumerator DelayedAnalyze(ContoursMapLayer layer, ProgressCallback callback)
+	{
+		do
+		{
+			yield return updateWait;
+		}
+		while (Time.time < lastUpdateTime);
+
+		layer.FetchGridValues();
+		yield return Analyze(layer.Grid, 1000, callback);
+	}
+
+	private IEnumerator Analyze(GridData contours, int countPerFrame, ProgressCallback callback)
     {
         Queue<int> cellQueue = new Queue<int>();
         HashSet<int> cellSet = new HashSet<int>();
-
-		yield return null;
 
         int xmo = contours.countX - 1;
         int ymo = contours.countY - 1;
@@ -51,9 +78,16 @@ public class ContoursAnalyzer : MonoBehaviour
             while (scanIndex < count && contours.values[scanIndex] != 1)
             {
                 scanIndex++;
-            }
 
-            if (scanIndex < count)
+				if (++processed > countPerFrame)
+				{
+					processed = 0;
+					callback((float)scanIndex / count);
+					yield return null;
+				}
+			}
+
+			if (scanIndex < count)
             {
                 siteIndex++;
 
@@ -121,7 +155,7 @@ public class ContoursAnalyzer : MonoBehaviour
 
         coroutine = null;
 
-        if (callback != null)
+		if (callback != null)
         {
             callback(1);
         }

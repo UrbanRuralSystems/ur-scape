@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -20,7 +20,7 @@ public class LoadingComponent : UrsComponent
     private float alpha = 0f;
 
     //
-    // Public Methods
+    // Unity Methods
     //
 
     protected override void Awake()
@@ -31,9 +31,11 @@ public class LoadingComponent : UrsComponent
 
         cg.alpha = alpha = 0f;
         gameObject.SetActive(false);
-    }
 
-    private void Update()
+		LocalizationManager.WaitAndRun(InitLocalization);
+	}
+
+	private void Update()
     {
         if (alphaChange > 0 && cg.alpha < 1f)
         {
@@ -57,7 +59,12 @@ public class LoadingComponent : UrsComponent
         }
     }
 
-    public void Show(bool show)
+
+	//
+	// Public Methods
+	//
+
+	public void Show(bool show)
     {
         if (show)
         {
@@ -76,5 +83,20 @@ public class LoadingComponent : UrsComponent
     {
         scrollBar.size = p;
     }
+
+
+	//
+	// Private Methods
+	//
+
+	private void InitLocalization()
+	{
+		LocalizationManager.Instance.OnLanguageChanged += OnLanguageChanged;
+	}
+
+	private void OnLanguageChanged()
+	{
+		label.text = Translator.Get("Loading") + " ...";
+	}
 
 }

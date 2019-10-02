@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -8,7 +8,6 @@
 //          Michael Joos(joos @arch.ethz.ch)
 
 using UnityEngine;
-using UnityEngine.UI;
 
 public class OutputPanel : UrsComponent
 {
@@ -27,8 +26,6 @@ public class OutputPanel : UrsComponent
     {
         defaultPanel = Instantiate(defaultPanelPrefab, outputContainer, false);
 		currentPanel = defaultPanel;
-
-		defaultPanel.transform.GetChild(1).GetComponent<Text>().text = "Version " + Application.version;
 	}
 
 	//
@@ -55,5 +52,11 @@ public class OutputPanel : UrsComponent
 	{
 		if (panel == currentPanel)
 			SetPanel(null);
+	}
+
+	public void DestroyPanel(GameObject panel)
+	{
+		RemovePanel(panel.transform);
+		Destroy(panel);
 	}
 }

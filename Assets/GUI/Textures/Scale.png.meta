@@ -1,12 +1,13 @@
 fileFormatVersion: 2
 guid: b1e8843d25d831f4ca5d30beb6ebe36c
-timeCreated: 1496821521
+timeCreated: 1551071943
 licenseType: Pro
 TextureImporter:
   fileIDToRecycleName:
     21300000: Scale_U
     21300002: Scale_A
     21300004: Scale_B
+    21300006: Scale_O
   serializedVersion: 4
   mipmaps:
     mipMapMode: 0
@@ -123,8 +124,21 @@ TextureImporter:
         width: 8
         height: 3
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 2, z: 0, w: 0}
+      outline: []
+      tessellationDetail: 0
+    - serializedVersion: 2
+      name: Scale_O
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 1
+        width: 14
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 1, y: 1, z: 1, w: 1}
       outline: []
       tessellationDetail: 0
     outline: []

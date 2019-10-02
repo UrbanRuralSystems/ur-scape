@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -10,7 +10,6 @@
 #define SAFETY_CHECK
 #endif
 
-using ExtensionMethods;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -29,36 +28,37 @@ public class DataLayers : UrsComponent
 
 	[Header("UI References")]
     public Transform groupsContainer;
-    public ScrollRect scrollRect;
-    public RectTransform shadow;
-    public Toggle optionsToggle;
-	public Toggle visibilityToggle;
-	public Button resetButton;
+	public GameObject hideLayersPanel;
+	public Button unhideLayersButton;
+	public ScrollRect scrollRect;
+	public RectTransform shadowTop;
+	public RectTransform shadowBottom;
+    public Button settingsButton;
+	public SettingsPanel settingsPanel;
 
 	[Header("Prefabs")]
     public DataLayerGroupPanel guiGroupPrefab;
     public DataLayerPanel layerPanelPrefab;
-    public Transform preferencePanelPrefab;
 
     public event OnLayerChangeDelegate OnLayerVisibilityChange;
 	public event OnLayerChangeDelegate OnLayerAvailabilityChange;
 
 	private MapController map;
 
-    private readonly Dictionary<string, DataLayerPanel> nameToLayer = new Dictionary<string, DataLayerPanel>();
+	private readonly Dictionary<string, DataLayerPanel> nameToLayer = new Dictionary<string, DataLayerPanel>();
     private readonly List<DataLayerPanel> layerPanels = new List<DataLayerPanel>();				// All layer-panels
 	public readonly List<DataLayerPanel> activeSiteLayerPanels = new List<DataLayerPanel>();    // Only layer-panels available for the active site
 	public readonly List<DataLayerPanel> activeLayerPanels = new List<DataLayerPanel>();		// Layer-panels that are toggled ON
-	public readonly HashSet<DataLayer> availableLayers = new HashSet<DataLayer>();				// From the active layers, only those that are in view
+	public readonly HashSet<DataLayer> availableLayers = new HashSet<DataLayer>();              // From the active layers, only those that are in view
 
+	private bool hideLayers;
 	private bool updatingMap;
     private float updateUntilTime;
     private static readonly float MapUpdateInterval = 0.3f;
     private static readonly WaitForSeconds MapUpdateDelay = new WaitForSeconds(MapUpdateInterval + 0.02f);
 
-    private Transform preferencePanel;
-	private float originalTitleHeight;
 	private float toolOpacity = 1f;
+
 
     //
     // Unity Methods
@@ -75,15 +75,10 @@ public class DataLayers : UrsComponent
 
 		ComponentManager.Instance.Get<SiteBrowser>().OnAfterActiveSiteChange += OnAfterActiveSiteChange;
 
-        scrollRect.onValueChanged.AddListener(OnScrollChanged);
-		optionsToggle.onValueChanged.AddListener(OnOptionsToggleChanged);
-		visibilityToggle.onValueChanged.AddListener(OnVisibilityToggleChanged);
-		resetButton.onClick.AddListener(OnResetClick);
-
-		originalTitleHeight = optionsToggle.transform.parent.GetComponent<RectTransform>().rect.height;
+		settingsButton.onClick.AddListener(OnSettingsClick);
+		unhideLayersButton.onClick.AddListener(OnUnhideButtonClick);
     }
-
-
+	
 
 	//
 	// Inheritance Mehods
@@ -132,7 +127,7 @@ public class DataLayers : UrsComponent
 					foreach (var patch in record.patches)
 					{
 						bw.Write(patch.name);
-						bw.Write(patch.Data.categoryMask);
+						bw.Write(patch.Data.categoryFilter);
 					}
                 }
             }
@@ -188,7 +183,7 @@ public class DataLayers : UrsComponent
 					for (int p = 0; p < patchCount; p++)
 					{
 						string patchName = br.ReadString();
-						uint mask = br.ReadUInt32();
+						uint filter = br.ReadUInt32();
 
 						if (l < dataLayer.levels.Length && s < dataLayer.levels[l].sites.Count)
 						{
@@ -200,7 +195,7 @@ public class DataLayers : UrsComponent
 								var gridPatch = patch as GridPatch;
 								if (gridPatch != null && gridPatch.grid.IsCategorized && gridPatch.name.Equals(patchName))
 								{
-									gridPatch.SetCategoryMask(mask);
+									gridPatch.SetCategoryFilter(filter);
 									break;
 								}
 							}
@@ -225,38 +220,16 @@ public class DataLayers : UrsComponent
 	// Event Methods
 	//
 
-	private void OnOptionsToggleChanged(bool isOn)
+	private void OnSettingsClick()
 	{
-		if (isOn)
-		{
-			preferencePanel = Instantiate(preferencePanelPrefab, optionsToggle.transform.parent, false);
-            StartCoroutine(UpdateLayersListHeight());
-		}
-		else
-		{
-			Destroy(preferencePanel.gameObject);
-			preferencePanel = null;
-
-			SetLayersListTopOffset(originalTitleHeight);
-		}
+		settingsPanel.Show(!settingsPanel.IsVisible());
 	}
 
-	private void OnVisibilityToggleChanged(bool isOn)
+	private void OnUnhideButtonClick()
 	{
-		var controller = map.GetLayerController<GridLayerController>();
-		foreach (var layer in controller.mapLayers)
-		{
-			layer.Show(isOn);
-		}
-	}
-
-	private void OnResetClick()
-	{
-		foreach (var panel in layerPanels)
-		{
-			panel.layerToggle.isOn = false;
-			panel.DataLayer.ResetFiltersAndOpacity();
-		}
+		ShowLayers(true);
+		unhideLayersButton.gameObject.SetActive(false);
+		settingsPanel.visibilityToggle.isOn = true;
 	}
 
 	private void OnMapBoundsChange()
@@ -276,44 +249,15 @@ public class DataLayers : UrsComponent
 
 	private void OnAfterActiveSiteChange(Site site, Site previousSite)
 	{
-		// Hide all the current patches in our view (loaded or not)
-		foreach (var layerPanel in activeSiteLayerPanels)
-		{
-			layerPanel.DataLayer.HidePatchesInView();
-		}
-
 		// Update the list of layer panels available for the new active site
 		activeSiteLayerPanels.Clear();
 		foreach (var panel in layerPanels)
 		{
-			var dataLayer = panel.DataLayer;
-			bool found = false;
-			foreach (var level in dataLayer.levels)
-			{
-				foreach (var layerSite in level.layerSites)
-				{
-					if (layerSite.site == site)
-					{
-						found = true;
-						break;
-					}
-				}
-
-				if (found)
-					break;
-			}
-
-			if (found)
-			{
-				activeSiteLayerPanels.Add(panel);
-				EnableLayerPanel(panel, true);
-			}
-			else
-			{
-				panel.layerToggle.isOn = false;
-				EnableLayerPanel(panel, false);
-			}
+			UpdateLayerPanelIsActive(panel, site.HasDataLayer(panel.DataLayer));
 		}
+
+		// Scroll the list up to avoid an "empty list" when the site only has a few layers
+		scrollRect.verticalScrollbar.value = 1f;	
 
 		// Show/load the new site's patches
 		UpdateLayers();
@@ -330,15 +274,16 @@ public class DataLayers : UrsComponent
             HideDataLayer(panel);
         }
 
-        if (panel.filterToggle.isOn)
+        if (panel.IsFilterToggleOn)
         {
-            StartCoroutine(ShowOptionsPanel(panel, isOn));
+            StartCoroutine(ShowFilterPanel(panel, isOn));
         }
     }
 
 	private void OnShowGrid(GridMapLayer mapLayer, bool show)
 	{
-		if (show && !visibilityToggle.isOn)
+		// Hide map layers that are loaded after hiding all layers
+		if (show && hideLayers)
 			mapLayer.Show(false);
 	}
 
@@ -346,6 +291,56 @@ public class DataLayers : UrsComponent
 	//
 	// Public Methods
 	//
+
+	public void RebuildList(List<LayerGroup> groups)
+	{
+		var _activeSiteLayerPanels = new List<DataLayerPanel>(activeSiteLayerPanels);
+		var _activeLayerPanels = new List<DataLayerPanel>(activeLayerPanels);
+		var _availableLayers = new HashSet<DataLayer>(availableLayers);
+
+		Clear();
+
+		var activeSite = ComponentManager.Instance.Get<SiteBrowser>().ActiveSite;
+
+		foreach (var group in groups)
+		{
+			var groupController = AddLayerGroup(group.name);
+			foreach (var layer in group.layers)
+			{
+				bool isLayerOn = false, isFilterOn = false;
+				bool isLayerInActiveSite = activeSite.HasDataLayer(layer);
+
+				var oldPanel = _activeLayerPanels.Find((p) => p.DataLayer == layer);
+
+				if (oldPanel != null)
+				{
+					isLayerOn = oldPanel.IsLayerToggleOn;
+					isFilterOn = oldPanel.IsFilterToggleOn;
+				}
+
+				var layerPanel = AddLayer(layer, groupController, isLayerOn);
+
+				if (oldPanel != null)
+					activeLayerPanels.Add(layerPanel);
+
+				if (_availableLayers.Contains(layer))
+					availableLayers.Add(layer);
+
+				UpdateLayerPanelIsActive(layerPanel, isLayerInActiveSite);
+
+				if (isLayerInActiveSite && isLayerOn && isFilterOn)
+				{
+					layerPanel.filterToggle.isOn = true;
+				}
+			}
+		}
+
+		// Scroll the list up to avoid an "empty list" when the site only has a few layers
+		scrollRect.verticalScrollbar.value = 1f;
+
+		// Show/load the new site's patches
+		UpdateLayers();
+	}
 
 	public void Show(bool show)
     {
@@ -356,8 +351,32 @@ public class DataLayers : UrsComponent
             GuiUtils.RebuildLayout(groupsContainer.transform);
         }
     }
-    
-    public DataLayerGroupPanel AddLayerGroup(string name)
+
+	public void ShowLayers(bool show)
+	{
+		hideLayers = !show;
+
+		hideLayersPanel.SetActive(hideLayers);
+		unhideLayersButton.gameObject.SetActive(hideLayers);
+		scrollRect.vertical = show;
+
+		var controller = map.GetLayerController<GridLayerController>();
+		foreach (var layer in controller.mapLayers)
+		{
+			layer.Show(show);
+		}
+	}
+
+	public void ResetLayers()
+	{
+		foreach (var panel in layerPanels)
+		{
+			panel.layerToggle.isOn = false;
+			panel.DataLayer.ResetFiltersAndOpacity();
+		}
+	}
+
+	public DataLayerGroupPanel AddLayerGroup(string name)
     {
         // Create a new group and move it to the end of the list
         var group = Instantiate(guiGroupPrefab);
@@ -369,6 +388,38 @@ public class DataLayers : UrsComponent
 
 		return group;
     }
+
+	public void RemoveLayerGroup(string groupName)
+	{
+		var group = GetLayerGroup(groupName);
+		if (group != null)
+		{
+			Destroy(group.gameObject);
+			GuiUtils.RebuildLayout(groupsContainer.transform);
+		}
+	}
+
+	public DataLayerGroupPanel GetLayerGroup(string groupName)
+	{
+		for (int i = 0; i < groupsContainer.childCount; i++)
+		{
+			var group = groupsContainer.GetChild(i);
+			if (group.name.Equals(groupName))
+			{
+				return group.GetComponent<DataLayerGroupPanel>();
+			}
+		}
+		return null;
+	}
+
+	public void UpdateGroup(string newName, string oldName)
+	{
+		var group = GetLayerGroup(oldName);
+		if (group != null)
+		{
+			group.UpdateName(newName);
+		}
+	}
 
 	public bool HasLayer(string layerName)
 	{
@@ -400,12 +451,16 @@ public class DataLayers : UrsComponent
 #endif
 	}
 
-	public void AddLayer(DataLayer layer, DataLayerGroupPanel groupController)
+	public DataLayerPanel AddLayer(DataLayer layer, DataLayerGroupPanel groupController, bool layerOn = false)
 	{
 		// Add new layer
 		DataLayerPanel layerPanel = groupController.AddLayer(layerPanelPrefab, layer);
+
+		if (layerOn)
+			layerPanel.layerToggle.isOn = true;
+
 		layerPanel.layerToggle.onValueChanged.AddListener((isOn) => OnLayerToggleChange(layerPanel, isOn));
-		layerPanel.filterToggle.onValueChanged.AddListener((isOn) => StartCoroutine(ShowOptionsPanel(layerPanel, isOn)));
+		layerPanel.filterToggle.onValueChanged.AddListener((isOn) => StartCoroutine(ShowFilterPanel(layerPanel, isOn)));
 
 		if (hideInactiveLayers)
 		{
@@ -419,28 +474,48 @@ public class DataLayers : UrsComponent
 		}
 
 #if SAFETY_CHECK
-		if (nameToLayer.ContainsKey(layer.name))
+		if (nameToLayer.ContainsKey(layer.Name))
 		{
-			Debug.LogWarning(layer.name + " appears more than once in the layers list");
+			Debug.LogWarning(layer.Name + " appears more than once in the layers list");
 		}
 		else
 #endif
 		{
 			layerPanels.Add(layerPanel);
-			nameToLayer.Add(layer.name, layerPanel);
+			nameToLayer.Add(layer.Name, layerPanel);
 		}
+
+		return layerPanel;
+	}
+
+	public void RemoveLayer(DataLayer layer)
+	{
+		var layerPanel = nameToLayer[layer.Name];
+        nameToLayer.Remove(layer.Name);
+        layerPanels.Remove(layerPanel);
+		activeSiteLayerPanels.Remove(layerPanel);
+		if (activeLayerPanels.Contains(layerPanel))
+			HideDataLayer(layerPanel);
+		else
+			availableLayers.Remove(layer);
+
+		var groupPanel = GetGroupPanel(layerPanel);
+
+		DestroyImmediate(layerPanel.gameObject);
+
+		groupPanel.UpdateVisibility();
 	}
 
 	public bool IsLayerActive(DataLayer layer)
 	{
 #if SAFETY_CHECK
-		if (!nameToLayer.ContainsKey(layer.name))
+		if (!nameToLayer.ContainsKey(layer.Name))
         {
-            Debug.LogError("Layer " + layer.name + " could not be found");
+            Debug.LogError("Layer " + layer.Name + " could not be found");
             return false;
         }
 #endif
-        return nameToLayer[layer.name].IsLayerToggleOn;
+        return nameToLayer[layer.Name].IsLayerToggleOn;
     }
 
 	private void DeactivateAll()
@@ -456,13 +531,13 @@ public class DataLayers : UrsComponent
 	public void ActivateLayer(DataLayer layer, bool activate)
     {
 #if SAFETY_CHECK
-        if (!nameToLayer.ContainsKey(layer.name))
+        if (!nameToLayer.ContainsKey(layer.Name))
         {
-            Debug.LogError("Layer " + layer.name + " could not be found");
+            Debug.LogError("Layer " + layer.Name + " could not be found");
             return;
         }
 #endif
-		nameToLayer[layer.name].layerToggle.isOn = activate;
+		nameToLayer[layer.Name].layerToggle.isOn = activate;
 	}
 
 	public void AutoReduceToolOpacity()
@@ -470,7 +545,7 @@ public class DataLayers : UrsComponent
 		if (availableLayers.Count == 0)
 			SetToolOpacity(1f);
 		else
-			SetToolOpacity(1f / (availableLayers.Count +1) );	
+			SetToolOpacity(0.1f + 1f / (availableLayers.Count + 1));
 	}
 
 	public void SetToolOpacity(float opacity)
@@ -531,20 +606,49 @@ public class DataLayers : UrsComponent
     // Private Methods
     //
 
-    // Helper function to show/hide or enable/disable layer depending on HideLayersWithoutVisiblePatches
-    public void EnableLayerPanel(DataLayerPanel layerPanel, bool enable)
+	private void Clear()
+	{
+		nameToLayer.Clear();
+		layerPanels.Clear();
+		activeSiteLayerPanels.Clear();
+		activeLayerPanels.Clear();
+		availableLayers.Clear();
+
+		for (int i = groupsContainer.childCount - 1; i >= 0; i--)
+		{
+			var group = groupsContainer.GetChild(i);
+			Destroy(group.gameObject);
+		}
+	}
+
+	private void UpdateLayerPanelIsActive(DataLayerPanel panel, bool active)
+	{
+		if (active)
+		{
+			activeSiteLayerPanels.Add(panel);
+			EnableLayerPanel(panel, true);
+		}
+		else
+		{
+			panel.layerToggle.isOn = false;
+			EnableLayerPanel(panel, false);
+		}
+	}
+
+	// Helper function to show/hide or enable/disable layer depending on HideLayersWithoutVisiblePatches
+	public void EnableLayerPanel(DataLayerPanel layerPanel, bool enable)
 	{
 		if (hideInactiveLayers)
 		{
 			// Show the group BEFORE the layer is shown
 			if (hideEmptyGroups && enable && layerPanel.gameObject.activeSelf != enable)
-				layerPanel.transform.parent.parent.GetComponent<DataLayerGroupPanel>().Show(true);
+				GetGroupPanel(layerPanel).Show(true);
 
 			if (layerPanel.ShowLayerPanel(enable))
 			{
 				// Hide the group AFTER the layer is hidden (only if no other layers are visible)
 				if (hideEmptyGroups && !enable)
-					layerPanel.transform.parent.parent.GetComponent<DataLayerGroupPanel>().UpdateVisibility();
+					GetGroupPanel(layerPanel).UpdateVisibility();
 			}
 		}
 		else
@@ -553,17 +657,23 @@ public class DataLayers : UrsComponent
 		}
 	}
 
+	private DataLayerGroupPanel GetGroupPanel(DataLayerPanel layerPanel)
+	{
+		return layerPanel.transform.parent.parent.GetComponent<DataLayerGroupPanel>();
+	}
+
 	private static readonly Vector2 bottomPoint = new Vector2(50, -1);
-    private IEnumerator ShowOptionsPanel(DataLayerPanel layerCtrl, bool show)
+    private IEnumerator ShowFilterPanel(DataLayerPanel layerCtrl, bool show)
     {
         // FIX: scrollbar won't retract if value is zero.
         if (!show && scrollRect.verticalScrollbar.value < 0.001f && scrollRect.verticalScrollbar.size < 1)
             scrollRect.verticalScrollbar.value = 0.001f;
 
-        layerCtrl.ShowOptionsPanel(show);
-        yield return null;
+		layerCtrl.ShowFilterPanel(show);
 
-        if (show)
+		yield return null;
+
+		if (show)
         {
             float offset = 30f / (scrollRect.content.rect.height - scrollRect.viewport.rect.height);
             while (scrollRect.verticalScrollbar.size < 0.99f &&
@@ -575,27 +685,16 @@ public class DataLayers : UrsComponent
         }
     }
 
-    private void OnScrollChanged(Vector2 value)
-    {
-        if (value.y <= 0.01f && shadow.gameObject.activeSelf)
-        {
-            shadow.gameObject.SetActive(false);
-        }
-        if (value.y > 0.01f && !shadow.gameObject.activeSelf)
-        {
-            shadow.gameObject.SetActive(true);
-        }
-    }
-
     private void ShowDataLayer(DataLayerPanel layerPanel)
     {
 #if SAFETY_CHECK
         if (activeLayerPanels.Contains(layerPanel))
         {
-            Debug.LogWarning("Layer " + layerPanel.DataLayer.name + " is already active!");
+            Debug.LogWarning("Layer " + layerPanel.DataLayer.Name + " is already active!");
             return;
         }
 #endif
+
 		activeLayerPanels.Add(layerPanel);
 
 		var dataLayer = layerPanel.DataLayer;
@@ -662,7 +761,7 @@ public class DataLayers : UrsComponent
 
 	private void UpdateLayerDistributionChart(DataLayerPanel layerPanel)
 	{
-		if (layerPanel.IsOptionsToggleOn && layerPanel.Panel is FilterPanel)
+		if (layerPanel.IsFilterToggleOn && layerPanel.Panel is FilterPanel)
 		{
 			var panel = layerPanel.Panel as FilterPanel;
 			panel.UpdateDistributionChart();
@@ -683,9 +782,9 @@ public class DataLayers : UrsComponent
 	public void UpdateLayer(DataLayer layer)
 	{
 #if SAFETY_CHECK
-		if (!nameToLayer.ContainsKey(layer.name))
+		if (!nameToLayer.ContainsKey(layer.Name))
 		{
-			Debug.LogError("Layer " + layer.name + " could not be found");
+			Debug.LogError("Layer " + layer.Name + " could not be found");
 			return;
 		}
 #endif
@@ -693,19 +792,19 @@ public class DataLayers : UrsComponent
 		int level = map.CurrentLevel;
 		var bounds = map.MapCoordBounds;
 
-		UpdateLayerPanel(nameToLayer[layer.name], level, bounds);
+		UpdateLayerPanel(nameToLayer[layer.Name], level, bounds);
 	}
 
 	private void UpdateLayerPanel(DataLayerPanel layerPanel, int level, AreaBounds bounds)
 	{
 		var dataLayer = layerPanel.DataLayer;
 
-        layerPanel.UpdateFilterIcon();
+		var site = ComponentManager.Instance.Get<SiteBrowser>().ActiveSite;
 
-        bool hasPatches;
+		bool hasPatches;
 		if (layerPanel.IsLayerToggleOn)
 		{
-			dataLayer.UpdatePatches(level, bounds);
+			dataLayer.UpdatePatches(site, level, bounds);
 			hasPatches = dataLayer.HasPatchesInView();
 
 			if (hasPatches && !availableLayers.Contains(dataLayer))
@@ -723,26 +822,11 @@ public class DataLayers : UrsComponent
 		}
 		else
 		{
-			hasPatches = dataLayer.HasPatches(level, bounds.west, bounds.east, bounds.north, bounds.south);
+			hasPatches = dataLayer.HasPatches(site, level, bounds.west, bounds.east, bounds.north, bounds.south);
 		}
 
 		// Show/hide a layer panel when only visible layers are allowed, otherwise enable/disable the layer panel
 		EnableLayerPanel(layerPanel, hasPatches);
     }
 
-	private IEnumerator UpdateLayersListHeight()
-	{
-		// Need to wait 1 frame to get the title bar's height
-		yield return null;
-		var titlePanel = optionsToggle.transform.parent.GetComponent<RectTransform>();
-		SetLayersListTopOffset(titlePanel.rect.height);
-	}
-
-	private void SetLayersListTopOffset(float topOffset)
-	{
-		var layersList = scrollRect.GetComponent<RectTransform>();
-		var offset = layersList.offsetMax;
-		offset.y = -topOffset;
-		layersList.offsetMax = offset;
-	}
 }

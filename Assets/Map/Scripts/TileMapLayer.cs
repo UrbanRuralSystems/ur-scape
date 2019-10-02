@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -190,8 +190,8 @@ public abstract class TileMapLayer : MapLayer
 
     protected void RequestTiles(int west, int east, int north, int south, int zoomLevel)
     {
-        RequestTilesSpiralIn(west, east, north, south, zoomLevel);
-    }
+		RequestTilesSpiralOut(west, east, north, south, zoomLevel);
+	}
 
     protected void CleanUpTiles()
     {
@@ -522,9 +522,8 @@ public abstract class TileMapLayer : MapLayer
             }
             else 
             {
-                // Getting a lot of errors here
-                Debug.LogError("Requesting tile '" + tileId + "' finished with state: " + request.State);
-                if (!string.IsNullOrEmpty(request.Error))
+				Debug.LogError("Requesting tile '" + tileId + "' finished with state: " + request.State);
+				if (!string.IsNullOrEmpty(request.Error))
                 {
                     Debug.LogError("Requesting error: " + request.Error);
                 }

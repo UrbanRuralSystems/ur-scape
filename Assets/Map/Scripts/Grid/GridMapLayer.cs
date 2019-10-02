@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -43,8 +43,6 @@ public class GridMapLayer : PatchMapLayer
 	}
 #endif
 
-	private int bufferSize = 0;
-
     private Texture2D projection;
 
     public GridData Grid { get { return grid; } }
@@ -56,7 +54,13 @@ public class GridMapLayer : PatchMapLayer
     private const double HalfPI = Math.PI * 0.5;
     private const double Rad2Deg = 180.0 / Math.PI;
     private Color[] categoryColors = null;
+
+	// Contours specific variables
     private int highlightedIndex = -1;
+#if !USE_TEXTURE
+	private bool gpuChangedValues = false;
+#endif
+
 
     //
     // Unity Methods
@@ -114,8 +118,8 @@ public class GridMapLayer : PatchMapLayer
 
         if (grid.patch != null)
         {
-            SetUserOpacity(grid.patch.dataLayer.UserOpacity);
-			SetToolOpacity(grid.patch.dataLayer.ToolOpacity);
+            SetUserOpacity(grid.patch.DataLayer.UserOpacity);
+			SetToolOpacity(grid.patch.DataLayer.ToolOpacity);
 		}
 		else
 		{
@@ -149,6 +153,11 @@ public class GridMapLayer : PatchMapLayer
 	{
 		material.SetFloat("ToolOpacity", opacity);
 	}
+
+    public bool IsTransectEnabled()
+    {
+        return material.IsKeywordEnabled("TRANSECT");
+    }
 
 	public void ShowTransect(bool show)
     {
@@ -291,14 +300,17 @@ public class GridMapLayer : PatchMapLayer
 	public void FetchGridValues()
 	{
 #if !USE_TEXTURE
-		if (valuesBuffer != null)
+		if (valuesBuffer != null && gpuChangedValues)
 		{
-			if (grid.values == null || grid.countX * grid.countY != grid.values.Length)
-			{
-				grid.values = new float[grid.countX * grid.countY];
-			}
 			valuesBuffer.GetData(grid.values);
 		}
+#endif
+	}
+
+	public void SetGpuChangedValues()
+	{
+#if !USE_TEXTURE
+		gpuChangedValues = true;
 #endif
 	}
 
@@ -368,13 +380,18 @@ public class GridMapLayer : PatchMapLayer
         }
         else
         {
-            if (valuesBuffer == null || grid.values.Length != bufferSize)
+            if (valuesBuffer == null ||
+#if USE_TEXTURE
+                grid.countX != valuesBuffer.width || grid.countY != valuesBuffer.height)
+#else
+                grid.values.Length != valuesBuffer.count)
+#endif
             {
                 CreateValuesBuffer();
             }
 
 #if USE_TEXTURE
-            System.Buffer.BlockCopy(grid.values, 0, byteArray, 0, byteArray.Length);
+            Buffer.BlockCopy(grid.values, 0, byteArray, 0, byteArray.Length);
             valuesBuffer.LoadRawTextureData(byteArray);
             valuesBuffer.Apply();
 #else
@@ -393,13 +410,18 @@ public class GridMapLayer : PatchMapLayer
 		else
 		{
 			SetUseMask(true);
-			if (maskBuffer == null || grid.valuesMask.Length != bufferSize)
-			{
-				CreateMaskBuffer();
+			if (maskBuffer == null ||
+#if USE_TEXTURE
+                grid.countX != maskBuffer.width || grid.countY != maskBuffer.height)
+#else
+                grid.valuesMask.Length != maskBuffer.count)
+#endif
+            {
+                CreateMaskBuffer();
 			}
 
 #if USE_TEXTURE
-			System.Buffer.BlockCopy(grid.valuesMask, 0, byteArray, 0, grid.valuesMask.Length);
+			Buffer.BlockCopy(grid.valuesMask, 0, byteArray, 0, grid.valuesMask.Length);
             maskBuffer.LoadRawTextureData(byteArray);
             maskBuffer.Apply();
 #else
@@ -455,7 +477,7 @@ public class GridMapLayer : PatchMapLayer
         }
         else
         {
-			var layerSite = grid.patch.siteRecord.layerSite;
+			var layerSite = grid.patch.SiteRecord.layerSite;
 			minValue = layerSite.minValue;
 			maxValue = layerSite.maxValue;
         }
@@ -469,7 +491,7 @@ public class GridMapLayer : PatchMapLayer
     {
         ReleaseValuesBuffer();
 
-        bufferSize = grid.countX * grid.countY;
+        var bufferSize = grid.countX * grid.countY;
 
 #if USE_TEXTURE
         byteArray = new byte[bufferSize * sizeof(float)];
@@ -478,7 +500,7 @@ public class GridMapLayer : PatchMapLayer
 		valuesBuffer.filterMode = FilterMode.Point;
         material.SetTexture("Values", valuesBuffer);
 #else
-		valuesBuffer = new ComputeBuffer(bufferSize, sizeof(float), ComputeBufferType.Default);
+        valuesBuffer = new ComputeBuffer(bufferSize, 4, ComputeBufferType.Default);
         material.SetBuffer("Values", valuesBuffer);
 #endif
     }
@@ -486,6 +508,9 @@ public class GridMapLayer : PatchMapLayer
 	protected void CreateMaskBuffer()
 	{
 		ReleaseMaskBuffer();
+
+        // Buffer size must be multiple of 4
+        var bufferSize = (grid.countX * grid.countY + 3) / 4;
 
 #if USE_TEXTURE
 		int countX = (grid.countX + 1) / 2;
@@ -495,13 +520,12 @@ public class GridMapLayer : PatchMapLayer
         maskBuffer.filterMode = FilterMode.Point;
         material.SetTexture("Mask", maskBuffer);
 #else
-		int count = (grid.countX * grid.countY + 3) / 4;
-		maskBuffer = new ComputeBuffer(count, sizeof(uint), ComputeBufferType.Default);
+        maskBuffer = new ComputeBuffer(bufferSize, 4, ComputeBufferType.Default);
 		material.SetBuffer("Mask", maskBuffer);
 #endif
 	}
 
-	private void ReleaseValuesBuffer()
+	protected void ReleaseValuesBuffer()
     {
         if (valuesBuffer != null)
         {
@@ -512,11 +536,10 @@ public class GridMapLayer : PatchMapLayer
 			valuesBuffer.Release();
 #endif
 			valuesBuffer = null;
-            bufferSize = 0;
         }
     }
 
-	private void ReleaseMaskBuffer()
+	protected void ReleaseMaskBuffer()
 	{
 		if (maskBuffer != null)
 		{
@@ -526,7 +549,7 @@ public class GridMapLayer : PatchMapLayer
 			maskBuffer.Release();
 #endif
 			maskBuffer = null;
-		}
+        }
 	}
 
 	private void CreateProjectionBuffer(int count)
@@ -560,9 +583,9 @@ public class GridMapLayer : PatchMapLayer
         int count = categoryColors.Length;
         for (int i = 0; i < count; i++)
         {
-            categoryColors[i].a = (grid.categoryMask >> i) & 1;
+            categoryColors[i].a = grid.categoryFilter.IsSetAsInt(i);
         }
-        if (highlightedIndex >= 0 && ((grid.categoryMask >> highlightedIndex) & 1) == 1)
+        if (highlightedIndex >= 0 && grid.categoryFilter.IsSet(highlightedIndex))
         {
             for (int i = 0; i < count; i++)
                 categoryColors[i].a *= i == highlightedIndex ? 1f : 0f;

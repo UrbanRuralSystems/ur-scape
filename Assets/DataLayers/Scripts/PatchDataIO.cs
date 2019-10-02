@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -7,16 +7,17 @@
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 //			David Neudecker  (neudecker@arch.ethz.ch)
 
-using ExtensionMethods;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 
 // Callback executed after a patch csv/bin has been parsed
 public delegate void PatchDataLoadedCallback<D>(D data) where D : PatchData;
 
 // Callback executed after loading metadata
-public delegate void LoadMetadataCallback(Metadata metadata);
+public delegate void LoadMetadataCallback(List<MetadataPair> metadata);
 
 // Delegate for loading patch data (csv/bin file)
 public delegate IEnumerator LoadPatchData<P, D>(string filename, PatchDataLoadedCallback<D> callback) where P : Patch where D : PatchData;
@@ -24,11 +25,41 @@ public delegate IEnumerator LoadPatchData<P, D>(string filename, PatchDataLoaded
 // Delegate for getting a delegate to load a patch
 public delegate LoadPatchData<P, D> GetPatchLoader<P, D>(PatchDataFormat format) where P : Patch where D : PatchData;
 
+// Callback executed after a patch csv/bin has been parsed
+public delegate void ParseTask(ParseTaskData data);
+
+
+public class ParseTaskData
+{
+	public StreamReader sr;
+	public string filename;
+	public ParseTask task;
+	public PatchData patch;
+
+	public void Parse()
+	{
+		if (task != null)
+			task(this);
+	}
+
+	public void Clear()
+	{
+		sr = null;
+		filename = null;
+		task = null;
+		patch = null;
+	}
+}
+
 
 public static class PatchDataIO
 {
+	public static readonly uint BIN_TOKEN = 0x600DF00D;
+	public static readonly uint BIN_VERSION = 13;
+
+
 #if UNITY_WEBGL
-    public static System.IO.BinaryReader brHeaders = null;
+    public static BinaryReader brHeaders = null;
 
 	public static IEnumerator StartReadingHeaders()
 	{
@@ -45,6 +76,31 @@ public static class PatchDataIO
 	}
 #endif
 
+	public static bool CheckBinVersion(string filename)
+	{
+		using (var br = new BinaryReader(File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
+		{
+			return CheckBinVersion(br);
+		}
+	}
+
+	public static bool CheckBinVersion(BinaryReader br)
+	{
+		return br.ReadUInt32() == BIN_TOKEN && br.ReadUInt32() == BIN_VERSION;
+	}
+
+	public static void SkipBinVersion(BinaryReader br)
+	{
+		br.ReadUInt32();
+		br.ReadUInt32();
+	}
+
+	public static void WriteBinVersion(BinaryWriter bw)
+	{
+		bw.Write(BIN_TOKEN);
+		bw.Write(BIN_VERSION);
+	}
+
 	public static void WriteBinBoundsHeader(BinaryWriter bw, PatchData patch)
 	{
 		bw.Write(patch.west);
@@ -53,97 +109,156 @@ public static class PatchDataIO
 		bw.Write(patch.south);
 	}
 
-	public static PatchData ReadBinBoundsHeader(BinaryReader br, PatchData patch)
+	public static PatchData ReadBinBoundsHeader(BinaryReader br, string filename, PatchData patch)
 	{
 		patch.west = br.ReadDouble();
 		patch.east = br.ReadDouble();
 		patch.north = br.ReadDouble();
 		patch.south = br.ReadDouble();
 
-		return patch;
+        if (/*patch.west < GeoCalculator.MinLongitude ||
+            patch.east > GeoCalculator.MaxLongitude ||*/
+            patch.north > GeoCalculator.MaxLatitude ||
+            patch.south < GeoCalculator.MinLatitude)
+            UnityEngine.Debug.LogWarning("File " + filename + " has bounds beyond limits (W,E,N,S): " + patch.west + ", " + patch.east + ", " + patch.north + ", " + patch.south);
+
+        return patch;
 	}
 
-	public static void WriteBinMetadata(BinaryWriter bw, Metadata metadata)
+	public static void WriteBinMetadata(BinaryWriter bw, List<MetadataPair> metadata)
 	{
 		// Write Metadata (if available)
-		bw.Write(metadata != null);
-		if (metadata != null)
+		if (metadata == null || metadata.Count == 0)
 		{
-			bw.Write(metadata.name);
-			bw.Write(metadata.date);
-			bw.Write(metadata.source);
-			bw.Write(metadata.accuracy);
-			bw.Write(metadata.mean);
-			bw.Write(metadata.stdDeviation);
+			bw.Write(0);
+			return;
+		}
+
+		bw.Write(metadata.Count);
+		foreach (var row in metadata)
+		{
+			bw.Write(row.Key);
+			bw.Write(row.Value);
 		}
 	}
 
-	public static Metadata ReadBinMetadata(BinaryReader br)
+	public static List<MetadataPair> ReadBinMetadata(BinaryReader br)
 	{
 		// Read Metadata (if available)
-		if (!br.ReadBoolean())
+		int count = br.ReadInt32();
+		if (count == 0)
 			return null;
 
-		Metadata metadata = new Metadata();
-		metadata.name = br.ReadString();
-		metadata.date = br.ReadString();
-		metadata.source = br.ReadString();
-		metadata.accuracy = br.ReadString();
-		metadata.mean = br.ReadNullableSingle();
-		metadata.stdDeviation = br.ReadNullableSingle();
-
+		var metadata = new List<MetadataPair>();
+		for (int i = 0; i < count; i++)
+		{
+			var key = br.ReadString();
+			var value = br.ReadString();
+			metadata.Add(key, value);
+		}
+		
 		return metadata;
 	}
 
-	public static Metadata ReadCsvMetadata(StreamReader sr, string[] csvTokens, ref string line)
+	public static List<MetadataPair> ReadCsvMetadata(StreamReader sr, string[] csvTokens, ref string line)
 	{
-		var metadata = new Metadata();
-
-		string[] cells;
+		var metadata = new List<MetadataPair>();
 
 		while ((line = sr.ReadLine()) != null)
 		{
-			cells = line.Split(',');
-
-			if (cells[0].EqualsIgnoreCase("Name"))
-			{
-				metadata.name = cells[1];
-			}
-			else if (cells[0].EqualsIgnoreCase("Date"))
-			{
-				metadata.date = cells[1];
-			}
-			else if (cells[0].EqualsIgnoreCase("Source"))
-			{
-				metadata.source = cells[1];
-			}
-			else if (cells[0].EqualsIgnoreCase("Accuracy"))
-			{
-				metadata.accuracy = cells[1];
-			}
-			else if (cells[0].EqualsIgnoreCase("Mean"))
-			{
-				float value;
-				if (float.TryParse(cells[1], out value))
-					metadata.mean = value;
-			}
-			else if (cells[0].EqualsIgnoreCase("Standard Deviation"))
-			{
-				float value;
-				if (float.TryParse(cells[1], out value))
-					metadata.stdDeviation = value;
-			}
-			else if (cells[0].EqualsIgnoreCase("Units"))	//- Remove this after a while: this was added to avoid Units in Metadata
-			{
-				// DO NOTHING
-			}
-			else if (cells[0].IsIn(csvTokens))
+			var matches = CsvHelper.regex.Matches(line);
+			var key = matches[0].Groups[2].Value;
+			if (key.IsIn(csvTokens))
 			{
 				break;
 			}
+
+			metadata.Add(key, matches[1].Groups[2].Value);
 		}
+
+		if (metadata.Count == 0)
+			return null;
 
 		return metadata;
 	}
-    
+
+
+	private static readonly object _lock = new object();
+	private static bool blockParser = true;
+	private static Thread parseThread = null;
+	private static volatile ParseTaskData taskData = new ParseTaskData();
+
+	public static IEnumerator ParseAsync<T>(StreamReader sr, string filename, ParseTask task, PatchDataLoadedCallback<T> callback) where T : PatchData
+	{
+		if (parseThread == null)
+		{
+			taskData = new ParseTaskData();
+
+			parseThread = new Thread(ParseThread)
+			{
+				Name = "ParseThread",
+				Priority = ThreadPriority.Highest,
+			};
+			parseThread.Start();
+		}
+
+		lock (_lock)
+		{
+			taskData.sr = sr;
+			taskData.filename = filename;
+			taskData.task = task;
+
+			blockParser = false;
+			Monitor.Pulse(_lock);
+		}
+
+		while (!blockParser)
+		{
+			yield return IEnumeratorExtensions.AvoidRunThru;
+		}
+
+		callback(taskData.patch as T);
+
+		// Clear task data
+		taskData.Clear();
+	}
+
+	public static void StopParsingThread()
+	{
+        if (parseThread != null)
+        {
+            lock (_lock)
+            {
+                taskData = null;
+                blockParser = false;
+                Monitor.Pulse(_lock);
+            }
+        }
+    }
+
+    private static void ParseThread()
+	{
+		while (true)
+		{
+			lock (_lock)
+			{
+				while (blockParser) Monitor.Wait(_lock);
+				if (taskData == null)
+					break;
+
+				try
+				{
+					taskData.Parse();
+				}
+				catch (Exception e)
+				{
+					UnityEngine.Debug.LogException(e);
+				}
+
+				blockParser = true;
+			}
+		}
+		parseThread = null;
+	}
+
 }

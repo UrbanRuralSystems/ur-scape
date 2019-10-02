@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2018 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -99,6 +99,15 @@ public abstract class SingleLruCacheKV<K, V> : SingleLruCache where V : class
         // Check if the object exists in the cache
         return cache.TryRemove(key, out value);
     }
+
+	public void Clear()
+	{
+		foreach (V obj in cache)
+		{
+			OnPushedOutFromCache(obj);
+		}
+		cache.Clear();
+	}
 
     protected abstract void OnPushedOutFromCache(V value);
 
