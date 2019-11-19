@@ -9,6 +9,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using UnityEngine;
 
@@ -48,6 +49,7 @@ public static class MultiGridDataIO
 		string line;
 		string[] cells;
 		float value;
+		var cultureInfo = CultureInfo.InvariantCulture;
 
 		// Read each data row at a time with value
 		while ((line = sr.ReadLine()) != null)
@@ -55,7 +57,7 @@ public static class MultiGridDataIO
 			cells = line.Split(',');
 			for (int i = 0; i < categoriesCount; i++)
 			{
-				value = float.Parse(cells[i]);
+				value = float.Parse(cells[i], cultureInfo);
 				data[i].Add(value);
 				var g = multigrid.categories[i].grid;
 				g.minValue = Mathf.Min(g.minValue, value);
@@ -170,16 +172,20 @@ public static class MultiGridDataIO
 					}
 					break;
 				case GridDataIO.ParamId.West:
-					grid.west = double.Parse(cells[1]);
+					grid.west = double.Parse(cells[1], CultureInfo.InvariantCulture);
 					break;
 				case GridDataIO.ParamId.North:
-					grid.north = double.Parse(cells[1]);
+					grid.north = double.Parse(cells[1], CultureInfo.InvariantCulture);
+					if (grid.north > GeoCalculator.MaxLatitude)
+						Debug.LogWarning("File " + data.filename + " has north above " + GeoCalculator.MaxLatitude + ": " + grid.north);
 					break;
 				case GridDataIO.ParamId.East:
-					grid.east = double.Parse(cells[1]);
+					grid.east = double.Parse(cells[1], CultureInfo.InvariantCulture);
 					break;
 				case GridDataIO.ParamId.South:
-					grid.south = double.Parse(cells[1]);
+					grid.south = double.Parse(cells[1], CultureInfo.InvariantCulture);
+					if (grid.south < GeoCalculator.MinLatitude)
+						Debug.LogWarning("File " + data.filename + " has south below " + GeoCalculator.MinLatitude + ": " + grid.south);
 					break;
 				case GridDataIO.ParamId.CountX:
 					grid.countX = int.Parse(cells[1]);

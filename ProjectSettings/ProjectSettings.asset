@@ -92,7 +92,7 @@ PlayerSettings:
   xboxEnableKinectAutoTracking: 0
   xboxEnableFitness: 0
   visibleInBackground: 1
-  allowFullscreenSwitch: 0
+  allowFullscreenSwitch: 1
   graphicsJobMode: 0
   fullscreenMode: 1
   xboxSpeechDB: 0
@@ -120,7 +120,7 @@ PlayerSettings:
     16:10: 1
     16:9: 1
     Others: 1
-  bundleVersion: 0.9.91
+  bundleVersion: 0.9.92
   preloadedAssets: []
   metroInputSource: 0
   wsaTransparentSwapchain: 0
@@ -168,9 +168,9 @@ PlayerSettings:
     iPhone: sg.fcl.urs.ur-scape
     tvOS: com.Company.ProductName
   buildNumber:
-    Standalone: 0.9.91
-    iPhone: 0.9.91
-  AndroidBundleVersionCode: 9091
+    Standalone: 0.9.92
+    iPhone: 0.9.92
+  AndroidBundleVersionCode: 9092
   AndroidMinSdkVersion: 19
   AndroidTargetSdkVersion: 0
   AndroidPreferredInstallLocation: 1
@@ -765,7 +765,7 @@ PlayerSettings:
   apiCompatibilityLevelPerPlatform:
     Standalone: 3
     WebGL: 3
-    iPhone: 6
+    iPhone: 3
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
   metroPackageName: Visual Data Platform

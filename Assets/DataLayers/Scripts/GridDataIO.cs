@@ -9,13 +9,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using UnityEngine;
 
 public static class GridDataIO
 {
 	public const string FileSufix = "grid";
-	public const int MaxWriteSize = 100000000;	// 100 MB
+	public const int MaxWriteSize = 100000000;  // 100 MB
 
 	private static readonly LoadPatchData<GridPatch, GridData>[] headerLoader =
     {
@@ -205,22 +206,22 @@ public static class GridDataIO
 					}
 					break;
 				case ParamId.West:
-					grid.west = double.Parse(cells[1]);
+					grid.west = double.Parse(cells[1], CultureInfo.InvariantCulture);
                     //if (grid.west < GeoCalculator.MinLongitude)
                     //    Debug.LogWarning("File " + data.filename + " has west below " + GeoCalculator.MinLongitude + ": " + grid.west);
                     break;
 				case ParamId.North:
-					grid.north = double.Parse(cells[1]);
+					grid.north = double.Parse(cells[1], CultureInfo.InvariantCulture);
                     if (grid.north > GeoCalculator.MaxLatitude)
                         Debug.LogWarning("File " + data.filename + " has north above " + GeoCalculator.MaxLatitude + ": " + grid.north);
                     break;
 				case ParamId.East:
-					grid.east = double.Parse(cells[1]);
+					grid.east = double.Parse(cells[1], CultureInfo.InvariantCulture);
                     //if (grid.east > GeoCalculator.MaxLongitude)
                     //    Debug.LogWarning("File " + data.filename + " has east above " + GeoCalculator.MaxLongitude + ": " + grid.east);
                     break;
 				case ParamId.South:
-					grid.south = double.Parse(cells[1]);
+					grid.south = double.Parse(cells[1], CultureInfo.InvariantCulture);
                     if (grid.south < GeoCalculator.MinLatitude)
                         Debug.LogWarning("File " + data.filename + " has south below " + GeoCalculator.MinLatitude + ": " + grid.south);
                     break;
@@ -270,6 +271,7 @@ public static class GridDataIO
 	public static IntCategory[] ReadCsvCategories(StreamReader sr, string filename, string[] csvTokens, ref string line)
 	{
 		List<IntCategory> categories = new List<IntCategory>();
+		var cultureInfo = CultureInfo.InvariantCulture;
 
 		while ((line = sr.ReadLine()) != null)
 		{
@@ -281,7 +283,7 @@ public static class GridDataIO
 			categories.Add(new IntCategory
 			{
 				name = cells[0],
-				value = (int)float.Parse(cells[1])
+				value = (int)float.Parse(cells[1], cultureInfo)
 			});
 		}
 
@@ -322,14 +324,15 @@ public static class GridDataIO
 		byte mask;
 		bool hasMask = false;
 		int index = 0;
+		var cultureInfo = CultureInfo.InvariantCulture;
 
-        if (valuesMap == null)
+		if (valuesMap == null)
         {
             // Read each data row at a time with value
             while ((line = sr.ReadLine()) != null)
             {
                 cells = line.Split(',');
-                value = float.Parse(cells[0]);
+                value = float.Parse(cells[0], cultureInfo);
                 mask = byte.Parse(cells[1]);
                 values[index] = value;
                 masks[index] = mask;
@@ -696,6 +699,7 @@ public static class GridDataIO
 	private static List<float> ReadCsvNameToValues(StreamReader sr, string[] csvTokens, ref string line)
     {
         List<float> namesToValues = new List<float>();
+		var cultureInfo = CultureInfo.InvariantCulture;
 
 		// Read each data row at a time
 		while ((line = sr.ReadLine()) != null)
@@ -705,7 +709,7 @@ public static class GridDataIO
 			if (cells[0].IsIn(csvTokens))
 				break;
 
-			namesToValues.Add(float.Parse(cells[1]));
+			namesToValues.Add(float.Parse(cells[1], cultureInfo));
         }
 
         return namesToValues;

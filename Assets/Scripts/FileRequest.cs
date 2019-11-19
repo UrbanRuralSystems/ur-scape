@@ -98,6 +98,8 @@ public static class FileRequest
 
 			if (webRequest.isNetworkError || webRequest.isHttpError || webRequest.responseCode != 200)       // 200 = HttpStatusCode.OK
 			{
+				
+				Debug.LogError("Failed request: " + url);
 				var error = "Response (code " + webRequest.responseCode + "): " + webRequest.error;
 				Debug.LogError(error);
 			}

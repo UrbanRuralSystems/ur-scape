@@ -566,14 +566,14 @@ public class MunicipalBudgetTool : Tool
 
         if (layersValue.Length != data.ids.Length)
         {
-			municipalBudgetOutput.ShowMessage("Invalid budget data size");
+            municipalBudgetOutput.ShowMessage("Invalid budget data size");
             return;
         }
 
         // Add all cells to list based on municipality
         for (int i = 0; i < layersValue.Length; ++i)
         {
-            if (data.ids[i] == -1)
+            if (data.ids[i] == 0)
                 continue;
 
             var key = idToName[data.ids[i]];

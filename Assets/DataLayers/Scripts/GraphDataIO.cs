@@ -10,6 +10,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 
 public static class GraphDataIO
@@ -43,6 +44,7 @@ public static class GraphDataIO
         graph.south = GeoCalculator.MaxLongitude;
 
 		Dictionary<int, GraphNode> nodes = new Dictionary<int, GraphNode>();
+		var cultureInfo = CultureInfo.InvariantCulture;
 
 		// Read/skip header
 		string line = data.sr.ReadLine();
@@ -60,11 +62,11 @@ public static class GraphDataIO
 
             int value = int.Parse(cells[7]);
 
-			float distance = float.Parse(cells[0]);
-            double x1 = double.Parse(cells[3]);
-            double y1 = double.Parse(cells[4]);
-            double x2 = double.Parse(cells[5]);
-            double y2 = double.Parse(cells[6]);
+			float distance = float.Parse(cells[0], cultureInfo);
+            double x1 = double.Parse(cells[3], cultureInfo);
+            double y1 = double.Parse(cells[4], cultureInfo);
+            double x2 = double.Parse(cells[5], cultureInfo);
+            double y2 = double.Parse(cells[6], cultureInfo);
 
 			if (value >= ClassificationValue.Highway)
 			{

@@ -334,8 +334,9 @@ public class DataManager : UrsComponent
 #if !UNITY_WEBGL
 		if (!Directory.Exists(Paths.Sites))
 		{
-			Debug.LogError("Data path '" + Paths.Sites + "' doesn't exist");
+			Debug.LogError("Data path '" + Paths.Sites + "' doesn't exist. Trying to create it.");
 			CloseProgressDialog();
+			Directory.CreateDirectory(Paths.Sites);
 			yield break;
 		}
 #endif

@@ -9,6 +9,7 @@
 
 using System;
 using System.Collections;
+using System.Globalization;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -256,7 +257,7 @@ public class FilterPanel : LayerOptionsPanel
 
 	private void OnInputMinChanged(string minString)
     {
-        float min = float.Parse(minString);
+        float min = float.Parse(minString, CultureInfo.InvariantCulture);
         float minVal = (filterValsInPercent) ? siteMinPercent : siteMinValue;
         float maxVal = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
 
@@ -278,7 +279,7 @@ public class FilterPanel : LayerOptionsPanel
 
     private void OnInputMaxChanged(string maxString)
     {
-        float max = float.Parse(maxString);
+        float max = float.Parse(maxString, CultureInfo.InvariantCulture);
         float minVal = (filterValsInPercent) ? siteMinPercent : siteMinValue;
         float maxVal = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
 

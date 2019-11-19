@@ -7,6 +7,7 @@
 // Author:  David Neudecker  (neudecker@arch.ethz.ch)
 
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -109,7 +110,7 @@ public class TargetPanel : MonoBehaviour
 				var input = item.GetComponentInChildren<InputField>();
 				if (!string.IsNullOrEmpty(input.text))
 				{
-					float value = float.Parse(item.GetComponentInChildren<InputField>().text);
+					float value = float.Parse(item.GetComponentInChildren<InputField>().text, CultureInfo.InvariantCulture);
 					targetValues.Add(itemToKey[item], value);
 				}
 			}
