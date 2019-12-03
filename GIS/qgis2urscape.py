@@ -1,7 +1,7 @@
 """---------------------------------------------------------------------
 Please set basic parameters
 ---------------------------------------------------------------------"""
-outputPath = "Insert Data Path "  # Do not use any backslash (e.g. C:/Documents/ur-scape/Data)
+outputPath = "Insert Data Path" # Do not use any backslash (e.g. C:/Documents/ur-scape/Data)
 name = "Insert Layer Name" # Set layer name in Camel case (e.g. Population Density)
 field = "Insert Field Name" # Name of the field to be used from shapefile. Will be ignored if raster.
 resolution = "1" # 0-Neighbourhood, 1-City, 2-Metropolitan, 3-National, 4-Continental, 5-Global
@@ -16,13 +16,14 @@ group = "Exported from QGIS"
 citation = "Insert Citation" # insert citation - 
 mandatoryCitation = False # should the citation be always shown?
 link = "Insert Link" # link to dataset if aplied 
+
 """---------------------------------------------------------------------
 Please set advanced parameters below only if you are advanced user
 ---------------------------------------------------------------------"""
 noDataValue = "n/a"
 extentAsCanvas = False
 resolutionPatch = [1, 2, 5 , 10, 50, 360] # in degrees units
-resolutionLevels = [5, 100, 1000, 0.0083333, 0.08333333, 0.416] 
+resolutionLevels = [10, 100, 300, 0.0083333, 0.08333333, 0.416] 
 # resolution is in [metres, metres, metres, degrees, degrees,degrees,]
 
 forMunicipalBudget = False# Create basic data for municipal budget
@@ -49,7 +50,7 @@ Setup for developer
 ---------------------------------------------------------------------"""
 resolutionEPSG = ['3857', '3857', '3857', '4326', '4326', '4326'] # '3857'= metres, '4326' = degress
 resolutionSign = ['D', 'D', 'D', 'C', 'B', 'A' ]
-debuggingMode = True
+debuggingMode = False
 onlyYear = False
 
 """---------------------------------------------------------------------
