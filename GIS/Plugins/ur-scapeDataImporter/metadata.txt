@@ -1,0 +1,38 @@
+# This file contains metadata for your plugin.
+# This file should be included when you package your plugin.
+
+# Mandatory items:
+
+[general]
+name=ur-scape Data Importer
+qgisMinimumVersion=3.10
+description=This plugin provides a GUI for qgis2urscape.py
+about=This plugin provides a GUI for qgis2urscape.py
+version=0.1
+author=Future Cities Laboratory
+email=muhammad.zaolkefli@sec.ethz.ch
+#tracker=http://bugs
+repository=https://github.com/UrbanRuralSystems/ur-scape
+
+
+# Recommended items:
+
+hasProcessingProvider=no
+#changelog=
+homepage=https://urs.sec.sg/#filter=.platform
+#category=Plugins
+icon=icon.png
+experimental=True
+
+# Tags are comma separated with spaces allowed
+tags=ur-scape
+
+# The deprecated flag applies to the whole plugin, not just a single version
+deprecated=False
+
+# A comma separated list of plugins to be installed or upgraded (since QGIS 3.8)
+#plugin_dependencies=
+
+# If the plugin can run on QGIS Server.
+server=False
+

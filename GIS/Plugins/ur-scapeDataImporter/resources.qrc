@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/qgis2urscapeUI" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>

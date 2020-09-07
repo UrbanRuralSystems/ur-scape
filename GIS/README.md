@@ -1,6 +1,6 @@
 # ur-scape - GIS tools
 
-Tool in PyQGIS, the Python environment in QGIS, allowing automatic export of Geospatial data to formats readable by ur-scape. 
+Scripts and plugins for QGIS, allowing automatic export of Geospatial data to formats readable by ur-scape. 
 
 ### Screenshots
 
@@ -11,21 +11,24 @@ Tool in PyQGIS, the Python environment in QGIS, allowing automatic export of Geo
 
 Hardware:
 
-At least 8 GB RAM
-At least 15 GB Hard Drive Storage
+- At least 8 GB RAM
+- At least 15 GB Hard Drive Storage
 
 Software:
 
-QGIS 3.4.5 or higher, Python 3
+* QGIS 3.10 or newer
+* Python 3
 
 ### Setup
 
- Script can be directly ran from QGIS Python console editor
+Plugin can be copied to QGIS plugins folder
+
+Script can be directly ran from QGIS Python console editor
 
 ### Contacts
 
 * David Neudecker: iam@davidneudecker.com
-* Serene Chen: serene.chen@arch.ethz.ch
+* Muhammad Salihin Bin Zaol-Kefli: muhammad.zaolkefli@sec.ethz.ch
 
 ## License
 
