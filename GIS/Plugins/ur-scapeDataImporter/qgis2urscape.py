@@ -56,8 +56,8 @@ Setup for developer
 ---------------------------------------------------------------------"""
 resolutionEPSG = ['3395', '3395', '3395', '4326', '4326', '4326','3395'] # '3857'= metres, '4326' = degress
 resolutionSign = ['D', 'D', 'D', 'C', 'B', 'A','D' ]
-unitsList= ['None' , 'category','Count','Index' , 'population/SqKm2', 'population/ha',' AMSL', 'Percentage', 'Yield : tons / ha'] 
-isUnitsRelative= [False, False, False, False, True, True,False,False, True] 
+unitsList= ['None' , 'category','Count','Index' , 'population/SqKm2', 'population/ha','AMSL', 'Percentage', 'Yield : tons / ha', 'Minutes','Hours', 'kWh/m2', 'mm/Year', 'PPP USD', 'Radiance']
+isUnitsRelative= [False, False, False, False, True, True,False,False, True,False,False,True,False,False,False]
 unitsMultiply=[ 1 , 1 , 1 , 1 , 1 , 100 , 1 , 100 ] # difference for relative numbers from km2
 colorHSV = None
 debuggingMode = False
@@ -805,7 +805,7 @@ class FileWriter:
 
         fileStringTemp = name+ sign +location+'@'+ str(index)+'_'+dateCode+ '_grid.csv'
         fileString = fileStringTemp if not forMunicipalBudget else location + '.csv'
-        output_file = open(setup.finalPath+'/' + fileString , 'w',newline='',encoding= 'utf-16le')
+        output_file = open(setup.finalPath+'/' + fileString , 'w',newline='',encoding= 'utf-16')
         if not forMunicipalBudget:
             output_file.write("METADATA,TRUE"+ '\n')
             output_file.write("Layer Name,"+name+ '\n')
