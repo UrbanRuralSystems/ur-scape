@@ -95,6 +95,7 @@ class Logger(object):
         #    QgsMessageLog.logMessage(message, self.TAG, Qgis.Info)
         self.writeToLogFile(message)
         self.writeToLogTab(message)
+        # self.orig_stdout.write(message)
 
     def writeToLogTab(self, message):
         if self.log is not None:
@@ -232,14 +233,10 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.wgtCustomRes.hide()
 
     def initUnits(self):
-        self.units = [
-            "Please select an option",
-            "None",
-            "population/SqKm2 (Relative)",
-            "population/ha (Relative)",
-            "AMSL (Absolute)",
-            "Custom"
-        ]
+        self.units = ["Please select an option", "Custom"]
+        for i in range(len(q2u.unitsList)): 
+            self.units.insert(i + 1, q2u.unitsList[i])
+        # print(self.units)
         self.selectedUnits = None
         self.txtCustomUnits.setText("")
         self.chkRelative.setChecked(False)
@@ -360,6 +357,8 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         if placeholderText:
             cmbBox.view().setRowHidden(0, True)
             cmbBox.activated.connect(activatedFunc)
+            
+        cmbBox.wheelEvent = lambda event: None
 
         eventFunc(index)
 
@@ -381,10 +380,15 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.initMsgBar()
 
         self.updateInputLayersUI()
+        self.cmbInputLayer.wheelEvent = lambda event: None
+        
         self.onShapefileFieldChanged(0)
+        self.cmbShapefileField.wheelEvent = lambda event: None
 
         # Add output types
         self.updateOutputType(isinstance(iface.activeLayer(), QgsVectorLayer))
+        self.cmbOutputType.wheelEvent = lambda event: None
+        
         # Add resolutions
         self.initCmbBoxUI(self.resolutions, self.cmbRes, self.onResolutionChanged, 1)
         # Add units
@@ -434,7 +438,7 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
             if not value.isTemporary():
                 self.layerIDs.append(key)
                 self.cmbInputLayer.addItem(value.name())
-        
+                
         # Still no available layers in QGIS after Refresh
         if not self.layerIDs:
             return
@@ -449,21 +453,22 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
                 activeLayer = iface.activeLayer()
                 if activeLayer is not None:
                     index = self.cmbInputLayer.findText(activeLayer.name(), QtCore.Qt.MatchFixedString)
+                    self.updateShapefileField(isinstance(iface.activeLayer(), QgsVectorLayer))
         else:
             index = 0
 
         if index >= 0:
             self.cmbInputLayer.setCurrentIndex(index)
-            self.onLayerChanged(index)
+            self.updateSelectedInputLayer(index)
+            iface.setActiveLayer(self.selectedInputLayer)
         self.cmbInputLayer.currentIndexChanged.connect(self.onLayerChanged)
-
+        
     def onLayerChanged(self, index):
         self.updateSelectedInputLayer(index)
         iface.setActiveLayer(self.selectedInputLayer)
         self.updateShapefileField(isinstance(iface.activeLayer(), QgsVectorLayer))
         self.updateOutputType(isinstance(iface.activeLayer(), QgsVectorLayer))
         self.onOutputTypeChanged(0)
-        self.resetNoDatas()
 
     def onShapefileFieldChanged(self, index):
         self.cmbShapefileField.setCurrentIndex(index)
@@ -480,7 +485,7 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         try:
             self.selectedOutputType = self.outputTypes[item]
         except: pass
-
+        
         if self.selectedOutputType == 0:    # Data Layer
             if isinstance(iface.activeLayer(), QgsVectorLayer):
                 self.dataLayerVectorUIElems()
@@ -493,16 +498,13 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
 
         # print("SelectedOutputType: " + str(self.selectedOutputType))
 
-        # Reset some of the UI sections
+        # Resolution should be "Global" by default if Location is "World"
+        # Otherwise, assign previously selected Resolution
         if not self.isWorld:
             self.onResolutionChanged(self.prevSelectedOthersRes if self.prevSelectedOthersRes is not None else 1)
         else:
             # self.onResolutionChanged(self.prevSelectedWorldRes if self.prevSelectedWorldRes is not None else 2)
             self.onResolutionChanged(2)
-        self.onUnitsChanged(0)
-        self.onLayerColorChanged(0)
-        self.onResamplingMthdChanged(0)
-        self.resetNoDatas()
 
         self.wgtChkboxes.adjustSize()
     
@@ -559,6 +561,7 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
             self.cmbLayerColor.setCurrentIndex(index)
     
     def onLayerColorChanged(self, index):
+        self.cmbLayerColor.setCurrentIndex(index)
         if index == len(self.colors) - 1:
             self.wgtCustomLayerColor.show()
             self.updateLayerCustomColor(self.hsCustomColor.value())
@@ -592,7 +595,7 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         currTextLen = len(text)
         
         if currTextLen - 1 == 0:
-            # Add new QLinEdit
+            # Add new QLineEdit
             #print("Adding new noData to list...")
             self.addToNoDatasList("")
             
@@ -1182,7 +1185,6 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         # Mandatory Parameters
         self.lblLayerName.show()
         self.txtLayerName.show()
-        self.txtLayerName.setText("")
         self.txtLayerName.setEnabled(True)
         self.lblRes.show()
         self.cmbRes.show()
@@ -1240,7 +1242,6 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         # Mandatory Parameters
         self.lblLayerName.show()
         self.txtLayerName.show()
-        self.txtLayerName.setText("")
         self.txtLayerName.setEnabled(True)
         self.lblRes.show()
         self.cmbRes.show()
