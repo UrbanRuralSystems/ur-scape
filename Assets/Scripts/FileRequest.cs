@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -31,7 +31,7 @@ public static class FileRequest
     public static IEnumerator GetStream(string filename, FileRequestCallback callback, UnityAction errCallback = null)
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
-        yield return GetFromURL(Web.GetUrl(filename), null, callback, errCallback);
+        yield return GetFromURL(Web.GetUrl(filename), callback, errCallback);
 #else
 #if UNITY_WEBGL
         yield return WebGLDelay;
@@ -110,10 +110,12 @@ public static class FileRequest
 		}
 	}
 
+
 	//
 	// Private Methods
 	//
 
+#if UNITY_STANDALONE || UNITY_IOS || (UNITY_WEBGL && UNITY_EDITOR)
 	private static void GetFromFile(string filename, FileRequestCallback callback, UnityAction errCallback = null)
     {
         if (!File.Exists(filename))
@@ -125,8 +127,10 @@ public static class FileRequest
 
         callback(File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
     }
+#endif
 
-    private static IEnumerator GetFromURL(string url, string saveAs, FileRequestCallback callback, UnityAction errCallback = null)
+#if UNITY_WEBGL && !UNITY_EDITOR
+	private static IEnumerator GetFromURL(string url, FileRequestCallback callback, UnityAction errCallback = null)
     {
         byte[] data = null;
         yield return GetFromURL(url, d => data = d);
@@ -138,12 +142,7 @@ public static class FileRequest
 			yield break;
         }
 
-		if (!string.IsNullOrEmpty(saveAs))
-        {
-            File.WriteAllBytes(saveAs, data);
-        }
-
         callback(new MemoryStream(data));
     }
-
+#endif
 }

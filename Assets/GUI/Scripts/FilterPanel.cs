@@ -11,6 +11,8 @@ using System;
 using System.Collections;
 using System.Globalization;
 using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class FilterPanel : LayerOptionsPanel
@@ -50,7 +52,7 @@ public class FilterPanel : LayerOptionsPanel
     private float maxChartValue;
     private bool chartNeedsUpdate;
 
-	private static readonly float ChartUpdateInterval = 0.2f;
+    private static readonly float ChartUpdateInterval = 0.2f;
 	private static readonly WaitForSeconds ChartUpdateDelay = new WaitForSeconds(ChartUpdateInterval + 0.02f);
 	private bool waitingForChartUpdate;
 	private float nextValidUpdateTime;
@@ -67,8 +69,8 @@ public class FilterPanel : LayerOptionsPanel
 
 		base.Init(dataLayer);
 
-		inputMin.characterValidation = InputField.CharacterValidation.Decimal;
-        inputMax.characterValidation = InputField.CharacterValidation.Decimal;
+        inputMin.characterValidation = InputField.CharacterValidation.None;
+        inputMax.characterValidation = InputField.CharacterValidation.None;
 
         chartValues = new float[chartSize];
         maxChartValue = 0;
@@ -118,6 +120,16 @@ public class FilterPanel : LayerOptionsPanel
 
             inputMin.onEndEdit.AddListener(OnInputMinChanged);
             inputMax.onEndEdit.AddListener(OnInputMaxChanged);
+
+            var trigger = inputMin.GetComponent<FocusEventTrigger>();
+            if (trigger == null)
+                trigger = inputMin.gameObject.AddComponent<FocusEventTrigger>();
+            trigger.onSelect += OnInputSelect;
+            
+            trigger = inputMax.GetComponent<FocusEventTrigger>();
+            if (trigger == null)
+                trigger = inputMax.gameObject.AddComponent<FocusEventTrigger>();
+            trigger.onSelect += OnInputSelect;
         }
         else
         {
@@ -129,12 +141,15 @@ public class FilterPanel : LayerOptionsPanel
             minSlider.OnClick -= OnSliderClick;
             maxSlider.OnClick -= OnSliderClick;
 
+            inputMin.GetComponent<FocusEventTrigger>().onSelect -= OnInputSelect;
+            inputMax.GetComponent<FocusEventTrigger>().onSelect -= OnInputSelect;
+
             inputMin.onEndEdit.RemoveListener(OnInputMinChanged);
             inputMax.onEndEdit.RemoveListener(OnInputMaxChanged);
         }
     }
 
-	protected override void OnPanelVisibilityChange(bool visible)
+    protected override void OnPanelVisibilityChange(bool visible)
 	{
 		if (!visible)
 		{
@@ -257,12 +272,14 @@ public class FilterPanel : LayerOptionsPanel
 
 	private void OnInputMinChanged(string minString)
     {
+        inputMin.characterValidation = InputField.CharacterValidation.None;
+
         float min = float.Parse(minString, CultureInfo.InvariantCulture);
         float minVal = (filterValsInPercent) ? siteMinPercent : siteMinValue;
         float maxVal = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
 
         minFilter = Mathf.Clamp(min, minVal, maxFilter);
-        if (minFilter != min)
+        if (minFilter != min || Math.Abs(minFilter) >= 1000f)
         {
 			UpdateInputField(inputMin, minFilter);
         }
@@ -275,17 +292,23 @@ public class FilterPanel : LayerOptionsPanel
         minSlider.value = GetLinearValue(normalizedMin);
         chart.SetMinFilter(normalizedMin);
         avoidSliderUpdate = false;
+
+        // Deselect/unfocus current input
+        if (!EventSystem.current.alreadySelecting)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     private void OnInputMaxChanged(string maxString)
     {
+        inputMax.characterValidation = InputField.CharacterValidation.None;
+
         float max = float.Parse(maxString, CultureInfo.InvariantCulture);
         float minVal = (filterValsInPercent) ? siteMinPercent : siteMinValue;
         float maxVal = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
 
         maxFilter = Mathf.Clamp(max, minFilter, maxVal);
 
-        if (maxFilter != max)
+        if (maxFilter != max || Math.Abs(maxFilter) >= 1000f)
         {
 			UpdateInputField(inputMax, maxFilter);
         }
@@ -298,6 +321,24 @@ public class FilterPanel : LayerOptionsPanel
         maxSlider.value = GetLinearValue(normalizedMax);
         chart.SetMaxFilter(normalizedMax);
         avoidSliderUpdate = false;
+
+        // Deselect/unfocus current input
+        if (!EventSystem.current.alreadySelecting)
+            EventSystem.current.SetSelectedGameObject(null);
+    }
+
+    private void OnInputSelect(GameObject selected)
+    {
+        if (selected == inputMin.gameObject)
+        {
+            inputMin.text = minFilter.ToString("0.######");
+            inputMin.characterValidation = InputField.CharacterValidation.Decimal;
+        }
+        else if (selected == inputMax.gameObject)
+        {
+            inputMax.text = maxFilter.ToString("0.######");
+            inputMax.characterValidation = InputField.CharacterValidation.Decimal;
+        }
     }
 
     private void UpdateValueType()
@@ -410,28 +451,46 @@ public class FilterPanel : LayerOptionsPanel
 	{
         float range = (filterValsInPercent) ? (siteMaxPercent - siteMinPercent) :
                                               (siteMaxValue - siteMinValue);
-        float epsilon = range * 0.001f;
+        float epsilon = Math.Min(1e-6f, range * 0.001f);
 
         float siteMin = (filterValsInPercent) ? siteMinPercent : siteMinValue;
         float siteMax = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
 
-        if (value + range <= siteMin)
-            input.text = siteMin.ToString("0.##");
-        else if (value - epsilon >= siteMax)
-            input.text = siteMax.ToString("0.##");
+        if (value - epsilon <= siteMin)
+            value = siteMin;
+        else if (value + epsilon >= siteMax)
+            value = siteMax;
+
+        var absValue = Math.Abs(value);
+        if (absValue >= 1e+12)
+            input.text = (value * 1e-12).ToString("0.0 T");
+        else if (absValue >= 1e+11)
+            input.text = (value * 1e-9).ToString("0.0 B");
+        else if (absValue >= 1e+9)
+            input.text = (value * 1e-9).ToString("0.00 B");
+        else if (absValue >= 1e+8)
+            input.text = (value * 1e-6).ToString("0.0 M");
+        else if (absValue >= 1e+6)
+            input.text = (value * 1e-6).ToString("0.00 M");
+        else if (absValue >= 1e+5)
+            input.text = (value * 1e-3).ToString("0.0 K");
+        else if (absValue >= 1e+3)
+            input.text = (value * 1e-3).ToString("0.00 K");
+        else if (absValue < 0.0001f)
+            input.text = "0";
+        else if (absValue < 0.01f)
+            input.text = value.ToString("0.0000");
+        else if (absValue < 0.1f)
+            input.text = value.ToString("0.000");
         else
         {
             int iValue = Mathf.FloorToInt(value);
-            if (iValue == value || range > 10f)
+            if (iValue == value)
                 input.text = iValue.ToString();
-            else if (range > 1f)
-                input.text = value.ToString("0.0");
-            else if (range > 0.1f)
-                input.text = value.ToString("0.00");
             else
-                input.text = value.ToString("0.000");
+                input.text = value.ToString("0.00");
         }
-	}
+    }
 
 	private void UpdateFilters()
     {
@@ -470,8 +529,9 @@ public class FilterPanel : LayerOptionsPanel
     private void UpdateDistributionPower()
     {
 		// Some sites may not have a mean (e.g. Reachibility)
-		if (UseNonlinearDistribution && siteMean > 0)
-			distributionPower = Mathf.Log(siteMean) * InvMeanThresholdLog;
+        var mean = filterValsInPercent ? siteMeanPercent : siteMean;
+        if (UseNonlinearDistribution && mean > 0)
+			distributionPower = Mathf.Log(mean) * InvMeanThresholdLog;
         else
 			distributionPower = 1;
 		chart.SetPower(distributionPower);
@@ -594,4 +654,10 @@ public class FilterPanel : LayerOptionsPanel
 		chart.SetData(chartValues, maxChartValue);
 	}
 
+}
+
+public class FocusEventTrigger : MonoBehaviour, ISelectHandler
+{
+    public UnityAction<GameObject> onSelect;
+    public void OnSelect(BaseEventData eventData) => onSelect?.Invoke(eventData.selectedObject);
 }

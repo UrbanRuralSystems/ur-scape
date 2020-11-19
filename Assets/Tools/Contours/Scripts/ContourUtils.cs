@@ -7,7 +7,6 @@
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 
 using System;
-using UnityEngine;
 
 public class ContourUtils
 {
@@ -34,13 +33,13 @@ public class ContourUtils
 			{
 				//double metersY2 = GeoCalculator.LatitudeToMeters(grid.north + y * scaleY);
 				double metersY2 = Math.Log(Math.Tan((90d + (grid.north + y * scaleY)) * GeoCalculator.Deg2HalfRad)) * GeoCalculator.Rad2Meters;
-				double dy = metersY1 - metersY2;
+				double cellSqm = (metersY1 - metersY2) * dx;
 
 				for (int x = 0; x < grid.countX; ++x, ++i)
 				{
 					if (grid.values[i] == selectedContour)
 					{
-						sqm += dx * dy;
+						sqm += cellSqm;
 					}
 				}
 				metersY1 = metersY2;
@@ -53,13 +52,13 @@ public class ContourUtils
 			{
 				//double metersY2 = GeoCalculator.LatitudeToMeters(grid.north + y * scaleY);
 				double metersY2 = Math.Log(Math.Tan((90d + (grid.north + y * scaleY)) * GeoCalculator.Deg2HalfRad)) * GeoCalculator.Rad2Meters;
-				double dy = metersY1 - metersY2;
+				double cellSqm = (metersY1 - metersY2) * dx;
 
 				for (int x = 0; x < grid.countX; ++x, ++i)
 				{
 					if (grid.values[i] > 0)
 					{
-						sqm += dx * dy;
+						sqm += cellSqm;
 					}
 				}
 				metersY1 = metersY2;
@@ -75,62 +74,110 @@ public class ContourUtils
 		if (selected && selectedContour == 0)
 			return 0;
 
-		if (contourGrid.values.Length != contourGrid.countX * contourGrid.countY)
-		{
-			Debug.LogError("SumContouredValues");
-			return 0;
-		}
-
-		double contoursCellsPerDegreeX = contourGrid.countX / (contourGrid.east - contourGrid.west);
-		double contoursCellsPerDegreeY = contourGrid.countY / (contourGrid.south - contourGrid.north);
-
-		var degreesPerCellX = (otherGrid.east - otherGrid.west) / otherGrid.countX;
-		var degreesPerCellY = (otherGrid.south - otherGrid.north) / otherGrid.countY;
-
-		double scaleX = contoursCellsPerDegreeX * degreesPerCellX;
-		double scaleY = contoursCellsPerDegreeY * degreesPerCellY;
-
-		double offsetX = (otherGrid.west - contourGrid.west) * contoursCellsPerDegreeX + 0.5 * scaleX;
-		double offsetY = (otherGrid.north - contourGrid.north) * contoursCellsPerDegreeY + 0.5 * scaleY;
-
 		double sum = 0;
 		int count = otherGrid.values.Length;
 
-		if (selected)
+		// Shortcut for grids that have the same resolution and boundary as the contours
+		if (contourGrid.countX == otherGrid.countX &&
+			contourGrid.countY == otherGrid.countY &&
+			contourGrid.north == otherGrid.north &&
+			contourGrid.east == otherGrid.east &&
+			contourGrid.south == otherGrid.south &&
+			contourGrid.west == otherGrid.west)
 		{
-			for (int i = 0; i < count; ++i)
+			if (selected)
 			{
-				int y = i / otherGrid.countX;
-				int x = i - y * otherGrid.countX;
-				int cX = (int)(offsetX + x * scaleX);
-				int cY = (int)(offsetY + y * scaleY);
-				int contourIndex = cY * contourGrid.countX + cX;
-				if (contourGrid.values[contourIndex] == selectedContour)
+				if (otherGrid.valuesMask == null)
 				{
-					if (otherGrid.valuesMask == null)
+					for (int i = 0; i < count; ++i)
+					{
+						if (contourGrid.values[i] != selectedContour) continue;
 						sum += otherGrid.values[i];
-					else
+						cellCount++;
+					}
+				}
+				else
+				{
+					for (int i = 0; i < count; ++i)
+					{
+						if (contourGrid.values[i] != selectedContour) continue;
 						sum += otherGrid.values[i] * otherGrid.valuesMask[i];
-					cellCount++;
+						cellCount++;
+					}
+				}
+			}
+			else
+			{
+				if (otherGrid.valuesMask == null)
+				{
+					for (int i = 0; i < count; ++i)
+					{
+						if (contourGrid.values[i] <= 0) continue;
+						sum += otherGrid.values[i];
+						cellCount++;
+					}
+				}
+				else
+				{
+					for (int i = 0; i < count; ++i)
+					{
+						if (contourGrid.values[i] <= 0) continue;
+						sum += otherGrid.values[i] * otherGrid.valuesMask[i];
+						cellCount++;
+					}
 				}
 			}
 		}
 		else
 		{
-			for (int i = 0; i < count; ++i)
+			double contoursCellsPerDegreeX = contourGrid.countX / (contourGrid.east - contourGrid.west);
+			double contoursCellsPerDegreeY = contourGrid.countY / (contourGrid.south - contourGrid.north);
+
+			var degreesPerCellX = (otherGrid.east - otherGrid.west) / otherGrid.countX;
+			var degreesPerCellY = (otherGrid.south - otherGrid.north) / otherGrid.countY;
+
+			double scaleX = contoursCellsPerDegreeX * degreesPerCellX;
+			double scaleY = contoursCellsPerDegreeY * degreesPerCellY;
+
+			double offsetX = (otherGrid.west - contourGrid.west) * contoursCellsPerDegreeX + 0.5 * scaleX;
+			double offsetY = (otherGrid.north - contourGrid.north) * contoursCellsPerDegreeY + 0.5 * scaleY;
+
+			if (selected)
 			{
-				int y = i / otherGrid.countX;
-				int x = i - y * otherGrid.countX;
-				int cX = (int)(offsetX + x * scaleX);
-				int cY = (int)(offsetY + y * scaleY);
-				int contourIndex = cY * contourGrid.countX + cX;
-				if (contourGrid.values[contourIndex] > 0)
+				for (int i = 0; i < count; ++i)
 				{
-					if (otherGrid.valuesMask == null)
-						sum += otherGrid.values[i];
-					else
-						sum += otherGrid.values[i] * otherGrid.valuesMask[i];
-					cellCount++;
+					int y = i / otherGrid.countX;
+					int x = i - y * otherGrid.countX;
+					int cX = (int)(offsetX + x * scaleX);
+					int cY = (int)(offsetY + y * scaleY);
+					int contourIndex = cY * contourGrid.countX + cX;
+					if (contourGrid.values[contourIndex] == selectedContour)
+					{
+						if (otherGrid.valuesMask == null)
+							sum += otherGrid.values[i];
+						else
+							sum += otherGrid.values[i] * otherGrid.valuesMask[i];
+						cellCount++;
+					}
+				}
+			}
+			else
+			{
+				for (int i = 0; i < count; ++i)
+				{
+					int y = i / otherGrid.countX;
+					int x = i - y * otherGrid.countX;
+					int cX = (int)(offsetX + x * scaleX);
+					int cY = (int)(offsetY + y * scaleY);
+					int contourIndex = cY * contourGrid.countX + cX;
+					if (contourGrid.values[contourIndex] > 0)
+					{
+						if (otherGrid.valuesMask == null)
+							sum += otherGrid.values[i];
+						else
+							sum += otherGrid.values[i] * otherGrid.valuesMask[i];
+						cellCount++;
+					}
 				}
 			}
 		}

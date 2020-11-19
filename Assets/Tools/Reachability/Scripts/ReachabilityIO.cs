@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -15,8 +15,6 @@ using UnityEngine.Events;
 
 public static class ReachabilityIO
 {
-    private const float kmPerHourToMetersPerMin = 1000.0f / 60.0f;
-
     public static IEnumerator Load(string filename, UnityAction<List<MobilityMode>> callback, UnityAction errCallback)
     {
 		yield return FileRequest.GetText(filename, (sr) => callback(Parse(sr)), errCallback);
@@ -28,7 +26,7 @@ public static class ReachabilityIO
         string line = sr.ReadLine();
         string[] header = line.Split(',');
 
-		if (header == null || header.Length != ClassificationIndex.Count)
+		if (header == null || header.Length != ClassificationValue.Count)
 			return null;
 
 		List<MobilityMode> modes = new List<MobilityMode>();
@@ -38,17 +36,16 @@ public static class ReachabilityIO
             if (string.IsNullOrEmpty(cells[0]))
                 continue;
 
-			if (cells.Length != ClassificationIndex.Count)
+			if (cells.Length != ClassificationValue.Count)
 				return null;
 
 			MobilityMode mode = new MobilityMode();
 			mode.name = cells[0].Trim();
 
-			for (int i = ClassificationIndex.Count - 1; i > 0; --i)
+			for (int i = ClassificationValue.Count - 1; i > 0; --i)
             {
-				float value = 0;
-				float.TryParse(cells[i], out value);
-				mode.speeds[ClassificationIndex.Count - i] = value * kmPerHourToMetersPerMin;   //convert from km/h to m/min
+				float.TryParse(cells[i], out float value);
+				mode.speeds[ClassificationValue.Count - i] = value * ReachabilityTool.kmPerHourToMetersPerMin;   //convert from km/h to m/min
 			}
 			modes.Add(mode);
         }

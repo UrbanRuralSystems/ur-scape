@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -25,15 +25,13 @@ public class MunicipalBudgetTool : Tool
     public GridMapLayer highlightLayerPrefab;
     public MunicipalBudgetOutput outputPrefab;
     public WeightSlider sliderPrefab;
-	public TransectChart chartPrefab;
 
 	[Header("UI References")]
     public Toggle filterToggle;
-	public TransectLocator transectLocator;
-    public TransectChartController transectControler;
+    public Toggle noDataToggle;
 
-    // Prefab Instances
-    private WeightedMapLayer budgetLayer;
+	// Prefab Instances
+	private WeightedMapLayer budgetLayer;
 	private GridMapLayer highlightLayer;
 	private MunicipalBudgetOutput municipalBudgetOutput;
 
@@ -44,11 +42,12 @@ public class MunicipalBudgetTool : Tool
     private InputHandler inputHandler;
 
     // Misc
-    private List<GridData> grids = new List<GridData>();
-    private Dictionary<string, WeightSlider> sliders = new Dictionary<string, WeightSlider>();
+    private readonly List<GridData> grids = new List<GridData>();
+    private readonly Dictionary<string, WeightSlider> sliders = new Dictionary<string, WeightSlider>();
 	private MunicipalityData data;
 	private Coroutine loadDataCR;
     private bool isHover;
+    private int initChildsCount;
 
 	//
 	// Unity Methods
@@ -56,11 +55,8 @@ public class MunicipalBudgetTool : Tool
 
 	protected override void OnDestroy()
     {
-		RemoveTransectChart();
-
 		base.OnDestroy();
 	}
-
 
 	//
 	// Inheritance Methods
@@ -82,24 +78,24 @@ public class MunicipalBudgetTool : Tool
         return false;
     }
 
-
     //
     // Event Methods
     //
 
-    public override void OnToggleTool(bool isOn)
+    protected override void OnToggleTool(bool isOn)
     {
         if (isOn)
         {
-			// Create budget layer
-			budgetLayer = CreateMapLayer(budgetLayerPrefab, "WeightedLayer");
-			budgetLayer.ShowTransect(true);
-			budgetLayer.SetTransect(transectLocator.Locator);
-			highlightLayer = CreateMapLayer(highlightLayerPrefab, "HighlightLayer");
+            // Create budget layer
+			budgetLayer = toolLayers.CreateMapLayer(budgetLayerPrefab, "WeightedLayer");
+			highlightLayer = toolLayers.CreateMapLayer(highlightLayerPrefab, "HighlightLayer");
 			highlightLayer.Show(false);
 
-			// Add sliders
-			foreach (var panel in dataLayers.activeLayerPanels)
+            // Store number of childs on start
+            initChildsCount = transform.childCount + 1;
+
+            // Add slider
+            foreach (var panel in dataLayers.activeLayerPanels)
 			{
 				UpdateSlider(panel.DataLayer, true);
 			}
@@ -127,15 +123,14 @@ public class MunicipalBudgetTool : Tool
 				grids.Add(layer.Grid);
 			}
 
-			ShowBudgetLayer(true);
+			ShowBudgetLayer(false);
 
 			// Add filter toggle event
 			filterToggle.onValueChanged.AddListener(OnFilterToggleChange);
-			budgetLayer.useFilters = filterToggle.isOn;
+            noDataToggle.onValueChanged.AddListener(OnNoDataToggleChange);
+            budgetLayer.useFilters = filterToggle.isOn;
 
-			transectLocator.OnLocatorChange += OnLocatorChange;
-
-			loadDataCR = StartCoroutine(LoadData());
+            loadDataCR = StartCoroutine(LoadData());
         }
         else
         {
@@ -154,16 +149,13 @@ public class MunicipalBudgetTool : Tool
                     gridController.OnShowGrid -= OnShowGrid;
                 }
             }
-			transectLocator.OnLocatorChange -= OnLocatorChange;
-
-			RemoveTransectChart();
 
             // Remove Output panel
-            outputPanel.RemovePanel(municipalBudgetOutput.transform);
-            municipalBudgetOutput.OnItemHovering -= OnItemHover;
+            outputPanel.DestroyPanel(municipalBudgetOutput.gameObject);
+			municipalBudgetOutput = null;
 
-            // Remove map layer
-            DeleteAllLayers();
+			// Remove map layer
+			DeleteAllLayers();
 
             // Remove sliders
             foreach (var pair in sliders)
@@ -178,15 +170,8 @@ public class MunicipalBudgetTool : Tool
 		}
 	}
 
-	private void OnLocatorChange(float locator)
-	{
-		budgetLayer.SetTransect(locator);
-	}
-
 	private void OnBeforeActiveSiteChange(Site nextSite, Site previousSite)
 	{
-		// Clean up
-		RemoveTransectChart();
 
 		if (loadDataCR != null)
 			StopCoroutine(loadDataCR);
@@ -202,9 +187,14 @@ public class MunicipalBudgetTool : Tool
 		loadDataCR = StartCoroutine(LoadData());
 	}
 
-    private void Update()
-    {
-        //all the conditions to disable Kelurahan identification via hovering on map
+	private void Update()
+	{
+		CheckMapAreaHover();
+	}
+
+	private void CheckMapAreaHover()
+	{
+        // All the conditions to disable area identification via hovering on map
         if (isHover || data == null || budgetLayer.Grid.values == null || budgetLayer.Grid.values.Length != data.ids.Length)
             return;
 
@@ -214,41 +204,41 @@ public class MunicipalBudgetTool : Tool
 
         string name = "";
 
-        Vector3 worldPos;
-        if (inputHandler.GetWorldPoint(Input.mousePosition, out worldPos))
-        {
-            Coordinate coords = map.GetCoordinatesFromUnits(worldPos.x, worldPos.z);
-            var grid = highlightLayer.Grid;
-            if (grid.values != null && grid.IsInside(coords.Longitude, coords.Latitude))
-            {
-                var id = grid.GetIndex(coords.Longitude, coords.Latitude);
+		if (inputHandler.GetWorldPoint(Input.mousePosition, out Vector3 worldPos))
+		{
+			Coordinate coords = map.GetCoordinatesFromUnits(worldPos.x, worldPos.z);
+			var grid = highlightLayer.Grid;
+			if (grid.values != null && grid.IsInside(coords.Longitude, coords.Latitude))
+			{
+				var id = grid.GetIndex(coords.Longitude, coords.Latitude);
 
-                var ids = data.ids;
-                var count = ids.Length;
+				var ids = data.ids;
+				var count = ids.Length;
 
-                // No data matching any of the Kelurahans listed
-                if (!data.idToName.TryGetValue(ids[id], out name))
-                {
-                    highlightLayer.Show(false);
-                    municipalBudgetOutput.ShowBudgetLabel("");
-                    municipalBudgetOutput.UpdateSelectedAreaAndVal("");
-                    return;
-                }
+				// No data matching any of the areas listed
+				if (!data.idToName.TryGetValue(ids[id], out name))
+				{
+					highlightLayer.Show(false);
+					municipalBudgetOutput.ShowBudgetLabel("");
+					municipalBudgetOutput.UpdateSelectedAreaAndVal("");
+					return;
+				}
 
-                for (int i = 0; i < count; ++i)
-                {
-                    values[i] = ids[i] == ids[id] ? 1 : 0;
-                }
+				for (int i = 0; i < count; ++i)
+				{
+					values[i] = ids[i] == ids[id] ? 1 : 0;
+				}
 
-                highlightLayer.Show(true);
-                highlightLayer.Grid.ValuesChanged();
-            }
-            else
-            {
-                highlightLayer.Show(false);
-            }
-        }
-        municipalBudgetOutput.ShowBudgetLabel(name);
+				highlightLayer.Show(true);
+				highlightLayer.Grid.ValuesChanged();
+			}
+			else
+			{
+				highlightLayer.Show(false);
+			}
+		}
+
+		municipalBudgetOutput.ShowBudgetLabel(name);
         municipalBudgetOutput.UpdateSelectedAreaAndVal(name);
     }
 
@@ -278,20 +268,21 @@ public class MunicipalBudgetTool : Tool
 		}
         else
         {
-            if(highlightLayer != null)
+            if (highlightLayer != null)
 			    highlightLayer.Show(false);
 		}
 
         isHover = hover;
     }
 
-    public override void OnActiveTool(bool isActive)
+    protected override void OnActiveTool(bool isActive)
     {
-		base.OnActiveTool(isActive);
-
 		if (municipalBudgetOutput != null)
         {
-            outputPanel.SetPanel((isActive) ? municipalBudgetOutput.transform : null);
+			outputPanel.SetPanel(isActive ? municipalBudgetOutput.transform : null);
+
+			if (!isActive)
+				municipalBudgetOutput.ClearAreas();
         }
     }
 
@@ -318,12 +309,7 @@ public class MunicipalBudgetTool : Tool
 			if (budgetLayer.IsVisible())
 			{
 				Add(otherGrid);
-				budgetLayer.Refresh();
-
-				if (budgetLayer.grids.Count == 1)
-				{
-					UpdateTransectChart();
-				}
+				budgetLayer.UpdateData();
 			}
 			else
 			{
@@ -342,14 +328,9 @@ public class MunicipalBudgetTool : Tool
 			// Remove from budget layer
 			if (budgetLayer.IsVisible())
 			{
-				// Remove the transect chart before the budget layer is emptied (grid values become null)
-				if (budgetLayer.grids.Count == 1)
-				{
-					RemoveTransectChart();
-				}
 
 				Remove(otherGrid);
-				budgetLayer.Refresh();
+				budgetLayer.UpdateData();
 			}
 			else
 			{
@@ -388,12 +369,17 @@ public class MunicipalBudgetTool : Tool
         UpdateOutput();
     }
 
+    private void OnNoDataToggleChange(bool isOn)
+    {
+        municipalBudgetOutput.SetNoDataUse(isOn);
+        UpdateOutput();
+    }
 
-	//
-	// Private Methods
-	//
+    //
+    // Private Methods
+    //
 
-	public void Add(GridData otherGrid)
+    public void Add(GridData otherGrid)
 	{
 		// Ignore Network patches
 		if (otherGrid.patch != null && otherGrid.patch is GraphPatch)
@@ -425,7 +411,9 @@ public class MunicipalBudgetTool : Tool
 		{
 			// Create new tool slider
 			var slider = Instantiate(sliderPrefab, transform, false);
-			if (!sliders.ContainsKey(layer.Name))
+            slider.transform.SetSiblingIndex(transform.childCount - initChildsCount);
+
+            if (!sliders.ContainsKey(layer.Name))
 				sliders.Add(layer.Name, slider);
 
 			// Prepare slider
@@ -462,10 +450,6 @@ public class MunicipalBudgetTool : Tool
 			grids.Clear();
 
 			budgetLayer.Show(true);
-
-			// Update data values
-			budgetLayer.Refresh();
-
 			dataLayers.AutoReduceToolOpacity();
 		}
         else
@@ -484,14 +468,7 @@ public class MunicipalBudgetTool : Tool
         }
     }
 
-    private T CreateMapLayer<T>(T prefab, string layerName) where T : GridMapLayer
-    {
-        T mapLayer = Instantiate(prefab);
-        toolLayers.Add(mapLayer, new GridData(), layerName, Color.white);
-        return mapLayer;
-    }
-
-    private void DeleteAllLayers()
+	private void DeleteAllLayers()
     {
         budgetLayer.Clear();
         var layer = budgetLayer as GridMapLayer;
@@ -522,11 +499,15 @@ public class MunicipalBudgetTool : Tool
 
 			if (data != null)
 			{
-				UpdateTransectChart();
+				if (!budgetLayer.IsVisible())
+					ShowBudgetLayer(true);
+
+				budgetLayer.UpdateGrid(data.north, data.east, data.south, data.west, data.countX, data.countY);
+                budgetLayer.UpdateData();
 				UpdateOutput();
 				UpdateHighlightGrid();
 				EnableSliders(true);
-			}
+            }
 		}
 #if !UNITY_WEBGL
 		else
@@ -540,76 +521,39 @@ public class MunicipalBudgetTool : Tool
 
 	private void OnNoData()
 	{
+		if (budgetLayer.IsVisible())
+			ShowBudgetLayer(false);
+
 		data = null;
+		budgetLayer.ResetGrid();
 		UpdateOutput();
 	}
 
-    private void UpdateOutput()
+	private BudgetData budgetData;
+	private void UpdateOutput()
     {
 		if (data == null)
 		{
-			municipalBudgetOutput.RemoveData();
+			municipalBudgetOutput.ShowAreas(false);
 			municipalBudgetOutput.ShowMessage("No budget data available for " + siteBrowser.ActiveSite.Name);
 			return;
 		}		
-		if (budgetLayer.Grid.values == null)
+		if (budgetLayer.grids.Count == 0)
 		{
-			municipalBudgetOutput.RemoveData();
+			municipalBudgetOutput.ShowAreas(false);
 			municipalBudgetOutput.ShowMessage("There are no active layers yet. Please select at least one layer in the Data Layer panel.");
 			return;
 		}
 
-		var idToName = data.idToName;
-        var layersValue = budgetLayer.Grid.values;
+		if (budgetData == null)
+			budgetData = new BudgetData(budgetLayer.Grid.values, budgetLayer.Grid.valuesMask, budgetLayer.Divisors, data);
+		else
+			budgetData.Update(budgetLayer.Grid.values, budgetLayer.Grid.valuesMask, budgetLayer.Divisors, data);
 
-        Dictionary<string, List<float>> idToValueList = new Dictionary<string, List<float>>();
-
-        if (layersValue.Length != data.ids.Length)
-        {
-            municipalBudgetOutput.ShowMessage("Invalid budget data size");
-            return;
-        }
-
-        // Add all cells to list based on municipality
-        for (int i = 0; i < layersValue.Length; ++i)
-        {
-            if (data.ids[i] == 0)
-                continue;
-
-            var key = idToName[data.ids[i]];
-            if (!idToValueList.ContainsKey(key))
-            {
-                List<float> list = new List<float>();
-                list.Add(layersValue[i]);
-                idToValueList.Add(key, list);
-            }
-            else
-            {
-                var list = idToValueList[key];
-                list.Add(layersValue[i]);
-            }
-        }
-
-        municipalBudgetOutput.HideMessage();
-        municipalBudgetOutput.SetData(idToValueList);
+		municipalBudgetOutput.ShowAreas(true);
+		municipalBudgetOutput.HideMessage();
+        municipalBudgetOutput.SetData(budgetData);
     }
-
-	private void UpdateTransectChart()
-	{
-		transectControler.RemoveCustomGrid(budgetLayer.Grid);
-		if (data != null && budgetLayer.Grid.values != null)
-		{
-			transectControler.AddCustomGrid(budgetLayer.Grid, Color.white, chartPrefab);
-		}
-    }
-
-    private void RemoveTransectChart()
-	{
-		if (budgetLayer != null)
-		{
-			transectControler.RemoveCustomGrid(budgetLayer.Grid);
-		}
-	}
 
     private void UpdateHighlightGrid()
     {
@@ -625,7 +569,7 @@ public class MunicipalBudgetTool : Tool
 			return;
 
 		GridData highlightGrid = highlightLayer.Grid;
-		var grid = budgetLayer.grids[0];
+		var grid = budgetLayer.Grid;
 
         highlightGrid.countX = grid.countX;
 		highlightGrid.countY = grid.countY;

@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -32,5 +32,7 @@ public class PlatformConfig : ScriptableObject
 #endif
 
 	public PlatformToolConfig[] tools;
+
+	public bool includeOtherTools = true;
 
 }

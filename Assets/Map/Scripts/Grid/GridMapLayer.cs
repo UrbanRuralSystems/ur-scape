@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -126,12 +126,15 @@ public class GridMapLayer : PatchMapLayer
 			SetUserOpacity(1f);
 			SetToolOpacity(1f);
 		}
+
+        if (grid.coloring == GridData.Coloring.ReverseSingle)
+            SetColoringKeyword("GRADIENT_REVERSE");
     }
 
 
-	//
-	// Public Methods
-	//
+    //
+    // Public Methods
+    //
 
     public void SetOffset(float x, float y)
     {
@@ -179,7 +182,10 @@ public class GridMapLayer : PatchMapLayer
     {
         if (stripeMarkers == null)
         {
-            SetColoringKeyword("GRADIENT");
+            if (grid.coloring == GridData.Coloring.ReverseSingle)
+                SetColoringKeyword("GRADIENT_REVERSE");
+            else
+                SetColoringKeyword("GRADIENT");
         }
         else
         {
@@ -206,7 +212,10 @@ public class GridMapLayer : PatchMapLayer
         count = Mathf.Clamp(count, 0, 4);
         if (count == 0)
         {
-            SetColoringKeyword("GRADIENT");
+            if (grid.coloring == GridData.Coloring.ReverseSingle)
+                SetColoringKeyword("GRADIENT_REVERSE");
+            else
+                SetColoringKeyword("GRADIENT");
         }
         else
         {
@@ -303,11 +312,12 @@ public class GridMapLayer : PatchMapLayer
 		if (valuesBuffer != null && gpuChangedValues)
 		{
 			valuesBuffer.GetData(grid.values);
-		}
+        }
+        gpuChangedValues = false;
 #endif
-	}
+    }
 
-	public void SetGpuChangedValues()
+    public void SetGpuChangedValues()
 	{
 #if !USE_TEXTURE
 		gpuChangedValues = true;
@@ -483,7 +493,7 @@ public class GridMapLayer : PatchMapLayer
         }
 
 		material.SetFloat("MinValue", minValue);
-		material.SetFloat("InvValueRange", Mathf.Pow(maxValue - minValue, -gamma));
+		material.SetFloat("InvValueRange", 1f / (maxValue - minValue));
 		material.SetFloat("Gamma", gamma);
     }
 

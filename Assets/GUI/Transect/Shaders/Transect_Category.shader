@@ -73,7 +73,7 @@ Shader "URS/Transect Category"
 			float Width;
 			float Height;
 			
-			fixed4 CategoryColors[128];
+			fixed4 CategoryColors[256];
 			float InvCountMinusOne;
 
 			struct appdata

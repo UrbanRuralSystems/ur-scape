@@ -216,6 +216,10 @@ public class DataManager : UrsComponent
 		if (patch.Data is GridData)
 		{
 			CreateGridMapLayer(patch.Data as GridData);
+
+			// Enable these lines to show the patch id in the GameObject's name
+			//Patch.SplitFileName(patch.Filename, out _, out _, out int patchId, out _, out _, out _, out _);
+			//visibleGrids[visibleGrids.Count - 1].name += "_" + patchId;
 		}
 		else if (patch.Data is MultiGridData)
 		{
@@ -447,15 +451,21 @@ public class DataManager : UrsComponent
 #if UNITY_EDITOR && !UNITY_WEBGL
 		if (findUnusedPatches)
 		{
+			var extensions = new string[] { "*.csv", "*.bin" };
 			var dirs = GetDataDirectories();
 			foreach (var dir in dirs)
 			{
-				var files = Directory.GetFiles(dir, "*.csv");
-				foreach (var file in files)
+				foreach (var ext in extensions)
 				{
-					var layerName = Patch.GetFileNameLayer(file);
-					if (!dataLayers.HasLayer(layerName))
-						Debug.LogWarning("Patch is being ignored: " + file);
+					var files = Directory.GetFiles(dir, ext);
+					foreach (var file in files)
+					{
+						if (Path.GetFileName(file).StartsWith("_"))
+							continue;
+						var layerName = Patch.GetFileNameLayer(file);
+						if (!dataLayers.HasLayer(layerName))
+							Debug.LogWarning("Patch is being ignored: " + file);
+					}
 				}
 			}
 		}

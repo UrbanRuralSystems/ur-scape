@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -142,7 +142,7 @@ public abstract class Patch
 			yield break;
 		}
 
-        SplitFileName(file, out int level, out string site, out int patch, out int year, out int month, out int day, out string type);
+        SplitFileName(file, out int level, out string site, out int _, out int year, out int month, out int day, out string type);
 
         // Create the patch based on the file name
         P newPatch = create(dataLayer, level, year, data, file);
@@ -343,6 +343,26 @@ public abstract class Patch
 			site = site.Substring(0, index);
 
 		return site;
+	}
+
+	public static int GetFileNamePatch(string file)
+	{
+		string[] parts = Path.GetFileNameWithoutExtension(file).Split('_');
+
+#if SAFETY_CHECK
+		if (parts.Length < 5)
+		{
+			Debug.LogError("Found file with wrong name: " + file);
+			return 0;
+		}
+#endif
+
+		var site = parts[2];
+		int index = site.IndexOf('@');
+		if (index > 0)
+			return int.Parse(site.Substring(index + 1));
+
+		return 0;
 	}
 
 	static IEnumerable<string> Split(string str, int chunkSize)

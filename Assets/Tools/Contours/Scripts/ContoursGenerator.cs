@@ -25,6 +25,7 @@ public abstract class ContoursGenerator
 
 	public abstract void InitializeValues(int layersCount, Vector2[] boundary);
 	public abstract void CalculateValues();
+	public abstract void Release();
 }
 
 public class ContoursGenerator_CPU : ContoursGenerator
@@ -135,6 +136,8 @@ public class ContoursGenerator_CPU : ContoursGenerator
 
 		contoursMapLayer.SubmitGridValues();
 	}
+
+	public override void Release() { }
 }
 
 #if !USE_TEXTURE
@@ -144,6 +147,7 @@ public class ContoursGenerator_GPU : ContoursGenerator
 	private readonly int ClipViewArea_Include_KID;
 	private readonly int ClipViewArea_Exclude_KID;
 	private readonly ComputeShader compute;
+	private readonly ComputeBuffer categoryFilterBuffer;
 
 	public ContoursGenerator_GPU(ContoursMapLayer contoursMapLayer) : base(contoursMapLayer)
 	{
@@ -151,6 +155,7 @@ public class ContoursGenerator_GPU : ContoursGenerator
 		Reset_KID = compute.FindKernel("CSReset");
 		ClipViewArea_Include_KID = compute.FindKernel("CSClipViewArea_Include");
 		ClipViewArea_Exclude_KID = compute.FindKernel("CSClipViewArea_Exclude");
+		categoryFilterBuffer = new ComputeBuffer(CategoryFilter.MaxCategories, sizeof(uint), ComputeBufferType.Default);
 	}
 
 	public override void InitializeValues(int layersCount, Vector2[] boundary)
@@ -167,8 +172,7 @@ public class ContoursGenerator_GPU : ContoursGenerator
 		int initialValue = excludeCellsWithNoData ? 1 - layersCount : 1;
 
 		// Get kernel thread count
-		uint threadsX, threadsY, threadsZ;
-		compute.GetKernelThreadGroupSizes(kernelID, out threadsX, out threadsY, out threadsZ);
+		compute.GetKernelThreadGroupSizes(kernelID, out uint threadsX, out uint threadsY, out uint threadsZ);
 
 		// Calculate threads & groups
 		uint threads = threadsX * threadsY * threadsZ;
@@ -217,8 +221,6 @@ public class ContoursGenerator_GPU : ContoursGenerator
 		string kernelSufix = excludeCellsWithNoData ? "_Exclude" : "_Include";
 
 		// Calculate total number of threads and buffer size
-		uint threadsX, threadsY, threadsZ;
-
 		for (int i = 0; i < grids.Count; i++)
 		{
 			var grid = grids[i];
@@ -252,9 +254,10 @@ public class ContoursGenerator_GPU : ContoursGenerator
 			int count = countX * countY;
 
 			string kernelName = grid.IsCategorized ? "CSCategorized" : "CSContinuous";
-			string kernelMask = mapLayer.MaskBuffer != null? "_Masked" : "_Unmasked";
+			string kernelMask = mapLayer.MaskBuffer != null ? "_Masked" : "_Unmasked";
 			int kernelID = compute.FindKernel(kernelName + kernelMask + kernelSufix);
-			compute.GetKernelThreadGroupSizes(kernelID, out threadsX, out threadsY, out threadsZ);
+			compute.GetKernelThreadGroupSizes(kernelID, out uint threadsX, out uint threadsY, out uint threadsZ);
+			compute.SetBuffer(kernelID, "categoryFilter", categoryFilterBuffer);
 
 			// Calculate threads & groups
 			uint threads = threadsX * threadsY * threadsZ;
@@ -268,7 +271,7 @@ public class ContoursGenerator_GPU : ContoursGenerator
 			compute.SetInt("contourValueCount", count);
 			compute.SetInt("croppedContourCountX", countX);
 			compute.SetInt("gridCountX", grid.countX);
-			compute.SetInts("categoryFilter", grid.categoryFilter.bits);
+			categoryFilterBuffer.SetData(grid.categoryFilter.bits);
 			compute.SetVector("minmax", new Vector2(grid.minFilter, grid.maxFilter));
 			compute.SetVector("offset", new Vector2((float)offsetX, (float)offsetY));
 			compute.SetVector("scale", new Vector2((float)scaleX, (float)scaleY));
@@ -278,6 +281,14 @@ public class ContoursGenerator_GPU : ContoursGenerator
 			compute.Dispatch(kernelID, groups, 1, 1);
 		}
 		contoursMapLayer.SetGpuChangedValues();
+	}
+
+	public override void Release()
+	{
+		if (categoryFilterBuffer != null)
+		{
+			categoryFilterBuffer.Release();
+		}
 	}
 }
 #endif

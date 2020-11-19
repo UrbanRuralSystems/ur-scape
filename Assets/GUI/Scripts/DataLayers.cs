@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -292,9 +292,9 @@ public class DataLayers : UrsComponent
 	// Public Methods
 	//
 
+	/// //+ <summary>Very slow method. Use carefully.</summary>
 	public void RebuildList(List<LayerGroup> groups)
 	{
-		var _activeSiteLayerPanels = new List<DataLayerPanel>(activeSiteLayerPanels);
 		var _activeLayerPanels = new List<DataLayerPanel>(activeLayerPanels);
 		var _availableLayers = new HashSet<DataLayer>(availableLayers);
 

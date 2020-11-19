@@ -6,7 +6,6 @@
 //
 // Author:  David Neudecker  (neudecker@arch.ethz.ch)
 
-using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -17,12 +16,11 @@ public class BudgetLabel: MonoBehaviour
 
     public void SetName(string nameString)
     {
-        this.nameLabel.text = nameString; 
+        nameLabel.text = nameString; 
     }
 
-    public void SetValue(float value)
+    public void SetValue(string valueString)
     {
-        var outputValue = Math.Round(value, 2).ToString("0.##");
-        this.valueLabel.text = outputValue + " %";
+        valueLabel.text = valueString;
     }
 }

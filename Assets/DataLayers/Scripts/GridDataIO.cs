@@ -90,7 +90,7 @@ public static class GridDataIO
 	};
 
 	public static readonly string[] CsvTokens = ExtractTokens(Parameters);
-	private static string[] ExtractTokens(Parameter[] parameters)
+	public static string[] ExtractTokens(Parameter[] parameters)
 	{
 		string[] tokens = new string[parameters.Length];
 		for (int i = 0; i < parameters.Length; i++)
@@ -98,13 +98,13 @@ public static class GridDataIO
 		return tokens;
 	}
 
-	public static Parameter CheckParameter(string cellA, string cellB, out bool hasData)
+	public static Parameter CheckParameter(string cellA, string cellB, Parameter[] parameters, out bool hasData)
     {
-        for (int i = 0; i < Parameters.Length; i++)
+        for (int i = 0; i < parameters.Length; i++)
         {
-            if (cellA.Equals(Parameters[i].label, StringComparison.CurrentCultureIgnoreCase))
+            if (cellA.Equals(parameters[i].label, StringComparison.CurrentCultureIgnoreCase))
             {
-				var t = Parameters[i];
+				var t = parameters[i];
 				hasData = !t.isSection || cellB.EqualsIgnoreCase("TRUE");
 				return t;
             }
@@ -138,7 +138,7 @@ public static class GridDataIO
 				break;
 
 			cells = line.Split(',');
-			parameter = CheckParameter(cells[0], cells[1], out bool hasData);
+			parameter = CheckParameter(cells[0], cells[1], Parameters, out bool hasData);
 
 			if (parameter == null)
 			{
@@ -314,7 +314,7 @@ public static class GridDataIO
 		int count = grid.countX * grid.countY;
 
 		float[] values = new float[count];
-        byte[] masks = new byte[((count + 3) / 4) * 4]; // make sure masks array size is multiple of 4
+        byte[] masks = GridData.CreateMaskBuffer(count); // masks array size needs to be multiple of 4
 		float minValue = float.MaxValue;
 		float maxValue = float.MinValue;
 

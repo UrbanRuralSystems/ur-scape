@@ -159,6 +159,7 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         
         # Disable buttons when pressing the ENTER key
         self.btnRefresh.setAutoDefault(False)
+        self.btnPrevSettings.setAutoDefault(False)
         self.btnRun.setAutoDefault(False)
         self.btnClose.setAutoDefault(False)
         self.btnOpenAttributeTable.setAutoDefault(False)
@@ -312,8 +313,11 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.noDataValue = None
 
     def initNetworkMap(self):
-        self.origNetworkMapVals = list(q2u.networkMap.values())
-        self.networkMap = q2u.networkMap
+        self.roadClasses = ["Default", "Custom"]
+        
+        self.defaultNetworkMapVals = list(q2u.networkMap.values())
+        self.customNetworkMapVals = list(q2u.networkMap.values())
+        self.networkMap = dict(q2u.networkMap)
         self.networkMapVals = []
 
         # for key, value in self.networkMap.items():
@@ -349,6 +353,7 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
 
         # Others
         self.q2uExportTask = None
+        self.qgsSettings = QgsSettings()
 
     def initCmbBoxUI(self, list, cmbBox, eventFunc, index=0, placeholderText=False, activatedFunc=None):
         for item in list:
@@ -375,6 +380,8 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
     def initNetworkMapUI(self):
         self.addToNetworkMapLabels()
         self.addToNetworkMapValues()
+
+        self.initCmbBoxUI(self.roadClasses, self.cmbRoadClasses, self.onRoadClassesChanged)
         
     def initUI(self):
         self.initMsgBar()
@@ -418,7 +425,9 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.cmbResamplingMthd.currentIndexChanged.connect(self.onResamplingMthdChanged)
         self.cmbNoDataCalculation.currentIndexChanged.connect(self.onNoDataCalculationChanged)
         self.chkNoDataList.stateChanged.connect(self.onChkNoDataListChanged)
+        self.cmbRoadClasses.currentIndexChanged.connect(self.onRoadClassesChanged)
         self.btnCancel.clicked.connect(self.onCancel)
+        self.btnPrevSettings.clicked.connect(self.onPrevSettings)
         self.btnRun.clicked.connect(self.onRun)
         self.btnClose.clicked.connect(self.onClose)
     
@@ -485,7 +494,7 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         try:
             self.selectedOutputType = self.outputTypes[item]
         except: pass
-        
+
         if self.selectedOutputType == 0:    # Data Layer
             if isinstance(iface.activeLayer(), QgsVectorLayer):
                 self.dataLayerVectorUIElems()
@@ -497,15 +506,7 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
             self.municipalBudgetVectorUIElems()
 
         # print("SelectedOutputType: " + str(self.selectedOutputType))
-
-        # Resolution should be "Global" by default if Location is "World"
-        # Otherwise, assign previously selected Resolution
-        if not self.isWorld:
-            self.onResolutionChanged(self.prevSelectedOthersRes if self.prevSelectedOthersRes is not None else 1)
-        else:
-            # self.onResolutionChanged(self.prevSelectedWorldRes if self.prevSelectedWorldRes is not None else 2)
-            self.onResolutionChanged(2)
-
+        
         self.wgtChkboxes.adjustSize()
     
     def onBrowseFile(self):
@@ -517,6 +518,7 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.isPrevWorld = self.isWorld
     
     def onResolutionChanged(self, index):
+        self.cmbRes.setCurrentIndex(index)
         if self.resolutions:
             lastItemIndex = len(self.resolutions) - 1
             self.selectedRes = self.resolutions[index][1]
@@ -525,9 +527,7 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
                 self.wgtCustomRes.show()
                 self.txtMaxPatchSize.setText(str(self.maxPatchSizesABC[-1]))
             else:
-                self.txtCustomRes.setText("")
                 self.wgtCustomRes.hide()
-                
                 # Update txtMaxPatchSize value according to Resolution selected
                 self.txtMaxPatchSize.setText(str(self.maxPatchSizes[index]))
 
@@ -536,7 +536,6 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
                     self.prevSelectedOthersRes = index
                 # else:
                 #     self.prevSelectedWorldRes = index
-        self.cmbRes.setCurrentIndex(index)
         #print("SelectedRes: " + self.selectedRes + "-" + self.resolutions[index][0])
 
     def onUnitsChanged(self, index):
@@ -545,7 +544,6 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
             self.wgtCustomUnits.show()
             self.selectedUnits = "Custom"
         elif index != 0:    # index 0 is for placeholder text
-            self.txtCustomUnits.setText("")
             self.wgtCustomUnits.hide()
             self.selectedUnits = self.units[index]
             # print("SelectedUnits: " + self.selectedUnits)
@@ -614,10 +612,18 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
                 
     def onChkNoDataListChanged(self, int):
         self.updateNoDatasUI(self.chkNoDataList.isChecked())
+        
+    def onRoadClassesChanged(self, index):
+        self.cmbRoadClasses.setCurrentIndex(index)
+        self.updateNetworkMapVals(index)
 
     def onTaskProgressChanged(self, progress):
         # print("Task Progress: " + str(self.q2uExportTask.progress()))
         self.progressBar.setValue(self.q2uExportTask.progress())
+        
+    def onPrevSettings(self):
+        self.loadPrevSettings()
+        pass
 
     def onCancel(self):
         if self.q2uExportTask is not None:
@@ -658,6 +664,8 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
             QgsApplication.taskManager().addTask(self.q2uExportTask)
 
             self.tabWidget.setCurrentIndex(1)   # Change to Log tab
+            
+            self.saveCurrSettings()
 
     def onClose(self):
         self.prepareForClose()
@@ -668,11 +676,132 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         super(Qgis2UrscapeUIDialog, self).closeEvent(event)
         
     def prepareForClose(self):
+        self.setNetworkMap()
+        self.saveCurrSettings()
+        
         self.onCancel()
         if self.q2uExportTask is not None and self.q2uExportTask.isCanceled():
             self.resetTask()
         self.stopLogger()
 
+    def saveCurrSettings(self):
+    # Save settings for:
+        # Input Layer
+        self.qgsSettings.setValue("inputLayer", self.cmbInputLayer.currentIndex())
+        # Field
+        self.qgsSettings.setValue("field", self.cmbShapefileField.currentIndex())
+        # Output Path
+        self.qgsSettings.setValue("outputPath", self.txtOutputPath.text())
+        # Layer Name
+        self.qgsSettings.setValue("layerName", self.txtLayerName.text())
+        # Location
+        self.qgsSettings.setValue("location", self.txtLocation.text())
+        # Resolution + Custom
+        self.qgsSettings.setValue("resolution", self.cmbRes.currentIndex())
+        self.qgsSettings.setValue("customResolution", self.txtCustomRes.text())
+        # Units + Custom + Relative
+        self.qgsSettings.setValue("units", self.cmbUnits.currentIndex())
+        self.qgsSettings.setValue("customUnits", self.txtCustomUnits.text())
+        self.qgsSettings.setValue("relative", self.chkRelative.isChecked())
+        # Date: YYYY, MM, DD
+        self.qgsSettings.setValue("dateYear", self.txtYYYY.text())
+        self.qgsSettings.setValue("dateMonth", self.txtMM.text())
+        self.qgsSettings.setValue("dateDay", self.txtDD.text())
+        # Layer Color
+        self.qgsSettings.setValue("layerColor", self.cmbLayerColor.currentIndex())
+        self.qgsSettings.setValue("customLayerColor", self.hsCustomColor.value())
+        # Layer Group
+        self.qgsSettings.setValue("layerGroup", self.txtLayerGroup.text())
+        # Source
+        self.qgsSettings.setValue("source", self.txtSource.text())
+        # Citation + Mandatory
+        self.qgsSettings.setValue("citation", self.txtCitation.text())
+        self.qgsSettings.setValue("mandatory", self.chkMandatory.isChecked())
+        # URL Link
+        self.qgsSettings.setValue("urlLink", self.txtURLLink.text())
+        # Raster Band
+        self.qgsSettings.setValue("rasterBand", self.txtRasterBand.text())
+        # Max Patch Size + Override
+        self.qgsSettings.setValue("maxPatchSize", self.txtMaxPatchSize.text())
+        self.qgsSettings.setValue("override", self.chkMaxPatchSizeOverride.isChecked())
+        # Resampling Method
+        self.qgsSettings.setValue("resamplingMethod", self.cmbResamplingMthd.currentIndex())
+        # No Data Calculation
+        self.qgsSettings.setValue("noDataCalculation", self.cmbNoDataCalculation.currentIndex())
+        # No Data Value + List
+        self.qgsSettings.setValue("list", self.chkNoDataList.isChecked())
+        self.qgsSettings.setValue("noDataValue", self.txtNoData.text())
+        self.qgsSettings.setValue("noDataValues", list(txtNoData.text() for txtNoData in self.txtNoDatas))
+        # Network Maps
+        self.qgsSettings.setValue("roadClasses", self.cmbRoadClasses.currentIndex())
+        self.qgsSettings.setValue("customNetworkMapVals", self.customNetworkMapVals)
+        # All the checkboxes
+        self.qgsSettings.setValue("clipToNoDataOuterArea", self.chkClipToNoDataOuterArea.isChecked())
+        self.qgsSettings.setValue("keepSameResAsInput", self.chkKeepSameResAsInput.isChecked())
+        self.qgsSettings.setValue("preventHigherRes", self.chkPreventHigherRes.isChecked())
+        self.qgsSettings.setValue("fixGeometry", self.chkFixGeometry.isChecked())
+        self.qgsSettings.setValue("clipToQGISCanvas", self.chkClipToQGISCanvas.isChecked())
+        # Output Type
+        self.qgsSettings.setValue("outputType", self.cmbOutputType.currentIndex())
+    
+    def loadPrevSettings(self):
+    # Load settings for:
+        # Input Layer
+        self.loadPrevCmbIndex(self.cmbInputLayer, self.qgsSettings.value("inputLayer"), self.cmbInputLayer.currentIndex())
+        # Field
+        self.loadPrevCmbIndex(self.cmbShapefileField, self.qgsSettings.value("field"), self.cmbShapefileField.currentIndex())
+        # Output Path
+        self.loadPrevTxt(self.txtOutputPath, self.qgsSettings.value("outputPath"), uiDirectory)
+        # Layer Name
+        self.loadPrevTxt(self.txtLayerName, self.qgsSettings.value("layerName"), self.txtLayerName.text())
+        # Location
+        self.loadPrevTxt(self.txtLocation, self.qgsSettings.value("location"), self.txtLocation.text())
+        # Resolution + Custom
+        self.loadPrevCmbIndex(self.cmbRes, self.qgsSettings.value("resolution"), self.cmbRes.currentIndex())
+        self.loadPrevTxt(self.txtCustomRes, self.qgsSettings.value("customResolution"), self.txtCustomRes.text())
+        # Units + Custom + Relative
+        self.loadPrevCmbIndex(self.cmbUnits, self.qgsSettings.value("units"), self.cmbUnits.currentIndex())
+        self.loadPrevTxt(self.txtCustomUnits, self.qgsSettings.value("customUnits"), self.txtCustomUnits.text())
+        self.loadPrevCheckbox(self.chkRelative, self.qgsSettings.value("relative"), self.chkRelative.isChecked())
+        # Date: YYYY, MM, DD
+        self.loadPrevTxt(self.txtYYYY, self.qgsSettings.value("dateYear"), self.txtYYYY.text())
+        self.loadPrevTxt(self.txtMM, self.qgsSettings.value("dateMonth"), self.txtMM.text())
+        self.loadPrevTxt(self.txtDD, self.qgsSettings.value("dateDay"), self.txtDD.text())
+        # Layer Color
+        self.loadPrevCmbIndex(self.cmbLayerColor, self.qgsSettings.value("layerColor"), self.cmbLayerColor.currentIndex())
+        storedCustomLayerColor = self.qgsSettings.value("customLayerColor")
+        self.hsCustomColor.setValue(self.hsCustomColor.value() if not storedCustomLayerColor else int(storedCustomLayerColor))
+        # Layer Group
+        self.loadPrevTxt(self.txtLayerGroup, self.qgsSettings.value("layerGroup"), self.txtLayerGroup.text())
+        # Source
+        self.loadPrevTxt(self.txtSource, self.qgsSettings.value("source"), self.txtSource.text())
+        # Citation + Mandatory
+        self.loadPrevTxt(self.txtCitation, self.qgsSettings.value("citation"), self.txtCitation.text())
+        self.loadPrevCheckbox(self.chkMandatory, self.qgsSettings.value("mandatory"), self.chkMandatory.isChecked())
+        # URL Link
+        self.loadPrevTxt(self.txtURLLink, self.qgsSettings.value("urlLink"), self.txtURLLink.text())
+        # Raster Band
+        self.loadPrevTxt(self.txtRasterBand, self.qgsSettings.value("rasterBand"), self.txtRasterBand.text())
+        # Max Patch Size + Override
+        self.loadPrevTxt(self.txtMaxPatchSize, self.qgsSettings.value("maxPatchSize"), self.txtMaxPatchSize.text())
+        self.loadPrevCheckbox(self.chkMaxPatchSizeOverride, self.qgsSettings.value("override"), self.chkMaxPatchSizeOverride.isChecked())
+        # Resampling Method
+        self.loadPrevCmbIndex(self.cmbResamplingMthd, self.qgsSettings.value("resamplingMethod"), self.cmbResamplingMthd.currentIndex())
+        # No Data Calculation
+        self.loadPrevCmbIndex(self.cmbNoDataCalculation, self.qgsSettings.value("noDataCalculation"), self.cmbNoDataCalculation.currentIndex())
+        # No Data Value + List
+        self.loadPrevNoDataValuesList(self.qgsSettings.value("list"), self.qgsSettings.value("noDataValue"), self.qgsSettings.value("noDataValues"))
+        # Network Maps
+        self.loadPrevCmbIndex(self.cmbRoadClasses, self.qgsSettings.value("roadClasses"), self.cmbRoadClasses.currentIndex())
+        self.loadPrevNetworkMap(self.qgsSettings.value("customNetworkMapVals"), self.defaultNetworkMapVals)
+        # All the checkboxes
+        self.loadPrevCheckbox(self.chkClipToNoDataOuterArea, self.qgsSettings.value("clipToNoDataOuterArea"), self.chkClipToNoDataOuterArea.isChecked())
+        self.loadPrevCheckbox(self.chkKeepSameResAsInput, self.qgsSettings.value("keepSameResAsInput"), self.chkKeepSameResAsInput.isChecked())
+        self.loadPrevCheckbox(self.chkPreventHigherRes, self.qgsSettings.value("preventHigherRes"), self.chkPreventHigherRes.isChecked())
+        self.loadPrevCheckbox(self.chkFixGeometry, self.qgsSettings.value("fixGeometry"), self.chkFixGeometry.isChecked())
+        self.loadPrevCheckbox(self.chkClipToQGISCanvas, self.qgsSettings.value("clipToQGISCanvas"), self.chkClipToQGISCanvas.isChecked())
+        # Output Type
+        self.loadPrevCmbIndex(self.cmbOutputType, self.qgsSettings.value("outputType"), self.cmbOutputType.currentIndex())
     
     #
     # Update Functions
@@ -824,6 +953,18 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
             self.txtNoData.setText(self.txtNoDatas[0].text())
             self.txtNoData.show()
             self.wgtListNoDatas.hide()
+            
+    def updateNetworkMapVals(self, index):
+        networkMapValues = list(self.networkMap.values())
+        networkMapValuesLen = len(networkMapValues)
+        
+        # Update values and toggle QLineEdit enabled depending on Default or Custom option
+        for i in range(networkMapValuesLen):
+            if index == 0:
+                self.customNetworkMapVals[i] = list(filter(None, [txt.strip() for txt in self.networkMapVals[i].text().split(",")]))
+            
+            self.networkMapVals[i].setText(','.join(self.defaultNetworkMapVals[i]) if index == 0 else ','.join(self.customNetworkMapVals[i]))
+            self.networkMapVals[i].setEnabled(False if index == 0 else True)
 
     #
     # Miscellaneous Functions
@@ -861,7 +1002,7 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
             qLabel.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
             qLabel.setIndent(3)
             self.glNetworkMap.addWidget(qLabel, i, 0, 1, 1)
-            self.glNetworkMap.setHorizontalSpacing(5)
+            self.glNetworkMap.setHorizontalSpacing(20)
 
     def addToNetworkMapValues(self):
         networkMapValues = list(self.networkMap.values())
@@ -914,6 +1055,8 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         for key in self.networkMap.keys():
             self.networkMap[str(key)] = networkMapValsTxtLst[counter]
             counter += 1
+            
+        self.customNetworkMapVals = list(self.networkMap.values())
 
         # for key, value in self.networkMap.items():
         #     print("Key: " + str(key) + ", Value: " + str(value))
@@ -1157,7 +1300,8 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
     
     def setGUITabOrder(self):
         if self.networkMapVals:
-            QWidget.setTabOrder(self.txtURLLink, self.networkMapVals[0])
+            QWidget.setTabOrder(self.txtURLLink, self.cmbRoadClasses)
+            QWidget.setTabOrder(self.cmbRoadClasses, self.networkMapVals[0])
             
             for i in range(len(self.networkMapVals) - 1):
                 QWidget.setTabOrder(self.networkMapVals[i], self.networkMapVals[i + 1])
@@ -1176,6 +1320,51 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.logger.write("\n")
         self.logger.write("\n") # write on purpose two new lines
         self.resetTask()
+        
+    def loadPrevTxt(self, txtField, storedVal, defaultVal):
+        txtField.setText(txtField.text() if not storedVal else storedVal)
+        
+    def loadPrevCmbIndex(self, cmbBox, storedVal, defaultVal):
+        cmbBox.setCurrentIndex(defaultVal if not storedVal else max(0, min(int(storedVal), cmbBox.count() - 1)))
+        
+    def loadPrevCheckbox(self, checkbox, storedVal, defaultVal):
+        if isinstance(storedVal, str):
+            checkbox.setChecked(False if storedVal.lower() == "false" else True)
+        else:
+            checkbox.setChecked(defaultVal if not storedVal else storedVal)
+        
+    def loadPrevNoDataValuesList(self, storedList, storedNoDataValue, storedNoDataValues):
+        # load prev chkNoDataList value
+        if isinstance(storedList, str):
+            self.chkNoDataList.setChecked(False if storedList.lower() == "false" else True)
+        else:
+            self.chkNoDataList.setChecked(self.chkNoDataList.isChecked() if not storedList else storedList)
+            
+        # load prev no data value
+        self.txtNoData.setText(self.txtNoData.text() if not storedNoDataValue else storedNoDataValue)
+        
+        # load prev no data value
+        # add empty QLineEdits to accomodate saved no data values
+        noDataValuesLen = 0 if not storedNoDataValues else len(storedNoDataValues)
+        txtNoDatasLen = len(self.txtNoDatas)
+        if txtNoDatasLen < noDataValuesLen:
+            for i in range(noDataValuesLen - txtNoDatasLen ):
+                qLineEdit = QLineEdit("")
+                qLineEdit.textChanged.connect(self.onNoDataTextChanged)
+                self.txtNoDatas.append(qLineEdit)
+                self.vblNoDatas.addWidget(qLineEdit)
+        for i in range(noDataValuesLen):
+            self.txtNoDatas[i].setText("" if not storedNoDataValues[i] else storedNoDataValues[i])
+            
+    def loadPrevNetworkMap(self, storedNetworkMapVals, defaultNetworkMapVals):
+        self.customNetworkMapVals = list(defaultNetworkMapVals) if not storedNetworkMapVals else list(storedNetworkMapVals)
+        
+        networkMapValues = list(self.networkMap.values())
+        networkMapValuesLen = len(networkMapValues)
+        
+        # Update values and toggle QLineEdit enabled depending on Default or Custom option
+        for i in range(networkMapValuesLen):
+            self.networkMapVals[i].setText(','.join(self.customNetworkMapVals[i]))
 
     def dataLayerRasterUIElems(self):
         # QGIS Input
@@ -1188,10 +1377,8 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.txtLayerName.setEnabled(True)
         self.lblRes.show()
         self.cmbRes.show()
-        self.wgtCustomRes.hide()
         self.lblUnits.show()
         self.cmbUnits.show()
-        self.wgtCustomUnits.hide()
         self.lblDate.show()
         self.wgtDate.show()
 
@@ -1200,7 +1387,6 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.lblOptionalParams.show()
         self.lblLayerColor.show()
         self.wgtLayerColorGrp.show()
-        self.wgtCustomLayerColor.hide()
         self.lblLayerGroup.show()
         self.txtLayerGroup.show()
 
@@ -1221,15 +1407,21 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.wgtMaxPatchSize.show()
         self.lblResamplingMthd.show()
         self.cmbResamplingMthd.show()
-        self.lblNoDataCalculation.show()
-        self.cmbNoDataCalculation.show()
+        self.onResamplingMthdChanged(self.cmbResamplingMthd.currentIndex())
         self.lblNoDataValue.show()
         self.wgtNoDataValue.show()
         self.chkClipToQGISCanvas.show()
         self.chkKeepSameResAsInput.show()
         self.chkPreventHigherRes.show()
         self.chkClipToNoDataOuterArea.show()
+        self.lblRoadClasses.hide()
+        self.cmbRoadClasses.hide()
         self.wgtNetworkMap.hide()
+
+        # Custom widgets
+        self.onResolutionChanged(self.cmbRes.currentIndex())
+        self.onUnitsChanged(self.cmbUnits.currentIndex())
+        self.onLayerColorChanged(self.cmbLayerColor.currentIndex())
 
         self.forMunicipalBudget = False
         self.forReachability = False
@@ -1245,10 +1437,8 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.txtLayerName.setEnabled(True)
         self.lblRes.show()
         self.cmbRes.show()
-        self.wgtCustomRes.hide()
         self.lblUnits.show()
         self.cmbUnits.show()
-        self.wgtCustomUnits.hide()
         self.lblDate.show()
         self.wgtDate.show()
 
@@ -1257,7 +1447,6 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.lblOptionalParams.show()
         self.lblLayerColor.show()
         self.wgtLayerColorGrp.show()
-        self.wgtCustomLayerColor.hide()
         self.lblLayerGroup.show()
         self.txtLayerGroup.show()
 
@@ -1286,7 +1475,14 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.chkKeepSameResAsInput.hide()
         self.chkPreventHigherRes.hide()
         self.chkClipToNoDataOuterArea.show()
+        self.lblRoadClasses.hide()
+        self.cmbRoadClasses.hide()
         self.wgtNetworkMap.hide()
+        
+        # Custom widgets
+        self.onResolutionChanged(self.cmbRes.currentIndex())
+        self.onUnitsChanged(self.cmbUnits.currentIndex())
+        self.onLayerColorChanged(self.cmbLayerColor.currentIndex())
 
         self.forMunicipalBudget = False
         self.forReachability = False
@@ -1303,10 +1499,8 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.txtLayerName.setEnabled(False)
         self.lblRes.hide()
         self.cmbRes.hide()
-        self.wgtCustomRes.hide()
         self.lblUnits.hide()
         self.cmbUnits.hide()
-        self.wgtCustomUnits.hide()
         self.lblDate.hide()
         self.wgtDate.hide()
 
@@ -1315,7 +1509,6 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.lblOptionalParams.hide()
         self.lblLayerColor.hide()
         self.wgtLayerColorGrp.hide()
-        self.wgtCustomLayerColor.hide()
         self.lblLayerGroup.hide()
         self.txtLayerGroup.hide()
 
@@ -1344,7 +1537,14 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.chkKeepSameResAsInput.hide()
         self.chkPreventHigherRes.hide()
         self.chkClipToNoDataOuterArea.hide()
+        self.lblRoadClasses.show()
+        self.cmbRoadClasses.show()
         self.wgtNetworkMap.show()
+        
+        # Custom widgets
+        self.wgtCustomRes.hide()
+        self.wgtCustomUnits.hide()
+        self.wgtCustomLayerColor.hide()
 
         self.forMunicipalBudget = False
         self.forReachability = True
@@ -1359,10 +1559,8 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.txtLayerName.hide()
         self.lblRes.show()
         self.cmbRes.show()
-        self.wgtCustomRes.hide()
         self.lblUnits.hide()
         self.cmbUnits.hide()
-        self.wgtCustomUnits.hide()
         self.lblDate.hide()
         self.wgtDate.hide()
 
@@ -1371,7 +1569,6 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.lblOptionalParams.hide()
         self.lblLayerColor.hide()
         self.wgtLayerColorGrp.hide()
-        self.wgtCustomLayerColor.hide()
         self.lblLayerGroup.hide()
         self.txtLayerGroup.hide()
 
@@ -1400,7 +1597,14 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.chkKeepSameResAsInput.hide()
         self.chkPreventHigherRes.hide()
         self.chkClipToNoDataOuterArea.show()
+        self.lblRoadClasses.hide()
+        self.cmbRoadClasses.hide()
         self.wgtNetworkMap.hide()
+        
+        # Custom widgets
+        self.wgtCustomRes.hide()
+        self.wgtCustomUnits.hide()
+        self.wgtCustomLayerColor.hide()
 
         self.forMunicipalBudget = True
         self.forReachability = False

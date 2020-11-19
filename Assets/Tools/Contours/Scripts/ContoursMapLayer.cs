@@ -68,6 +68,12 @@ public class ContoursMapLayer : GridMapLayer
 		map.OnPreLevelChange -= OnPreLevelChange;
 		map.OnPostLevelChange -= OnPostLevelChange;
 		map.OnMapUpdate -= OnMapUpdate;
+
+		if (generator != null)
+		{
+			generator.Release();
+			generator = null;
+		}
 	}
 
 	public override void Show(bool show)

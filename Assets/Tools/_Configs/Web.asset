@@ -19,14 +19,15 @@ MonoBehaviour:
   - config: {fileID: 11400000, guid: 3746084b5049d854495fd6effb16aee7, type: 2}
     state: 0
   - config: {fileID: 11400000, guid: a1bbd41919a52304fa8c764bed083b72, type: 2}
-    state: 1
+    state: 0
   - config: {fileID: 11400000, guid: 2fa48642d63d5ef4d825f9edd5c3cb11, type: 2}
     state: 0
   - config: {fileID: 11400000, guid: 2672c30fc22da084cb69112c6dd1c38f, type: 2}
-    state: 0
+    state: 1
   - config: {fileID: 11400000, guid: 0a5ebc145f3ae6a4f905c0ade225e37f, type: 2}
     state: 1
   - config: {fileID: 11400000, guid: e511caed3f133194f970d560dea68200, type: 2}
     state: 0
   - config: {fileID: 11400000, guid: 585a4e9c0046bca4c954279d4cd35f45, type: 2}
     state: 0
+  includeOtherTools: 1

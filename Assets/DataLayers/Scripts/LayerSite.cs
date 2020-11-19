@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -7,6 +7,7 @@
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 
 using System.Collections.Generic;
+using UnityEngine;
 
 public class LayerSite
 {
@@ -84,6 +85,84 @@ public class LayerSite
 		{
 			if (pair.Key > LastRecord.Year)
 				LastRecord = pair.Value;
+		}
+	}
+
+	public bool UpdateMinMax(float min, float max)
+	{
+		if (minValue == 0 && maxValue == 0)
+		{
+			minValue = min;
+			maxValue = max;
+			return true;
+		}
+		else if (min < minValue || max > maxValue)
+		{
+			minValue = Mathf.Min(minValue, min);
+			maxValue = Mathf.Max(maxValue, max);
+			return true;
+		}
+		return false;
+	}
+
+	public void RecalculateMinMax()
+	{
+		minValue = maxValue = 0;
+
+		bool first = true;
+		foreach (var record in records.Values)
+		{
+			foreach (var patch in record.patches)
+			{
+				if (patch.Data is GridData grid && grid.IsLoaded())
+				{
+					if (first)
+					{
+						first = false;
+						minValue = grid.minValue;
+						maxValue = grid.maxValue;
+					}
+					else
+					{
+						minValue = Mathf.Min(minValue, grid.minValue);
+						maxValue = Mathf.Max(maxValue, grid.maxValue);
+					}
+				}
+			}
+		}
+	}
+
+	public void RecalculateMean(bool recalculateGridsMean)
+	{
+		mean = 0;
+		foreach (var record in records.Values)
+		{
+			foreach (var patch in record.patches)
+			{
+				if (patch.Data is GridData grid && grid.IsLoaded())
+				{
+					var gridMean = (float)grid.GetMean(minValue, recalculateGridsMean);
+					var meanPercent = Mathf.InverseLerp(minValue, maxValue, gridMean);
+					mean = Mathf.Max(mean, meanPercent);
+				}
+			}
+		}
+	}
+
+	public void UpdatePatchesMinMaxFilters(float minFilter, float maxFilter)
+	{
+		float siteMin = Mathf.Lerp(minValue, maxValue, minFilter);
+		float siteMax = Mathf.Lerp(minValue, maxValue, maxFilter);
+
+		foreach (var record in records.Values)
+		{
+			foreach (var patch in record.patches)
+			{
+				if (patch is GridPatch gridPatch)
+				{
+					gridPatch.SetMinMaxFilter(siteMin, siteMax);
+				}
+			}
 		}
 	}
 }

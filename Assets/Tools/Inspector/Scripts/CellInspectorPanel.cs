@@ -6,6 +6,7 @@
 //
 // Author:  Muhammad Salihin Bin Zaol-kefli
 
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -90,11 +91,31 @@ public class CellInspectorPanel : MonoBehaviour
 						}
 					}
 				}
+				else if (patch is GraphPatch graphPatch)
+				{
+					if (GetGridDataValue(graphPatch, coords, out cellValue))
+						break;
+				}
 			}
 
 			// Set (or add) a row
 			UpdateRow(index++, layer.Name, layerSufix, layer.Color, cellValue);
 		}
+
+#if UNITY_EDITOR
+		// Also add the tool grids
+		var toolLayers = map.GetLayerController<ToolLayerController>();
+		foreach (var mapLayer in toolLayers.mapLayers)
+		{
+			string cellValue = "N/A";
+			var grid = mapLayer.Grid;
+			if (grid is GridData gridData)
+			{
+				if (GetGridDataValue(gridData, coords, true, out cellValue))
+					UpdateRow(index++, mapLayer.name, "", Color.gray, cellValue);
+			}
+		}
+#endif
 
 		// Remove remaining rows
 		RemoveRemainingItems(index);
@@ -133,12 +154,39 @@ public class CellInspectorPanel : MonoBehaviour
 				}
 				else
 				{
-					cellValue = cell.Value.ToString("0.##");
+					cellValue = cell.Value.ToString("#,##0.####");
 					if (units)
 						cellValue += " " + gridData.units;
 					return true;
 				}
 			}
+		}
+		cellValue = "N/A";
+		return false;
+	}
+
+	private bool GetGridDataValue(GraphPatch graphPatch, Coordinate coords, out string cellValue)
+	{
+		var gridData = graphPatch.grid;
+		if (gridData.values != null && gridData.IsInside(coords.Longitude, coords.Latitude))
+		{
+			int classification = (int)gridData.GetValue(coords.Longitude, coords.Latitude);
+			if (classification == 0)
+			{
+				cellValue = "None";
+			}
+			else
+			{
+				cellValue = "";
+				var classificationNames = Enum.GetNames(typeof(ClassificationIndex));
+				for (int i = 1, k = 1; i < (int)ClassificationIndex.Count; i++, k*=2)
+				{
+					if ((classification & k) != 0)
+						cellValue += classificationNames[i] + ", ";
+				}
+				cellValue = cellValue.Remove(cellValue.Length - 2);
+			}
+			return true;
 		}
 		cellValue = "N/A";
 		return false;

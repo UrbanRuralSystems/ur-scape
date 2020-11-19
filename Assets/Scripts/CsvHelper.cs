@@ -12,8 +12,8 @@ public static class CsvHelper
 {
 	public const char Delimiter = ',';
 
-	// CSV Regex: (?:^|,)(?=[^"]|(")?)"?((?(1)(?>[^"]+|"")+|[^,"]*))"?(?=,|$)
-	public static readonly Regex regex = new Regex("(?:^|,)(?=[^\"]|(\")?)\"?((?(1)(?>[^\"]+|\"\")+|[^,\"]*))\"?(?=,|$)");
+	// CSV Regex: (?<=^|,)(?=[^"]|(")?)"?((?(1)(?>[^"]+|"")+|[^,"]*))"?(?=,|$)
+	public static readonly Regex regex = new Regex("(?<=^|,)(?=[^\"]|(\")?)\"?((?(1)(?>[^\"]+|\"\")+|[^,\"]*))\"?(?=,|$)");
 
 	public static readonly char[] CsvTokens = new[] { '\"', ',', '\n', '\r' };
 
@@ -34,8 +34,8 @@ public static class TsvHelper
 {
 	public const char Delimiter = '\t';
 
-	// CSV Regex: (?:^|\t)(?=[^"]|(")?)"?((?(1)(?>[^"]+|"")+|[^\t"]*))"?(?=\t|$)
-	public static readonly Regex regex = new Regex("(?:^|\\t)(?=[^\"]|(\")?)\"?((?(1)(?>[^\"]+|\"\")+|[^\\t\"]*))\"?(?=\\t|$)");
+	// CSV Regex: (?<=^|\t)(?=[^"]|(")?)"?((?(1)(?>[^"]+|"")+|[^\t"]*))"?(?=\t|$)
+	public static readonly Regex regex = new Regex("(?<=^|\\t)(?=[^\"]|(\")?)\"?((?(1)(?>[^\"]+|\"\")+|[^\\t\"]*))\"?(?=\\t|$)");
 
 	public static readonly char[] TsvTokens = new[] { '\"', '\t', '\n', '\r' };
 

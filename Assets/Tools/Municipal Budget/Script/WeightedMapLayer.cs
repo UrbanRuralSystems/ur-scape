@@ -18,16 +18,19 @@ using UnityEngine;
 public class WeightedMapLayer : GridMapLayer
 {
     public readonly List<GridData> grids = new List<GridData>();
+    private float[] divisors;
     public bool useFilters = false;
-    // weight from UI to data layer
     private readonly Dictionary<DataLayer, float> weights = new Dictionary<DataLayer, float>();
+
+    public float[] Divisors => divisors;
+
 
     //
     // Public Methods
     //
 
     // update weight value for layer
-	public void SetWeight(DataLayer layer, float weight)
+    public void SetWeight(DataLayer layer, float weight)
 	{
 		if (weights.ContainsKey(layer))
 			weights[layer] = weight;
@@ -67,32 +70,30 @@ public class WeightedMapLayer : GridMapLayer
         grids.Clear();
     }
 
-    public void Refresh()
+    public void ResetGrid()
     {
-        if (grids.Count > 0 && !UpdateBounds())
+        _UpdateGrid(0, 0, 0, 0, 0, 0);
+    }
+
+    public void UpdateGrid(double north, double east, double south, double west, int countX, int countY)
+    {
+        if (east <= west || north <= south)
         {
             Debug.LogError("Invalid area!");
             return;
         }
 
-        UpdateData();
+        _UpdateGrid(north, east, south, west, countX, countY);
     }
 
     public void UpdateData()
     {
         bool hasGrids = grids.Count > 0;
 
-        if (hasGrids)
+        if (hasGrids && grid.values != null)
         {
-            InitializeValues();
             CalculateValues();
 		}
-        else
-        {
-            grid.values = null;
-            grid.countX = 0;
-            grid.countY = 0;
-        }
 
         if (hasGrids ^ GetComponent<MeshRenderer>().enabled)
         {
@@ -100,99 +101,104 @@ public class WeightedMapLayer : GridMapLayer
         }
     }
 
+
     //
     // Event Methods
     //
 
-	private void OnOtherGridFilterChange(GridData grid)
+    private void OnOtherGridFilterChange(GridData grid)
 	{
 		UpdateData();
 	}
 
-	//
-	// Private Methods
-	//
 
-	private void InitializeValues()
+    //
+    // Private Methods
+    //
+
+    private void InitArrays()
     {
         int length = grid.countX * grid.countY;
 
-        if (grid.values == null || grid.values.Length != length)
+        if (length > 0)
         {
-            grid.values = new float[length];
+            if (grid.values == null || grid.values.Length != length)
+            {
+                grid.values = new float[length];
+                grid.valuesMask = GridData.CreateMaskBuffer(length);
+                divisors = new float[length];
+            }
         }
-
-        // Set all values to 0
-        for (int i = 0; i < length; ++i)
+        else
         {
-            grid.values[i] = 0;
+            grid.values = null;
+            grid.valuesMask = null;
+            divisors = null;
         }
     }
 
-	private bool UpdateBounds()
-	{
-		double dotsPerDegreeX = 0;
-		double dotsPerDegreeY = 0;
+    private void ResetArrays()
+    {
+        var length = grid.values.Length;
 
-		double west = double.MaxValue;
-		double east = double.MinValue;
-		double north = double.MinValue;
-		double south = double.MaxValue;
+        // Set all values to 0
+        Array.Clear(grid.values, 0, length);
+        Array.Clear(divisors, 0, length);
 
-		foreach (var g in grids)
-		{
-			dotsPerDegreeX = Math.Max(g.countX / (g.east - g.west), dotsPerDegreeX);
-			dotsPerDegreeY = Math.Max(g.countY / (g.north - g.south), dotsPerDegreeY);
-			west = Math.Min(west, g.west);
-			east = Math.Max(east, g.east);
-			north = Math.Max(north, g.north);
-			south = Math.Min(south, g.south);
-		}
+        // Set all values to 1 (True)
+        for (int i = 0; i < length; ++i)
+            grid.valuesMask[i] = 1;
+    }
+    
+    private void _UpdateGrid(double north, double east, double south, double west, int countX, int countY)
+    {
+        grid.countX = countX;
+        grid.countY = countY;
+        grid.ChangeBounds(west, east, north, south);
 
-		if (east <= west || north <= south)
-			return false;
+        UpdateResolution();
 
-		// Calculate grid resolution
-		grid.countX = (int)Math.Round((east - west) * dotsPerDegreeX);
-		grid.countY = (int)Math.Round((north - south) * dotsPerDegreeY);
-
-		// Update the material
-		UpdateResolution();
-
-		if (grid.west != west || grid.east != east || grid.north != north || grid.south != south)
-		{
-			grid.ChangeBounds(west, east, north, south);
-		}
-
-        return true;
+        InitArrays();
     }
 
     private void CalculateValues()
     {
-		double thisDegreesPerCellX = (grid.east - grid.west) / grid.countX;
+        ResetArrays();
+
+        double thisDegreesPerCellX = (grid.east - grid.west) / grid.countX;
 		double thisDegreesPerCellY = (grid.south - grid.north) / grid.countY;
-		double thisCellsPerDegreeX = 1.0 / thisDegreesPerCellX;
-		double thisCellsPerDegreeY = 1.0 / thisDegreesPerCellY;
 
-		for (int i = 0; i < grids.Count; i++)
+        for (int index = 0; index < grids.Count; index++)
         {
-            var otherGrid = grids[i];
-
+            var otherGrid = grids[index];
+            
 			var patchCellsPerDegreeX = otherGrid.countX / (otherGrid.east - otherGrid.west);
 			var patchCellsPerDegreeY = otherGrid.countY / (otherGrid.south - otherGrid.north);
+            var cellSizeInDegressX = 1.0 / patchCellsPerDegreeX;
+            var cellSizeInDegressY = 1.0 / patchCellsPerDegreeY;
+            var absPatchCellsPerDegreeX = Math.Abs(patchCellsPerDegreeX);
+            var absPatchCellsPerDegreeY = Math.Abs(patchCellsPerDegreeY);
 
-			double scaleX = patchCellsPerDegreeX * thisDegreesPerCellX;
+            double scaleX = patchCellsPerDegreeX * thisDegreesPerCellX;
 			double scaleY = patchCellsPerDegreeY * thisDegreesPerCellY;
+            double invScaleX = 1.0 / scaleX;
+            double invScaleY = 1.0 / scaleY;
 
-			double offsetX = (grid.west - otherGrid.west) * patchCellsPerDegreeX + 0.5 * scaleX;
-			double offsetY = (grid.north - otherGrid.north) * patchCellsPerDegreeY + 0.5 * scaleY;
+            double offsetX = (grid.west - otherGrid.west) * patchCellsPerDegreeX ;
+			double offsetY = (grid.north - otherGrid.north) * patchCellsPerDegreeY ;
 
-			int startX = (int)((otherGrid.west - grid.west) * thisCellsPerDegreeX + 0.5);
-			int startY = (int)((otherGrid.north - grid.north) * thisCellsPerDegreeY + 0.5);
-			int endX = (int)((otherGrid.east - grid.west) * thisCellsPerDegreeX + 0.5);
-			int endY = (int)((otherGrid.south - grid.north) * thisCellsPerDegreeY + 0.5);
+            double startX = (grid.west - otherGrid.west) * patchCellsPerDegreeX;
+            double startY = (grid.north - otherGrid.north) * patchCellsPerDegreeY;
+            double endX = (grid.east - otherGrid.west) * patchCellsPerDegreeX;
+            double endY = (grid.south - otherGrid.north) * patchCellsPerDegreeY;
 
-			float weight = 1;
+            // Get clear start and end
+            startX = (int)Math.Max(Math.Floor(startX), 0);
+            startY = (int)Math.Max(Math.Floor(startY), 0);
+            endX = (int)Math.Min(Math.Ceiling(endX), otherGrid.countX);
+            endY = (int)Math.Min(Math.Ceiling(endY), otherGrid.countY);
+
+            float weight = 1;
 			if (otherGrid.patch != null && weights.ContainsKey(otherGrid.patch.DataLayer))
 			{
 				weight = weights[otherGrid.patch.DataLayer];
@@ -200,7 +206,6 @@ public class WeightedMapLayer : GridMapLayer
 
 			SetValueDelegate SetValue;
 
-			int count = otherGrid.values.Length;
             if (otherGrid.IsCategorized)
             {
 				if (!useFilters)
@@ -208,101 +213,171 @@ public class WeightedMapLayer : GridMapLayer
 
 				// Include cells which has selected category
 				if (otherGrid.valuesMask == null)
-					SetValue = CategorizedUnmasked;
+                    SetValue = CategorizedUnmasked;
 				else
 					SetValue = CategorizedMasked;
 			}
             else
             {
-				// Weighted Average formula = w1x1 + w2x2 + ... + wnxn
+                // Weighted Average formula = w1x1 + w2x2 + ... + wnxn
+                weight /= otherGrid.maxValue;
 
-				weight /= otherGrid.maxValue;
-
-				if (useFilters)
+                if (useFilters)
 				{
 					// Exlude filtered cells
-					if (otherGrid.valuesMask == null)
-						SetValue = FilteredUnmasked;
+					if (otherGrid.valuesMask == null) 
+                        SetValue = FilteredUnmasked;
 					else
 						SetValue = FilteredMasked;
 				}
 				else
 				{
 					// Include filtered areas
-					if (otherGrid.valuesMask == null)
-						SetValue = UnfilteredUnmasked;
+					if (otherGrid.valuesMask == null) 
+                        SetValue = UnfilteredUnmasked;
 					else
 						SetValue = UnfilteredMasked;
 				}
             }
 
-			for (int y = startY; y < endY; y++)
-			{
-				int gridIndex = y * grid.countX + startX;
-				for (int x = startX; x < endX; x++, gridIndex++)
-				{
-					int pX = (int)(offsetX + x * scaleX);
-					int pY = (int)(offsetY + y * scaleY);
-					int otherIndex = pY * otherGrid.countX + pX;
+            for (int y = (int)startY; y < (int)endY; y++)
+            {
+                // Get Data grid index
+                var otherGridIndex = y * otherGrid.countX + (int)startX;
+                for (int x = (int)startX; x < (int)endX; x++, otherGridIndex++)
+                {
+                    // Get Extent of the Data Grid cell
+                    var otherCellxMin = otherGrid.west + x * cellSizeInDegressX;
+                    var otherCellxMax = otherGrid.west + (x + 1) * cellSizeInDegressX;
+                    var otherCellyMax = otherGrid.north + y * cellSizeInDegressY;
+                    var otherCellyMin = otherGrid.north + (y + 1) * cellSizeInDegressY;
 
-					SetValue(grid, gridIndex, otherGrid, otherIndex, weight);
-				}
-			}
-		}
+                    // IMPORTANT: The following code block has been optimized. Original code is commented out for reference
+                    // Floor equivalent:   var f = (int)(value + 32768.0) - 32768;
+                    // Ceiling equivalent: var c = 32768 - (int)(32768.0 - value);
 
-		float min = float.MaxValue;
-		float max = float.MinValue;
-		int gridCount = grid.countX * grid.countY;
-		for (int i = 0; i < gridCount; ++i)
+                    // Get range of affected cells
+                    int fromX = (int)((x - offsetX) * invScaleX + 50000.0) - 50000; // (int)Math.Floor((x - offsetX) * invScaleX);
+                    int fromY = (int)((y - offsetY) * invScaleY + 50000.0) - 50000; // (int)Math.Floor((y - offsetY) * invScaleY);
+                    int toX = 50000 - (int)(50000.0 - (x - offsetX + 1) * invScaleX); // (int)Math.Ceiling((x - offsetX + 1) * invScaleX);
+                    int toY = 50000 - (int)(50000.0 - (y - offsetY + 1) * invScaleY); // (int)Math.Ceiling((y - offsetY + 1) * invScaleY);
+
+                    // if data cell is bigger then affected cell and also the extent
+                    // it might call negative index, therefore the range check
+                    fromX = fromX > 0 ? fromX : 0; // Math.Max(0, fromX);
+                    fromY = fromY > 0 ? fromY : 0; // Math.Max(0, fromY);
+                    toX = toX < grid.countX ? toX : grid.countX; // Math.Min(grid.countX, toX);
+                    toY = toY < grid.countY ? toY : grid.countY; // Math.Min(grid.countY, toY);
+
+                    // Go thru all grid cells inside of other grid cell (other grid cell can be bigger)
+                    for (int yI = fromY; yI < toY; yI++)
+                    {
+                        var thisGridIndex = yI * grid.countX + fromX;
+                        for (int xI = fromX; xI < toX; xI++, thisGridIndex++)
+                        {
+                            //Get municipal grid extent
+                            var thisCellxMin = grid.west + xI * thisDegreesPerCellX;
+                            var thisCellxMax = grid.west + (xI + 1) * thisDegreesPerCellX;
+                            var thisCellyMax = grid.north + yI * thisDegreesPerCellY;
+                            var thisCellyMin = grid.north + (yI + 1) * thisDegreesPerCellY;
+
+                            // IMPORTANT: The following code block has been optimized. Original code with Min/Max is commented out for reference
+
+                            // Get area from XY range overlap 
+                            var right = otherCellxMax < thisCellxMax ? otherCellxMax : thisCellxMax; // Math.Min(otherCellxMax, thisCellxMax);
+                            var left = otherCellxMin > thisCellxMin ? otherCellxMin : thisCellxMin; // Math.Max(otherCellxMin, thisCellxMin);
+                            var top = otherCellyMax < thisCellyMax ? otherCellyMax : thisCellyMax; // Math.Min(otherCellyMax, thisCellyMax);
+                            var bottom = otherCellyMin > thisCellyMin ? otherCellyMin : thisCellyMin; // Math.Max(otherCellyMin, thisCellyMin);
+                            var overlapX = right > left ? right - left : 0; // Math.Max(right - left, 0);
+                            var overlapY = top > bottom ? top - bottom : 0; // Math.Max(top - bottom, 0);
+                            var areaRatio = (float)(overlapX * absPatchCellsPerDegreeX * overlapY * absPatchCellsPerDegreeY);
+
+                            // Assign values to grid if values available
+                            SetValue(grid, thisGridIndex, otherGrid, otherGridIndex, weight, areaRatio);
+                        }
+                    }
+                }
+            }
+        }
+
+        int gridCount = grid.countX * grid.countY;
+        float min =  gridCount > 0? grid.values[0] : 0;
+        float max = min;
+		for (int i = 1; i < gridCount; ++i)
 		{
-			float value = grid.values[i];
-			min = Mathf.Min(min, value);
-			max = Mathf.Max(max, value);
-		}
+            float value = grid.values[i];
+
+            // IMPORTANT: The following code block has been optimized.
+
+            if (value > max) max = value;
+            else if (value < min) min = value;
+        }
 
 		grid.maxValue = max;
-		grid.minValue = min;
-
+        grid.minValue = min < max ? min : 0; // case for categorized, when all categories enabled
         grid.ValuesChanged();
     }
 
-	private delegate void SetValueDelegate(GridData grid, int thisIndex, GridData otherGrid, int otherIndex, float weight);
+    private delegate void SetValueDelegate(GridData grid, int thisIndex, GridData otherGrid, int otherIndex, float weight, float areaRatio);
 
-	private static void CategorizedMasked(GridData grid, int thisIndex, GridData otherGrid, int otherIndex, float weight)
+	private void CategorizedMasked(GridData grid, int gridIndex, GridData otherGrid, int otherIndex, float weight, float areaRatio)
 	{
-		int value = (int)otherGrid.values[otherIndex];
-		if (otherGrid.valuesMask[otherIndex] == 1)
-			grid.values[thisIndex] += otherGrid.categoryFilter.IsSetAsInt(value) * weight;
-	}
+        int value = (int)otherGrid.values[otherIndex];
+        if (otherGrid.valuesMask[otherIndex] == 1) // 3th case of ignoring noData from TS #68
+        {
+            grid.values[gridIndex] += otherGrid.categoryFilter.IsSetAsInt(value) * weight * areaRatio;
+            //Assign the divisor -  to be used for whole admin area
+            divisors[gridIndex] += areaRatio;
+        }
+    }
 
-	private static void CategorizedUnmasked(GridData grid, int thisIndex, GridData otherGrid, int otherIndex, float weight)
-	{
-		int value = (int)otherGrid.values[otherIndex];
-		grid.values[thisIndex] += otherGrid.categoryFilter.IsSetAsInt(value) * weight;
-	}
+	private void CategorizedUnmasked(GridData grid, int gridIndex, GridData otherGrid, int otherIndex, float weight, float areaRatio)
+	{   
+        int value = (int)otherGrid.values[otherIndex];
+		grid.values[gridIndex] += otherGrid.categoryFilter.IsSetAsInt(value) * weight * areaRatio;
 
-	private static void FilteredMasked(GridData grid, int gridIndex, GridData otherGrid, int otherIndex, float weight)
-	{
-		float value = otherGrid.values[otherIndex];
-		if (otherGrid.valuesMask[otherIndex] == 1 && value >= otherGrid.minFilter && value <= otherGrid.maxFilter)
-			grid.values[gridIndex] += (value - otherGrid.minValue) * weight;
-	}
+        //Assign the divisor -  to be used for whole admin area
+        divisors[gridIndex] += areaRatio;
+    }
 
-	private static void UnfilteredMasked(GridData grid, int gridIndex, GridData otherGrid, int otherIndex, float weight)
+	private void FilteredMasked(GridData grid, int gridIndex, GridData otherGrid, int otherIndex, float weight, float areaRatio )
 	{
-		if (otherGrid.valuesMask[otherIndex] == 1)
-			grid.values[gridIndex] += (otherGrid.values[otherIndex] - otherGrid.minValue) * weight;
-	}
+        float value = otherGrid.values[otherIndex];
+        if (otherGrid.valuesMask[otherIndex] == 1 && value >= otherGrid.minFilter && value <= otherGrid.maxFilter)
+        {
+            grid.values[gridIndex] += (value - otherGrid.minValue) * weight * areaRatio;
+            //Assign the divisor -  to be used for whole admin area
+            divisors[gridIndex] += areaRatio;
+        }
+    }
 
-	private static void FilteredUnmasked(GridData grid, int gridIndex, GridData otherGrid, int otherIndex, float weight)
+	private void UnfilteredMasked(GridData grid, int gridIndex, GridData otherGrid, int otherIndex, float weight, float areaRatio)
 	{
-		float value = otherGrid.values[otherIndex];
-		if (value >= otherGrid.minFilter && value <= otherGrid.maxFilter)
-			grid.values[gridIndex] += (value - otherGrid.minValue) * weight;
-	}
+        if (otherGrid.valuesMask[otherIndex] == 1)  // 3th case of ignoring noData from TS #68
+        {
+            grid.values[gridIndex] += (otherGrid.values[otherIndex] - otherGrid.minValue) * weight * areaRatio;
+            //Assign the divisor -  to be used for whole admin area
+            divisors[gridIndex] += areaRatio;
+        }
+    }
 
-	private static void UnfilteredUnmasked(GridData grid, int gridIndex, GridData otherGrid, int otherIndex, float weight)
+    private void FilteredUnmasked(GridData grid, int gridIndex, GridData otherGrid, int otherIndex, float weight, float areaRatio)
+    {
+        float value = otherGrid.values[otherIndex];
+        if (value >= otherGrid.minFilter && value <= otherGrid.maxFilter)
+        {
+            grid.values[gridIndex] += (value - otherGrid.minValue) * weight * areaRatio;
+        }
+        //Assign the divisor -  to be used for whole admin area
+        divisors[gridIndex] += areaRatio;
+    }
+
+	private void UnfilteredUnmasked(GridData grid, int gridIndex, GridData otherGrid, int otherIndex, float weight, float areaRatio)
 	{
-		grid.values[gridIndex] += (otherGrid.values[otherIndex] - otherGrid.minValue) * weight;
-	}
+		grid.values[gridIndex] += (otherGrid.values[otherIndex] - otherGrid.minValue) * weight* areaRatio;
+
+        //Assign the divisor -  to be used for whole admin area
+        divisors[gridIndex] += areaRatio;
+    }
+
 }

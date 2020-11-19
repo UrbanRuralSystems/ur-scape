@@ -96,7 +96,7 @@ public class DataLayerPanel : MonoBehaviour
 
 	private void OnLayerToggleHover(bool hover)
 	{
-		if (hover)
+		if (hover || dataLayer.ToolOpacity == 0)
 			dataLayer.SetUserOpacity(1f / dataLayer.ToolOpacity);
 		else
 			dataLayer.SetUserOpacity(1f);
@@ -278,7 +278,8 @@ public class DataLayerPanel : MonoBehaviour
 	private void EnableHoverEvents()
 	{
 		layerToggle.GetComponent<HoverHandler>().OnHover += OnLayerToggleHover;
-		OnLayerToggleHover(true);
+		if ((layerToggle.transform as RectTransform).IsMouseInside())
+			OnLayerToggleHover(true);
 	}
 
 	private void DisableHoverEvents()

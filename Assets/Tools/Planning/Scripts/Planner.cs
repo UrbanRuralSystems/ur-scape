@@ -189,9 +189,10 @@ public class Planner : MonoBehaviour
 			StopCoroutine(drawingArea);
 		}
 
-        if (planningOutputPanel)
+        if (planningOutputPanel != null)
         {
-            outputPanel.RemovePanel(planningOutputPanel.transform);
+            outputPanel.DestroyPanel(planningOutputPanel.gameObject);
+            planningOutputPanel = null;
         }
 
         // Clear icons

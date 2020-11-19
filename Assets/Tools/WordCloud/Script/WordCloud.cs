@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -239,7 +239,7 @@ public class WordCloud : Tool
 	// Inheritance Methods
 	//
 
-	public override void OnToggleTool(bool isOn)
+	protected override void OnToggleTool(bool isOn)
 	{
 		if (isOn)
 		{

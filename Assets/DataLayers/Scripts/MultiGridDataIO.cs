@@ -115,7 +115,7 @@ public static class MultiGridDataIO
 				break;
 
 			cells = line.Split(',');
-			parameter = GridDataIO.CheckParameter(cells[0], cells[1], out bool hasData);
+			parameter = GridDataIO.CheckParameter(cells[0], cells[1], GridDataIO.Parameters, out bool hasData);
 
             if (parameter == null)
             {

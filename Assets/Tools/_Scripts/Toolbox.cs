@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -24,7 +24,7 @@ public class Toolbox : UrsComponent
 	}
 
 	public BuildConfig config;
-	private List<ToolInfo> tools = new List<ToolInfo>();
+	private readonly List<ToolInfo> tools = new List<ToolInfo>();
 
 	[Header("UI Refecences")]
     public ToggleGroup tabPanel;
@@ -75,20 +75,26 @@ public class Toolbox : UrsComponent
 			if (tool.config.enabled && 
 				tool.state != ToolState.Hidden)
 			{
-				var toolInfo = new ToolInfo();
-				tools.Add(toolInfo);
+                AddTool(tool.config, tool.state == ToolState.Enabled);
+            }
+        }
 
-				toolInfo.toolConfig = tool.config;
-				bool enabled = tool.state == ToolState.Enabled;
-				toolInfo.button = CreateButton(tool.config, toolsListPanel.transform, enabled);
-				if (enabled)
-				{
-					toolInfo.button.onClick.AddListener(delegate { OnToolButtonClick(toolInfo); });
-					toolInfo.panel = CreatePanel(tool.config);
-				}
-			}
+        // Add other tools that are not in the list and have the 'autoAddToToolbox' flag set
+        if (config.platform.includeOtherTools)
+        {
+            var toolConfigs = Resources.LoadAll<ToolConfig>("");
+            foreach (var toolConfig in toolConfigs)
+            {
+                if (toolConfig.autoAddToToolbox &&
+                    toolConfig.enabled &&
+                    !tools.Exists(t => t.toolConfig == toolConfig))
+                {
+                    AddTool(toolConfig);
+                }
+            }
         }
     }
+
 
     //
     // Inheritance Methods
@@ -209,7 +215,7 @@ public class Toolbox : UrsComponent
     {
 		tool.panel.gameObject.SetActive(isOn);
         var toolComponent = tool.panel.GetComponent<Tool>();
-		toolComponent.OnActiveTool(isOn);
+		toolComponent.Activate(isOn);
     }
 
     private void OnCloseToolButtonClick(ToolInfo tool)
@@ -225,7 +231,6 @@ public class Toolbox : UrsComponent
 
         CloseTool(tool, otherTab);
 
-
         UpdateAddTab();
     }
 
@@ -234,6 +239,7 @@ public class Toolbox : UrsComponent
         OpenTool(tool, true);
         UpdateAddTab();
     }
+
 
 	//
 	// Public Methods
@@ -246,10 +252,29 @@ public class Toolbox : UrsComponent
 		return messenger;
 	}
 
+    public void AddTool(ToolConfig toolConfig)
+    {
+        AddTool(toolConfig, true);
+    }
+
 
     //
     // Private Methods
     //
+
+    private void AddTool(ToolConfig toolConfig, bool enabled)
+    {
+        var toolInfo = new ToolInfo();
+        tools.Add(toolInfo);
+
+        toolInfo.toolConfig = toolConfig;
+        toolInfo.button = CreateButton(toolConfig, toolsListPanel.transform, enabled);
+        if (enabled)
+        {
+            toolInfo.button.onClick.AddListener(delegate { OnToolButtonClick(toolInfo); });
+            toolInfo.panel = CreatePanel(toolConfig);
+        }
+    }
 
     private RectTransform CreatePanel(ToolConfig config)
     {
@@ -298,15 +323,16 @@ public class Toolbox : UrsComponent
 
 		// Create the tab
 		tool.tab = AddTab(tool);
-        if (activate)
-			tool.tab.isOn = true;
 
-		// Activate the tool
+		// Open the tool
 		var toolComponent = tool.panel.GetComponent<Tool>();
         if (toolComponent != null)
         {
-			toolComponent.OnToggleTool(true);
+            toolComponent.Open(activate);
         }
+
+        if (activate)
+            tool.tab.isOn = true;
 
         var scroll = transform.GetComponentInChildren<ScrollRect>();
         scroll.content = tool.panel;
@@ -314,13 +340,20 @@ public class Toolbox : UrsComponent
 
     private void CloseTool(ToolInfo tool, Toggle otherTab = null)
     {
-		// Deactivate the tool
-		var toolComponent = tool.panel.GetComponent<Tool>();
+        // Remove listeners
+        var toggle = tool.tab.GetComponent<Toggle>();
+        toggle.onValueChanged.RemoveAllListeners();
+        var button = tool.tab.GetComponentInChildren<Button>();
+        button.onClick.RemoveAllListeners();
+
+        // Close the tool
+        var toolComponent = tool.panel.GetComponent<Tool>();
         if (toolComponent != null)
         {
-			toolComponent.OnToggleTool(false);
+            toolComponent.Close();
         }
 
+        // Activate the new tab
         if (otherTab != null)
         {
             otherTab.isOn = true;

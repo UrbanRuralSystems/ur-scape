@@ -307,17 +307,18 @@ public class GridData : PatchData
 
 		maxDistributionValue = 0;
         int count = values.Length;
+		int chartIndex, value;
 		if (crop)
 		{
 			if (valuesMask == null)
 			{
 				for (int i = 0; i < count; i++)
 				{
-					int chartIndex = Mathf.RoundToInt((values[i] - minValue) * invValueRange);
+					chartIndex = (int)((values[i] - minValue) * invValueRange + 0.5f);
 					if (chartIndex >= 0 && chartIndex <= lastChartIndex)
 					{
-						distributionValues[chartIndex]++;
-						maxDistributionValue = Math.Max(maxDistributionValue, distributionValues[chartIndex]);
+						value = ++distributionValues[chartIndex];
+						maxDistributionValue = value > maxDistributionValue? value : maxDistributionValue;
 					}
 				}
 			}
@@ -325,14 +326,13 @@ public class GridData : PatchData
 			{
 				for (int i = 0; i < count; i++)
 				{
-					int chartIndex = Mathf.RoundToInt((values[i] - minValue) * invValueRange);
+					chartIndex = (int)((values[i] - minValue) * invValueRange + 0.5f);
 					if (valuesMask[i] == 1 && chartIndex >= 0 && chartIndex <= lastChartIndex)
 					{
-						distributionValues[chartIndex]++;
-						maxDistributionValue = Math.Max(maxDistributionValue, distributionValues[chartIndex]);
+						value = ++distributionValues[chartIndex];
+						maxDistributionValue = value > maxDistributionValue ? value : maxDistributionValue;
 					}
 				}
-
 			}
 		}
 		else
@@ -341,9 +341,9 @@ public class GridData : PatchData
 			{
 				for (int i = 0; i < count; i++)
 				{
-					int chartIndex = (int)((values[i] - minValue) * invValueRange + 0.4999f);
-					distributionValues[chartIndex]++;
-					maxDistributionValue = Math.Max(maxDistributionValue, distributionValues[chartIndex]);
+					chartIndex = (int)((values[i] - minValue) * invValueRange + 0.5f);
+					value = ++distributionValues[chartIndex];
+					maxDistributionValue = value > maxDistributionValue ? value : maxDistributionValue;
 				}
 			}
 			else
@@ -352,9 +352,9 @@ public class GridData : PatchData
 				{
 					if (valuesMask[i] == 1)
 					{
-						int chartIndex = (int)((values[i] - minValue) * invValueRange + 0.4999f);
-						distributionValues[chartIndex]++;
-						maxDistributionValue = Math.Max(maxDistributionValue, distributionValues[chartIndex]);
+						chartIndex = (int)((values[i] - minValue) * invValueRange + 0.5f);
+						value = ++distributionValues[chartIndex];
+						maxDistributionValue = value > maxDistributionValue ? value : maxDistributionValue;
 					}
 				}
 			}

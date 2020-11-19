@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -12,7 +12,6 @@ using UnityEngine.UI;
 
 using LineInfo = LineInspector.LineInspectorInfo;
 using AreaInfo = AreaInspector.AreaInspectorInfo;
-using UnityEngine.EventSystems;
 
 public class InspectorTool : Tool
 {
@@ -144,9 +143,9 @@ public class InspectorTool : Tool
 		InitAreaInspectorInfo();
 	}
 
-    public override void OnToggleTool(bool isOn)
+	protected override void OnToggleTool(bool isOn)
     {
-        if(isOn)
+        if (isOn)
         {
             TurnOn();
         }
@@ -156,9 +155,9 @@ public class InspectorTool : Tool
         }
     }
 
-    public override void OnActiveTool(bool isActive)
+	protected override void OnActiveTool(bool isActive)
     {
-		if(isActive)
+		if (isActive)
 		{
 			if (inspectorOutput != null)
 				outputPanel.SetPanel(inspectorOutput.transform);

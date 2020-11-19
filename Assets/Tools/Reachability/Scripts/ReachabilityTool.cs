@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -46,10 +46,9 @@ public class ReachabilityTool : Tool
 
 	public int maxRoadCount = 3;
 
-	public string networkLayerName = "Network";
 	public string reachabilityLayerName = "Reachability";
 	public int travelTimeScale = 15;
-	public int defaultWalkSpeed = 5; // km/h
+	public float defaultWalkSpeed = 5; // km/h
 
     public string highwayRoadLetter = "H";
     public string primaryRoadLetter = "P";
@@ -66,6 +65,7 @@ public class ReachabilityTool : Tool
 
 	[Header("UI References")]
 	public GameObject mainPanel;
+	public Dropdown layerDropdown;
 	public Toggle startSingleButton;
 	public Toggle startMultiButton;
 	public Button clearButton;
@@ -91,12 +91,13 @@ public class ReachabilityTool : Tool
 	private SiteBrowser siteBrowser;
 
 	// Misc
+	private string networkLayerName;
 	private DataLayer networkLayer;
 	private DataLayer reachabilityLayer;
 	private GraphPatch networkPatch;
 	private GridPatch reachabilityPatch;
 
-	private int classificationIndex = ClassificationIndex.Highway;
+	private ClassificationIndex classificationIndex = ClassificationIndex.Highway;
 
 	private Action action = Action.None;
 	private int mobilityMode = 0;
@@ -119,7 +120,7 @@ public class ReachabilityTool : Tool
 
 	private readonly int stripeCount = 3;
 
-    private const float kmPerHourToMetersPerMin = 1000.0f / 60.0f;
+    public const float kmPerHourToMetersPerMin = 1000.0f / 60.0f;
 
 	private bool HasErrorMessage => currentErrorMessage != null || currentErrorBuilder != null;
 	private string currentErrorMessage = null;
@@ -134,6 +135,8 @@ public class ReachabilityTool : Tool
 	protected override void OnComponentRegistrationFinished()
 	{
 		base.OnComponentRegistrationFinished();
+
+		networkLayerName = "Network"; //-
 
 		roads = new RoadInfo[maxRoadCount];
 		for (int i = 0; i < maxRoadCount; i++)
@@ -156,6 +159,7 @@ public class ReachabilityTool : Tool
 		siteBrowser = ComponentManager.Instance.Get<SiteBrowser>();
 
 		// UI Listeners - Main Panel
+		layerDropdown.onValueChanged.AddListener(OnSelectedLayerChanged);
 		startSingleButton.onValueChanged.AddListener(OnToggleStartSingle);
 		startMultiButton.onValueChanged.AddListener(OnToggleStartMulti);
 		clearButton.onClick.AddListener(OnClearClicked);
@@ -174,7 +178,7 @@ public class ReachabilityTool : Tool
 		removeRoadToggle.onValueChanged.AddListener(OnRemoveRoadChanged);
 	}
 
-	public override void OnToggleTool(bool isOn)
+	protected override void OnToggleTool(bool isOn)
 	{
 		if (isOn)
 		{
@@ -204,7 +208,7 @@ public class ReachabilityTool : Tool
 
 	private void OnLayerVisibilityChange(DataLayer layer, bool visible)
 	{
-		if (layer.Name.Equals(networkLayerName) && !visible)
+		if (layer.Name == networkLayerName && !visible)
 		{
 			SetNetworkPatch(null);
 		}
@@ -230,7 +234,7 @@ public class ReachabilityTool : Tool
 
 	private void OnPatchVisibilityChange(DataLayer dataLayer, Patch patch, bool visible)
 	{
-		if (dataLayer.Name.Equals(networkLayerName))
+		if (dataLayer.Name == networkLayerName)
 		{
 			if (visible)
 			{
@@ -241,7 +245,7 @@ public class ReachabilityTool : Tool
 				SetNetworkPatch(null);
 			}
 		}
-		else if (dataLayer.Name.Equals(reachabilityLayerName))
+		else if (dataLayer.Name == reachabilityLayerName)
 		{
 			if (visible)
 			{
@@ -289,12 +293,12 @@ public class ReachabilityTool : Tool
 			var mode = mobilityModes[i];
 
 			// Override the speed for "No network" classfication to be walking speed
-			mode.speeds[ClassificationIndex.None] = defaultWalkSpeed * kmPerHourToMetersPerMin; //convert from km/h to m/min
+			mode.speeds[(int)ClassificationIndex.None] = defaultWalkSpeed * kmPerHourToMetersPerMin; //convert from km/h to m/min
 
             int count = mode.speeds.Length;
 			for (int j = 0; j < count; ++j)
 			{
-				mode.invSpeeds[j] = 1f / mode.speeds[j];
+				mode.invSpeeds[j] = mode.speeds[j] > 0? 1f / mode.speeds[j] : 600; // 600 = 10 hours, which is higher than the max travel time
 			}
 
 			var mobilityToggle = Instantiate(mobilityTogglePrefab, mobilityGroup.transform, false);
@@ -340,6 +344,28 @@ public class ReachabilityTool : Tool
 	//
 	// UI Event Methods
 	//
+
+	private void OnSelectedLayerChanged(int value)
+	{
+		ClearAllUserChanges();
+
+		if (layerDropdown.options.Count > 0)
+			networkLayerName = layerDropdown.options[value].text;
+		else
+			networkLayerName = null;
+
+		if (networkLayer != null && networkLayer.Name != networkLayerName)
+		{
+			// Disable patches visibility events
+			networkLayer.OnPatchVisibilityChange -= OnPatchVisibilityChange;
+			if (dataLayers.IsLayerActive(networkLayer))
+				dataLayers.ActivateLayer(networkLayer, false);
+
+			networkLayer = null;
+		}
+
+		PrepareNetworkLayer();
+	}
 
 	private void OnToggleStartSingle(bool isOn)
 	{
@@ -453,10 +479,12 @@ public class ReachabilityTool : Tool
 
 		road.mapLayer.Show(isOn);
 
-		if (placeStart != null && placeStart.HasStartPoints)
+		if (placeStart != null)
 		{
 			placeStart.SetNewRoads(activeRoadLayers);
-			placeStart.UpdateGrid();
+			
+			if (placeStart.HasStartPoints)
+				placeStart.UpdateGrid();
 		}
 	}
 
@@ -589,12 +617,7 @@ public class ReachabilityTool : Tool
 		// Remove temp reachability layer
 		if (reachabilityLayer != null && reachabilityLayer.IsTemp)
 		{
-			var sites = reachabilityLayer.GetSites();
-			foreach (var site in sites)
-			{
-				site.RemoveLayer(reachabilityLayer);
-			}
-			reachabilityLayer.Group.RemoveLayer(reachabilityLayer);
+			reachabilityLayer.Remove();
 			dataLayers.RebuildList(ComponentManager.Instance.Get<DataManager>().groups);
 		}
 
@@ -619,6 +642,10 @@ public class ReachabilityTool : Tool
 	{
 		// Disable layers visibility event
 		dataLayers.OnLayerVisibilityChange -= OnLayerVisibilityChange;
+
+		// Clear layers dropdown
+		if (!turnOff)
+			layerDropdown.ClearOptions();
 
 		ClearAllUserChanges();
 
@@ -663,14 +690,37 @@ public class ReachabilityTool : Tool
 		}
 	}
 
+	private void RefreshLayersDropdown()
+	{
+		//+layerDropdown.onValueChanged.RemoveListener(OnSelectedLayerChanged);
+
+		layerDropdown.ClearOptions();
+
+		foreach (var layer in dataLayers.availableLayers)
+		{
+			foreach (var patch in layer.patchesInView)
+			{
+				if (patch is GraphPatch)
+				{
+					layerDropdown.options.Add(new Dropdown.OptionData(layer.Name));
+					break;
+				}
+			}
+		}
+
+		//+layerDropdown.onValueChanged.AddListener(OnSelectedLayerChanged);
+	}
+
 	private void ChangeMobilityMode(int mode)
 	{
 		mobilityMode = mode;
 
-		if (placeStart != null && placeStart.HasStartPoints)
+		if (placeStart != null)
 		{
 			placeStart.SetMinutesPerMeter(mobilityModes[mode].invSpeeds);
-			placeStart.UpdateGrid();
+			
+			if (placeStart.HasStartPoints)
+				placeStart.UpdateGrid();
 		}
 	}
 
@@ -687,7 +737,7 @@ public class ReachabilityTool : Tool
 		else if (add && networkLayer != null)
 		{
 			var dataManager = ComponentManager.Instance.Get<DataManager>();
-			layer = new DataLayer(dataManager, layerName, networkLayer.Color, networkLayer.Group);
+			layer = new DataLayer(dataManager, layerName, networkLayer.Color, networkLayer.Group); //+ Don't use network Color
 			layer.SetIsTemp(true);
 			dataLayers.RebuildList(dataManager.groups);
 			return true;
@@ -769,21 +819,21 @@ public class ReachabilityTool : Tool
 		changingAction = false;
 	}
 
-    private string UpdateRoadName(int index, out string roadType)
+    private string UpdateRoadName(ClassificationIndex index, out string roadType)
     {
-        if (classificationIndex == ClassificationIndex.Highway)
+        if (index == ClassificationIndex.Highway)
         {
             roadType = (highwayRoadLetter + ++highwayRoadCount);
         }
-        else if (classificationIndex == ClassificationIndex.Primary)
+        else if (index == ClassificationIndex.Primary)
         {
             roadType = (primaryRoadLetter + ++primaryRoadCount);
         }
-        else if (classificationIndex == ClassificationIndex.Secondary)
+        else if (index == ClassificationIndex.Secondary)
         {
             roadType = (secondaryRoadLetter + ++secondaryRoadCount);
         }
-        else if (classificationIndex == ClassificationIndex.Other)
+        else if (index == ClassificationIndex.Other)
         {
             roadType = (otherRoadLetter + ++otherRoadCount);
         }
@@ -804,8 +854,9 @@ public class ReachabilityTool : Tool
 
 		// Create snapshot's map layer
 		road.mapLayer = Instantiate(roadLayerPrefab);
-		road.mapLayer.Init(networkPatch, classificationIndex, points);
-		toolLayers.Add(road.mapLayer, road.mapLayer.Grid, "newRoad", networkLayer.Color);
+		int classification = classificationIndex == ClassificationIndex.None ? 0 : 1 << ((int)classificationIndex - 1);
+		road.mapLayer.Init(networkPatch, classification, points);
+		toolLayers.Add(road.mapLayer, road.mapLayer.Grid, "newRoad", networkLayer.Color);	//+ Don't use network color
 
 		activeRoadLayers.Add(road.mapLayer);
 
@@ -894,8 +945,8 @@ public class ReachabilityTool : Tool
 	{
 		if (placeStart != null)
 		{
-			// Stop any ongoing grid generations
-			placeStart.StopGridGenerations();
+			// Stop any ongoing grid generation
+			placeStart.StopGridGeneration();
 
 			Destroy(placeStart.gameObject);
 			placeStart = null;
@@ -1100,30 +1151,30 @@ public class ReachabilityTool : Tool
 	private void CreateDefaultMobilityModes(string filename)
 	{
 		var mode = new MobilityMode() { name = "Car"/*translatable*/ };
-		mode.speeds[ClassificationIndex.Highway]		= 80;
-		mode.speeds[ClassificationIndex.HighwayLink]	= 50;
-		mode.speeds[ClassificationIndex.Primary]		= 50;
-		mode.speeds[ClassificationIndex.Secondary]		= 35;
-		mode.speeds[ClassificationIndex.Other]			= 15;
-		mode.speeds[ClassificationIndex.None]			= defaultWalkSpeed;
+		mode.speeds[(int)ClassificationIndex.Highway]		= 80;
+		mode.speeds[(int)ClassificationIndex.HighwayLink]	= 50;
+		mode.speeds[(int)ClassificationIndex.Primary]		= 50;
+		mode.speeds[(int)ClassificationIndex.Secondary]		= 35;
+		mode.speeds[(int)ClassificationIndex.Other]			= 15;
+		mode.speeds[(int)ClassificationIndex.None]			= defaultWalkSpeed;
 		mobilityModes.Add(mode);
 
 		mode = new MobilityMode() { name = "Motorbike"/*translatable*/ };
-		mode.speeds[ClassificationIndex.Highway]		= 60;
-		mode.speeds[ClassificationIndex.HighwayLink]	= 40;
-		mode.speeds[ClassificationIndex.Primary]		= 30;
-		mode.speeds[ClassificationIndex.Secondary]		= 30;
-		mode.speeds[ClassificationIndex.Other]			= 15;
-		mode.speeds[ClassificationIndex.None]			= defaultWalkSpeed;
+		mode.speeds[(int)ClassificationIndex.Highway]		= 60;
+		mode.speeds[(int)ClassificationIndex.HighwayLink]	= 40;
+		mode.speeds[(int)ClassificationIndex.Primary]		= 30;
+		mode.speeds[(int)ClassificationIndex.Secondary]		= 30;
+		mode.speeds[(int)ClassificationIndex.Other]			= 15;
+		mode.speeds[(int)ClassificationIndex.None]			= defaultWalkSpeed;
 		mobilityModes.Add(mode);
 
 		mode = new MobilityMode() { name = "Walk"/*translatable*/ };
-		mode.speeds[ClassificationIndex.Highway]		= 0;	// Can't walk on highway
-		mode.speeds[ClassificationIndex.HighwayLink]	= 0;    // Can't walk on highway link
-		mode.speeds[ClassificationIndex.Primary]		= defaultWalkSpeed;
-		mode.speeds[ClassificationIndex.Secondary]		= defaultWalkSpeed;
-		mode.speeds[ClassificationIndex.Other]			= defaultWalkSpeed;
-		mode.speeds[ClassificationIndex.None]			= defaultWalkSpeed;
+		mode.speeds[(int)ClassificationIndex.Highway]		= 0;	// Can't walk on highway
+		mode.speeds[(int)ClassificationIndex.HighwayLink]	= 0;    // Can't walk on highway link
+		mode.speeds[(int)ClassificationIndex.Primary]		= defaultWalkSpeed;
+		mode.speeds[(int)ClassificationIndex.Secondary]		= defaultWalkSpeed;
+		mode.speeds[(int)ClassificationIndex.Other]			= defaultWalkSpeed;
+		mode.speeds[(int)ClassificationIndex.None]			= defaultWalkSpeed;
 		mobilityModes.Add(mode);
 
 		ReachabilityIO.Save(mobilityModes, filename);

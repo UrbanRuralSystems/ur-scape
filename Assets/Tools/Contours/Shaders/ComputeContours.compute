@@ -24,10 +24,7 @@
 #define CC_THREAD_COUNT 1024
 #endif
 
-//#define MAX_CATEGORIES 128
-//#define MAX_CATEGORY_INDEX MAX_CATEGORIES - 1;
-
-static const int MAX_CATEGORIES = 128;
+static const int MAX_CATEGORIES = 256;
 static const int MAX_CATEGORY_INDEX = MAX_CATEGORIES - 1;
 static const int CATEGORY_FILTER_ARRAY_SIZE = (MAX_CATEGORIES + 31) / 32;
 
@@ -46,7 +43,7 @@ uint contourCountX;
 uint croppedContourCountX;
 uint gridCountX;
 //+ uint categoryFilter[CATEGORY_FILTER_ARRAY_SIZE];
-int4 categoryFilter;	//- Temp fix for Unity bug (Case 1167093) http://fogbugz.unity3d.com/default.asp?1167093_vvaqd0gbhgo3cmr5
+StructuredBuffer<uint> categoryFilter; //- Temp fix for Unity bug (Case 1167093) http://fogbugz.unity3d.com/default.asp?1167093_vvaqd0gbhgo3cmr5
 float2 minmax;
 float2 offset;
 float2 scale;

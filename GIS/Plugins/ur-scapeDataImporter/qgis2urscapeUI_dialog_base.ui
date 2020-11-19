@@ -148,7 +148,7 @@
             <x>0</x>
             <y>0</y>
             <width>470</width>
-            <height>1208</height>
+            <height>1168</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_9">
@@ -170,11 +170,271 @@
            <property name="spacing">
             <number>10</number>
            </property>
-           <item row="20" column="4">
-            <widget class="QWidget" name="wgtCustomLayerColor" native="true">
-             <layout class="QHBoxLayout" name="horizontalLayout_4">
+           <item row="16" column="5">
+            <widget class="QWidget" name="wgtDate" native="true">
+             <layout class="QHBoxLayout" name="hblDate">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="lblYYYY">
+                <property name="text">
+                 <string>Year</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="txtYYYY">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="placeholderText">
+                 <string>YYYY</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lblMM">
+                <property name="text">
+                 <string>Month</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="txtMM">
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
+                </property>
+                <property name="placeholderText">
+                 <string>MM</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lblDD">
+                <property name="text">
+                 <string>Day</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="txtDD">
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
+                </property>
+                <property name="placeholderText">
+                 <string>DD</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="25" column="5">
+            <widget class="QWidget" name="wgtCitation" native="true">
+             <layout class="QHBoxLayout" name="hblCitation">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLineEdit" name="txtCitation">
+                <property name="placeholderText">
+                 <string>e.g. Website Name. Publisher, Publication date...</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="chkMandatory">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
+                </property>
+                <property name="text">
+                 <string>Mandatory</string>
+                </property>
+                <property name="checked">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="33" column="5">
+            <widget class="QWidget" name="wgtMaxPatchSize" native="true">
+             <layout class="QHBoxLayout" name="hblMaxPatchSize">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLineEdit" name="txtMaxPatchSize">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>1</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lblResPatchUnit">
+                <property name="text">
+                 <string>degrees</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="chkMaxPatchSizeOverride">
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
+                </property>
+                <property name="text">
+                 <string>Override</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="15" column="5">
+            <widget class="QWidget" name="wgtCustomUnits" native="true">
+             <layout class="QHBoxLayout" name="horizontalLayout">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="lblCustomUnits">
+                <property name="text">
+                 <string>Value</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="txtCustomUnits">
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="chkRelative">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
+                </property>
+                <property name="text">
+                 <string>Relative</string>
+                </property>
+                <property name="checked">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="17" column="0" colspan="6">
+            <widget class="QFrame" name="frmHLineOptionalParams">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>10</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="sizeIncrement">
+              <size>
+               <width>10</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="baseSize">
+              <size>
+               <width>10</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="frameShape">
+              <enum>QFrame::HLine</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Sunken</enum>
+             </property>
+             <layout class="QFormLayout" name="formLayout_2">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+             </layout>
+            </widget>
+           </item>
+           <item row="19" column="5">
+            <widget class="QWidget" name="wgtLayerColorGrp" native="true">
+             <layout class="QHBoxLayout" name="hblLayerColor">
               <property name="spacing">
-               <number>-1</number>
+               <number>10</number>
               </property>
               <property name="leftMargin">
                <number>0</number>
@@ -189,149 +449,40 @@
                <number>0</number>
               </property>
               <item>
-               <layout class="QVBoxLayout" name="vblHue">
-                <item>
-                 <widget class="QLabel" name="lblHue">
-                  <property name="text">
-                   <string>Hue</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <spacer name="verticalSpacer">
-                  <property name="orientation">
-                   <enum>Qt::Vertical</enum>
-                  </property>
-                  <property name="sizeType">
-                   <enum>QSizePolicy::Fixed</enum>
-                  </property>
-                  <property name="sizeHint" stdset="0">
-                   <size>
-                    <width>28</width>
-                    <height>28</height>
-                   </size>
-                  </property>
-                 </spacer>
-                </item>
-               </layout>
+               <widget class="QComboBox" name="cmbLayerColor">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
+                </property>
+               </widget>
               </item>
               <item>
-               <layout class="QVBoxLayout" name="vblHueSlider">
-                <property name="leftMargin">
-                 <number>0</number>
+               <widget class="QWidget" name="wgtLayerColor" native="true">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
                 </property>
-                <property name="topMargin">
-                 <number>0</number>
+                <property name="minimumSize">
+                 <size>
+                  <width>75</width>
+                  <height>0</height>
+                 </size>
                 </property>
-                <property name="bottomMargin">
-                 <number>0</number>
-                </property>
-                <item>
-                 <widget class="QSlider" name="hsCustomColor">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>30</height>
-                   </size>
-                  </property>
-                  <property name="focusPolicy">
-                   <enum>Qt::StrongFocus</enum>
-                  </property>
-                  <property name="maximum">
-                   <number>360</number>
-                  </property>
-                  <property name="singleStep">
-                   <number>1</number>
-                  </property>
-                  <property name="pageStep">
-                   <number>10</number>
-                  </property>
-                  <property name="orientation">
-                   <enum>Qt::Horizontal</enum>
-                  </property>
-                  <property name="tickPosition">
-                   <enum>QSlider::TicksBelow</enum>
-                  </property>
-                  <property name="tickInterval">
-                   <number>30</number>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <layout class="QHBoxLayout" name="hblHueMinMax">
-                  <item>
-                   <widget class="QLabel" name="lblHueMin">
-                    <property name="text">
-                     <string>0</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <spacer name="horizontalSpacer_2">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                    <property name="sizeHint" stdset="0">
-                     <size>
-                      <width>58</width>
-                      <height>20</height>
-                     </size>
-                    </property>
-                   </spacer>
-                  </item>
-                  <item>
-                   <widget class="QLabel" name="lblHueMax">
-                    <property name="text">
-                     <string>360</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-               </layout>
+               </widget>
               </item>
              </layout>
             </widget>
            </item>
-           <item row="27" column="0" colspan="5">
-            <widget class="QFrame" name="frmHLineAdvancedParams">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>10</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="sizeIncrement">
-              <size>
-               <width>10</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="baseSize">
-              <size>
-               <width>10</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="frameShape">
-              <enum>QFrame::HLine</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Sunken</enum>
-             </property>
-             <layout class="QFormLayout" name="formLayout_5">
+           <item row="13" column="5">
+            <widget class="QWidget" name="wgtCustomRes" native="true">
+             <layout class="QGridLayout" name="gridLayout">
               <property name="leftMargin">
                <number>0</number>
               </property>
@@ -344,58 +495,44 @@
               <property name="bottomMargin">
                <number>0</number>
               </property>
+              <item row="0" column="0">
+               <widget class="QLabel" name="lblCustomRes">
+                <property name="text">
+                 <string>Value</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLineEdit" name="txtCustomRes">
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0" colspan="3">
+               <widget class="QLabel" name="lblCustomResNote">
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                  <italic>true</italic>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>* Values &lt; 1 or &gt; 1000 meters are not recommended</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="lblMeters">
+                <property name="text">
+                 <string>meters</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </item>
-           <item row="6" column="0" colspan="5">
-            <widget class="QFrame" name="frmHLineMandatoryParams">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>10</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="sizeIncrement">
-              <size>
-               <width>10</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="baseSize">
-              <size>
-               <width>10</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="frameShape">
-              <enum>QFrame::HLine</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Sunken</enum>
-             </property>
-             <layout class="QFormLayout" name="formLayout_3">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-             </layout>
-            </widget>
-           </item>
-           <item row="36" column="4">
+           <item row="38" column="5">
             <widget class="QWidget" name="wgtChkboxes" native="true">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -505,7 +642,7 @@
              </layout>
             </widget>
            </item>
-           <item row="34" column="4">
+           <item row="36" column="5">
             <widget class="QWidget" name="wgtNoDataValue" native="true">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -638,7 +775,232 @@
              </layout>
             </widget>
            </item>
-           <item row="3" column="4">
+           <item row="20" column="5">
+            <widget class="QWidget" name="wgtCustomLayerColor" native="true">
+             <layout class="QHBoxLayout" name="horizontalLayout_4">
+              <property name="spacing">
+               <number>-1</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <layout class="QVBoxLayout" name="vblHue">
+                <item>
+                 <widget class="QLabel" name="lblHue">
+                  <property name="text">
+                   <string>Hue</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="verticalSpacer">
+                  <property name="orientation">
+                   <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeType">
+                   <enum>QSizePolicy::Fixed</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>28</width>
+                    <height>28</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="vblHueSlider">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QSlider" name="hsCustomColor">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>30</height>
+                   </size>
+                  </property>
+                  <property name="focusPolicy">
+                   <enum>Qt::StrongFocus</enum>
+                  </property>
+                  <property name="maximum">
+                   <number>360</number>
+                  </property>
+                  <property name="singleStep">
+                   <number>1</number>
+                  </property>
+                  <property name="pageStep">
+                   <number>10</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="tickPosition">
+                   <enum>QSlider::TicksBelow</enum>
+                  </property>
+                  <property name="tickInterval">
+                   <number>30</number>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="hblHueMinMax">
+                  <item>
+                   <widget class="QLabel" name="lblHueMin">
+                    <property name="text">
+                     <string>0</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <spacer name="horizontalSpacer_2">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>58</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="lblHueMax">
+                    <property name="text">
+                     <string>360</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="27" column="0" colspan="6">
+            <widget class="QFrame" name="frmHLineAdvancedParams">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>10</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="sizeIncrement">
+              <size>
+               <width>10</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="baseSize">
+              <size>
+               <width>10</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="frameShape">
+              <enum>QFrame::HLine</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Sunken</enum>
+             </property>
+             <layout class="QFormLayout" name="formLayout_5">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+             </layout>
+            </widget>
+           </item>
+           <item row="6" column="0" colspan="6">
+            <widget class="QFrame" name="frmHLineMandatoryParams">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>10</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="sizeIncrement">
+              <size>
+               <width>10</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="baseSize">
+              <size>
+               <width>10</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="frameShape">
+              <enum>QFrame::HLine</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Sunken</enum>
+             </property>
+             <layout class="QFormLayout" name="formLayout_3">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+             </layout>
+            </widget>
+           </item>
+           <item row="3" column="5">
             <widget class="QWidget" name="wgtShapefileField" native="true">
              <layout class="QHBoxLayout" name="horizontalLayout_7">
               <property name="leftMargin">
@@ -679,7 +1041,7 @@
              </layout>
             </widget>
            </item>
-           <item row="22" column="0" colspan="5">
+           <item row="22" column="0" colspan="6">
             <widget class="QFrame" name="frmHLineMetadata">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -727,399 +1089,17 @@
              </layout>
             </widget>
            </item>
-           <item row="29" column="2" colspan="3">
-            <widget class="QWidget" name="wgtNetworkMap" native="true">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
+           <item row="29" column="3">
+            <widget class="QLabel" name="lblRoadClasses">
+             <property name="text">
+              <string>Road Classes</string>
              </property>
-             <property name="focusPolicy">
-              <enum>Qt::StrongFocus</enum>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
-             <layout class="QGridLayout" name="gridLayout_8">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item row="0" column="0">
-               <layout class="QGridLayout" name="glNetworkMap"/>
-              </item>
-             </layout>
             </widget>
            </item>
-           <item row="13" column="4">
-            <widget class="QWidget" name="wgtCustomRes" native="true">
-             <layout class="QGridLayout" name="gridLayout">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item row="0" column="0">
-               <widget class="QLabel" name="lblCustomRes">
-                <property name="text">
-                 <string>Value</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLineEdit" name="txtCustomRes">
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0" colspan="3">
-               <widget class="QLabel" name="lblCustomResNote">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                  <italic>true</italic>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>* Values &lt; 1 or &gt; 1000 meters are not recommended</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="2">
-               <widget class="QLabel" name="lblMeters">
-                <property name="text">
-                 <string>meters</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="25" column="4">
-            <widget class="QWidget" name="wgtCitation" native="true">
-             <layout class="QHBoxLayout" name="hblCitation">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QLineEdit" name="txtCitation">
-                <property name="placeholderText">
-                 <string>e.g. Website Name. Publisher, Publication date...</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="chkMandatory">
-                <property name="enabled">
-                 <bool>true</bool>
-                </property>
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-                <property name="text">
-                 <string>Mandatory</string>
-                </property>
-                <property name="checked">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="31" column="4">
-            <widget class="QWidget" name="wgtMaxPatchSize" native="true">
-             <layout class="QHBoxLayout" name="hblMaxPatchSize">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QLineEdit" name="txtMaxPatchSize">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-                <property name="text">
-                 <string>1</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="lblResPatchUnit">
-                <property name="text">
-                 <string>degrees</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="chkMaxPatchSizeOverride">
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-                <property name="text">
-                 <string>Override</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="15" column="4">
-            <widget class="QWidget" name="wgtCustomUnits" native="true">
-             <layout class="QHBoxLayout" name="horizontalLayout">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QLabel" name="lblCustomUnits">
-                <property name="text">
-                 <string>Value</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLineEdit" name="txtCustomUnits">
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="chkRelative">
-                <property name="enabled">
-                 <bool>true</bool>
-                </property>
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-                <property name="text">
-                 <string>Relative</string>
-                </property>
-                <property name="checked">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="17" column="0" colspan="5">
-            <widget class="QFrame" name="frmHLineOptionalParams">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>10</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="sizeIncrement">
-              <size>
-               <width>10</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="baseSize">
-              <size>
-               <width>10</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="frameShape">
-              <enum>QFrame::HLine</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Sunken</enum>
-             </property>
-             <layout class="QFormLayout" name="formLayout_2">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-             </layout>
-            </widget>
-           </item>
-           <item row="19" column="4">
-            <widget class="QWidget" name="wgtLayerColorGrp" native="true">
-             <layout class="QHBoxLayout" name="hblLayerColor">
-              <property name="spacing">
-               <number>10</number>
-              </property>
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QComboBox" name="cmbLayerColor">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QWidget" name="wgtLayerColor" native="true">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="minimumSize">
-                 <size>
-                  <width>75</width>
-                  <height>0</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="16" column="4">
-            <widget class="QWidget" name="wgtDate" native="true">
-             <layout class="QHBoxLayout" name="hblDate">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QLabel" name="lblYYYY">
-                <property name="text">
-                 <string>Year</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLineEdit" name="txtYYYY">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="placeholderText">
-                 <string>YYYY</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="lblMM">
-                <property name="text">
-                 <string>Month</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLineEdit" name="txtMM">
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-                <property name="placeholderText">
-                 <string>MM</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="lblDD">
-                <property name="text">
-                 <string>Day</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLineEdit" name="txtDD">
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-                <property name="placeholderText">
-                 <string>DD</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="37" column="0" colspan="5">
+           <item row="39" column="0" colspan="6">
             <spacer name="verticalSpacer_2">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -1132,7 +1112,7 @@
              </property>
             </spacer>
            </item>
-           <item row="34" column="3">
+           <item row="36" column="3">
             <widget class="QLabel" name="lblNoDataValue">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -1160,14 +1140,14 @@
              </property>
             </widget>
            </item>
-           <item row="33" column="4">
+           <item row="35" column="5">
             <widget class="QComboBox" name="cmbNoDataCalculation">
              <property name="focusPolicy">
               <enum>Qt::StrongFocus</enum>
              </property>
             </widget>
            </item>
-           <item row="30" column="1" colspan="3">
+           <item row="32" column="1" colspan="3">
             <widget class="QLabel" name="lblRasterBand">
              <property name="text">
               <string>Raster Band</string>
@@ -1177,7 +1157,7 @@
              </property>
             </widget>
            </item>
-           <item row="30" column="4">
+           <item row="32" column="5">
             <widget class="QLineEdit" name="txtRasterBand">
              <property name="toolTip">
               <string>Set the band for multi-band data (default is 1)</string>
@@ -1187,7 +1167,7 @@
              </property>
             </widget>
            </item>
-           <item row="31" column="1" colspan="3">
+           <item row="33" column="1" colspan="3">
             <widget class="QLabel" name="lblMaxPatchSize">
              <property name="text">
               <string>Max Patch Size</string>
@@ -1197,7 +1177,7 @@
              </property>
             </widget>
            </item>
-           <item row="32" column="0" colspan="4">
+           <item row="34" column="0" colspan="4">
             <widget class="QLabel" name="lblResamplingMthd">
              <property name="text">
               <string>Resampling Method</string>
@@ -1207,14 +1187,14 @@
              </property>
             </widget>
            </item>
-           <item row="32" column="4">
+           <item row="34" column="5">
             <widget class="QComboBox" name="cmbResamplingMthd">
              <property name="focusPolicy">
               <enum>Qt::StrongFocus</enum>
              </property>
             </widget>
            </item>
-           <item row="33" column="0" colspan="4">
+           <item row="35" column="0" colspan="4">
             <widget class="QLabel" name="lblNoDataCalculation">
              <property name="text">
               <string>No Data Calculation</string>
@@ -1224,7 +1204,7 @@
              </property>
             </widget>
            </item>
-           <item row="28" column="0" colspan="5">
+           <item row="28" column="0" colspan="6">
             <widget class="QLabel" name="lblAdvParams">
              <property name="font">
               <font>
@@ -1238,7 +1218,7 @@
              </property>
             </widget>
            </item>
-           <item row="26" column="4">
+           <item row="26" column="5">
             <widget class="QLineEdit" name="txtURLLink">
              <property name="placeholderText">
               <string>e.g. www.nasa.com</string>
@@ -1265,7 +1245,7 @@
              </property>
             </widget>
            </item>
-           <item row="24" column="4">
+           <item row="24" column="5">
             <widget class="QLineEdit" name="txtSource">
              <property name="placeholderText">
               <string>e.g. Nasa</string>
@@ -1282,7 +1262,7 @@
              </property>
             </widget>
            </item>
-           <item row="23" column="0" colspan="5">
+           <item row="23" column="0" colspan="6">
             <widget class="QLabel" name="lblMetadata">
              <property name="font">
               <font>
@@ -1296,7 +1276,7 @@
              </property>
             </widget>
            </item>
-           <item row="21" column="4">
+           <item row="21" column="5">
             <widget class="QLineEdit" name="txtLayerGroup">
              <property name="inputMask">
               <string/>
@@ -1329,7 +1309,7 @@
              </property>
             </widget>
            </item>
-           <item row="18" column="0" colspan="5">
+           <item row="18" column="0" colspan="6">
             <widget class="QLabel" name="lblOptionalParams">
              <property name="font">
               <font>
@@ -1356,7 +1336,7 @@
              </property>
             </widget>
            </item>
-           <item row="14" column="4">
+           <item row="14" column="5">
             <widget class="QComboBox" name="cmbUnits">
              <property name="focusPolicy">
               <enum>Qt::StrongFocus</enum>
@@ -1379,7 +1359,7 @@
              </property>
             </widget>
            </item>
-           <item row="12" column="4">
+           <item row="12" column="5">
             <widget class="QComboBox" name="cmbRes">
              <property name="focusPolicy">
               <enum>Qt::StrongFocus</enum>
@@ -1399,7 +1379,7 @@
              </property>
             </widget>
            </item>
-           <item row="11" column="4">
+           <item row="11" column="5">
             <widget class="QLineEdit" name="txtLocation">
              <property name="focusPolicy">
               <enum>Qt::StrongFocus</enum>
@@ -1422,7 +1402,7 @@
              </property>
             </widget>
            </item>
-           <item row="10" column="4">
+           <item row="10" column="5">
             <widget class="QLineEdit" name="txtLayerName">
              <property name="enabled">
               <bool>true</bool>
@@ -1451,7 +1431,7 @@
              </property>
             </widget>
            </item>
-           <item row="9" column="4">
+           <item row="9" column="5">
             <layout class="QHBoxLayout" name="hblOutputPath">
              <property name="spacing">
               <number>-1</number>
@@ -1497,7 +1477,7 @@
              </property>
             </widget>
            </item>
-           <item row="8" column="4">
+           <item row="8" column="5">
             <widget class="QComboBox" name="cmbOutputType">
              <property name="focusPolicy">
               <enum>Qt::StrongFocus</enum>
@@ -1514,7 +1494,7 @@
              </property>
             </widget>
            </item>
-           <item row="7" column="0" colspan="5">
+           <item row="7" column="0" colspan="6">
             <widget class="QLabel" name="lblMandatoryParams">
              <property name="font">
               <font>
@@ -1541,7 +1521,7 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="0" colspan="5">
+           <item row="1" column="0" colspan="6">
             <widget class="QLabel" name="lblQGISInput">
              <property name="font">
               <font>
@@ -1558,7 +1538,7 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="4">
+           <item row="2" column="5">
             <layout class="QHBoxLayout" name="horizontalLayout_2">
              <item>
               <widget class="QComboBox" name="cmbInputLayer">
@@ -1593,6 +1573,43 @@
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
+            </widget>
+           </item>
+           <item row="29" column="5">
+            <widget class="QComboBox" name="cmbRoadClasses">
+             <property name="focusPolicy">
+              <enum>Qt::StrongFocus</enum>
+             </property>
+            </widget>
+           </item>
+           <item row="30" column="3" colspan="3">
+            <widget class="QWidget" name="wgtNetworkMap" native="true">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="focusPolicy">
+              <enum>Qt::StrongFocus</enum>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_8">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <layout class="QGridLayout" name="glNetworkMap"/>
+              </item>
+             </layout>
             </widget>
            </item>
           </layout>
@@ -1632,7 +1649,7 @@
             <x>0</x>
             <y>0</y>
             <width>470</width>
-            <height>1208</height>
+            <height>940</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -1698,7 +1715,7 @@
     </spacer>
    </item>
    <item row="5" column="0" colspan="2">
-    <layout class="QHBoxLayout" name="hblRunClose" stretch="0,0,0">
+    <layout class="QHBoxLayout" name="hblRunClose" stretch="0,0,0,0">
      <property name="spacing">
       <number>10</number>
      </property>
@@ -1714,6 +1731,13 @@
      <property name="rightMargin">
       <number>0</number>
      </property>
+     <item>
+      <widget class="QPushButton" name="btnPrevSettings">
+       <property name="text">
+        <string>Previous Settings</string>
+       </property>
+      </widget>
+     </item>
      <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
@@ -1802,6 +1826,7 @@
   <tabstop>chkFixGeometry</tabstop>
   <tabstop>chkClipToQGISCanvas</tabstop>
   <tabstop>btnCancel</tabstop>
+  <tabstop>btnPrevSettings</tabstop>
   <tabstop>btnRun</tabstop>
   <tabstop>btnClose</tabstop>
   <tabstop>scrollArea</tabstop>

@@ -345,19 +345,9 @@ public class LineInspector {
 
 	public void CreateLineMapLayer(LineInspectorInfo lineInfo, LineInspectionMapLayer lineInspectionMapLayerPrefab)
 	{
-		lineInfo.mapLayer = CreateMapLayer(lineInspectionMapLayerPrefab, "LineInspectionLayer" + createdLineInspectionCount.ToString());
+		lineInfo.mapLayer = toolLayers.CreateMapLayer(lineInspectionMapLayerPrefab, "LineInspectionLayer" + createdLineInspectionCount.ToString());
 		lineInfo.mapLayer.Init(lineInfo.coords);
 		lineInfo.mapLayer.ShowTransect(false);
 	}
 
-	//
-	// Private Methods
-	//
-
-	private T CreateMapLayer<T>(T prefab, string layerName) where T : GridMapLayer
-	{
-		T mapLayer = GameObject.Instantiate(prefab);
-		toolLayers.Add(mapLayer, new GridData(), layerName, Color.white);
-		return mapLayer;
-	}
 }

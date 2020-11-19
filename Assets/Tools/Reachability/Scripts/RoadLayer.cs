@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -16,16 +16,16 @@ public class RoadLayer : GridMapLayer
 {
 	public GraphData graph;
 
-    private int classificationIndex;
+    private int classification;
 
 	//
 	// Public Method
 	//
 
-	public void Init(GraphPatch patch, int classificationIndex, List<Coordinate> points)
+	public void Init(GraphPatch patch, int classification, List<Coordinate> points)
     {
         graph = new GraphData();
-        this.classificationIndex = classificationIndex;
+        this.classification = classification;
 
         GraphData g = patch.graph;
         graph.cellSizeX = g.cellSizeX;
@@ -78,20 +78,20 @@ public class RoadLayer : GridMapLayer
 		double kX = 1.0 / graph.cellSizeX;
 		double kY = 1.0 / graph.cellSizeY;
 
-		for (int i = 0; i < points.Count - 1; i++)
+        for (int i = 0; i < points.Count - 1; i++)
         {
-            int value = classificationIndex == 0? 0 : 1 << (classificationIndex - 1); 
-
             Coordinate coorStart = points[i];
             Coordinate coorEnd = points[i + 1];
-            GraphNode startNode = new GraphNode(coorStart.Longitude, coorStart.Latitude, value);
-            GraphNode endNode = new GraphNode(coorEnd.Longitude, coorEnd.Latitude, value);
 
-            int startIndex = (int)((startNode.longitude - graph.west) * kX) + grid.countX * (int)((graph.north - startNode.latitude) * kY);
+            int startIndex = (int)((coorStart.Longitude - graph.west) * kX) + grid.countX * (int)((graph.north - coorStart.Latitude) * kY);
+            int endIndex = (int)((coorEnd.Longitude - graph.west) * kX) + grid.countX * (int)((graph.north - coorEnd.Latitude) * kY);
+
+            var startNode = new GraphNode(coorStart.Longitude, coorStart.Latitude, classification, startIndex);
+            var endNode = new GraphNode(coorEnd.Longitude, coorEnd.Latitude, classification, endIndex);
+
             int startRow = startIndex / grid.countX;
             int startColumn = startIndex - startRow * grid.countX;
 
-            int endIndex = (int)((endNode.longitude - graph.west) * kX) + grid.countX * (int)((graph.north - endNode.latitude) * kY);
             int endRow = endIndex / grid.countX;
             int endColumn = endIndex - endRow * grid.countX;
 
@@ -117,10 +117,10 @@ public class RoadLayer : GridMapLayer
                 {
                     if (i == 0)
                     {
-						if (startNode.value == ClassificationValue.Highway) // 16
+						if (startNode.classifications == ClassificationValue.Highway) // 16
 						{
 							// The first point is highway link
-							startNode.value = ClassificationValue.HighwayLink; // 8
+							startNode.classifications = ClassificationValue.HighwayLink; // 8
 						}
                         AddNode(startIndex, startNode);
                         continue;
@@ -132,16 +132,16 @@ public class RoadLayer : GridMapLayer
                 {
                     GraphNode lastNode = graph.nodes[graph.nodes.Count - 1];
 
-					if ((i == points.Count - 2) && endNode.value == ClassificationValue.Highway) // 16
+					if ((i == points.Count - 2) && endNode.classifications == ClassificationValue.Highway) // 16
 					{
-						endNode.value = ClassificationValue.HighwayLink; // 8
+						endNode.classifications = ClassificationValue.HighwayLink; // 8
 					}
 
                     AddNode(endIndex, endNode);
 
 					var distance = (float)GeoCalculator.GetDistanceInMeters(endNode.longitude, endNode.latitude, lastNode.longitude, lastNode.latitude);
 
-                    GraphNode.AddLink(endNode, lastNode, distance, endNode.value);
+                    GraphNode.AddLink(endNode, lastNode, distance, endNode.classifications);
                 }
                 else
                 {
@@ -176,17 +176,17 @@ public class RoadLayer : GridMapLayer
                         }
                     }
 
-					GraphNode newNode = new GraphNode(lon, lat, value);
+                    int index = (int)((lon - graph.west) * kX) + grid.countX * (int)((graph.north - lat) * kY);
+                    var newNode = new GraphNode(lon, lat, classification, index);
 
 					var distance = (float)GeoCalculator.GetDistanceInMeters(endNode.longitude, endNode.latitude, lastNode.longitude, lastNode.latitude);
 
-					int index = (int)((lon - graph.west) * kX) + grid.countX * (int)((graph.north - lat) * kY);
                     AddNode(index, newNode);
 
                     if (i == 0 && j == 1)
                         GraphNode.AddLink(endNode, lastNode, distance, ClassificationValue.HighwayLink); // 8
 					else
-                        GraphNode.AddLink(newNode, lastNode, distance, value);
+                        GraphNode.AddLink(newNode, lastNode, distance, classification);
                 }
             }
         }

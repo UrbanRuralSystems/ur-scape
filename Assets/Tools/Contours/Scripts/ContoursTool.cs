@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -190,7 +190,7 @@ public class ContoursTool : Tool
 		if (isOn)
         {
 			contoursLayer.FetchGridValues();
-			lockedContours = CreateMapLayer(snapshotLayerPrefab, "LockedContours", contoursLayer.Grid);
+			lockedContours = toolLayers.CreateMapLayer(snapshotLayerPrefab, "LockedContours", contoursLayer.Grid);
             lockedContours.Show(showContoursToggle.isOn);
         }
         else
@@ -205,14 +205,14 @@ public class ContoursTool : Tool
 		UpdateContoursInfo();
 	}
 
-    public override void OnToggleTool(bool isOn)
+	protected override void OnToggleTool(bool isOn)
     {
         if (isOn)
         {
 			runningSnapshotCounter = 1;
 
 			// Create contours layer
-			contoursLayer = CreateMapLayer(contoursLayerPrefab, "Contours");
+			contoursLayer = toolLayers.CreateMapLayer(contoursLayerPrefab, "Contours");
 			contoursLayer.ExcludeCellsWithNoData(excludeNoDataToggle.isOn);
 
 			// Listen to any data layers being added/removed
@@ -335,10 +335,8 @@ public class ContoursTool : Tool
 		}
 	}
 
-	public override void OnActiveTool(bool isActive)
+	protected override void OnActiveTool(bool isActive)
     {
-		base.OnActiveTool(isActive);
-
         if (infoPanel != null)
         {
 			ComponentManager.Instance.Get<OutputPanel>().SetPanel(isActive ? infoPanel.transform : null);
@@ -663,7 +661,7 @@ public class ContoursTool : Tool
 		input.onEndEdit.AddListener((value) => OnEndEdit(value, input, snapshot));
 
 		// Create snapshot's map layer
-		snapshot.mapLayer = CreateMapLayer(snapshotLayerPrefab, "ContoursSnapshot", gridData);
+		snapshot.mapLayer = toolLayers.CreateMapLayer(snapshotLayerPrefab, "ContoursSnapshot", gridData);
 
 		// Set Snapshot color
 		SetColorsToSnapshot(snapshot.mapLayer, toggleButton, deleteButton);
@@ -703,14 +701,6 @@ public class ContoursTool : Tool
 			}
 		}
 	}
-
-    private T CreateMapLayer<T>(T prefab, string layerName, GridData gridData = null) where T : GridMapLayer
-    {
-        T mapLayer = Instantiate(prefab);
-		var grid = gridData == null ? new GridData() : new GridData(gridData);
-        toolLayers.Add(mapLayer, grid, layerName, Color.white);
-        return mapLayer;
-    }
 
     private void DeleteAllLayers()
     {
@@ -865,8 +855,8 @@ public class ContoursTool : Tool
 	{
 		do
 		{
-			nextUpdateFrame = Time.frameCount + 10;
-			do yield return null; while (Time.frameCount < nextUpdateFrame);
+			needsUpdate = false;
+			while (Time.frameCount < nextUpdateFrame) yield return null;
 			_UpdateContoursInfo();
 		}
 		while (needsUpdate);
@@ -882,15 +872,15 @@ public class ContoursTool : Tool
 		{
 			if (showContoursToggle.isOn && (contoursLayer.grids.Count > 0 || lockedContours != null))
 			{
-				// Avoid doing multiple updates per frame
-				nextUpdateFrame = Time.frameCount + 1;
-
 				contoursLayer.FetchGridValues();
 				var sqm = ContourUtils.GetContoursSquareMeters(contoursLayer.Grid);
 
 				// Show the stats FIRST to ensure proper UI colors
 				infoPanel.ShowStats(true);
 				infoPanel.UpdateEntry("CC", sqm);
+
+				// Avoid doing multiple updates per frame (in case it's called outside of coroutine)
+				nextUpdateFrame = Time.frameCount + 10;
 			}
 			else if (grids.Count > 0)
 			{

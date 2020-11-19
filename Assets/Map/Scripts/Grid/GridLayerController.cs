@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -45,6 +45,12 @@ public class GridLayerController : MapLayerControllerT<GridMapLayer>
 	{
 		layer.Init(map, grid);
 
+#if UNITY_EDITOR
+		layer.name = grid.patch.DataLayer.Name;
+		if (!string.IsNullOrWhiteSpace(grid.patch.Filename))
+			layer.name += Patch.GetFileNamePatch(grid.patch.Filename);
+#endif
+
 		var dataLayer = grid.patch.DataLayer;
 		layer.SetColor(dataLayer.Color);
 		layer.transform.SetParent(transform, false);
@@ -57,8 +63,7 @@ public class GridLayerController : MapLayerControllerT<GridMapLayer>
 			visibleDataLayers.Add(dataLayer);
 		}
 
-		if (OnShowGrid != null)
-			OnShowGrid(layer, true);
+		OnShowGrid?.Invoke(layer, true);
 
 		ArrangeLayers();
 
@@ -80,8 +85,7 @@ public class GridLayerController : MapLayerControllerT<GridMapLayer>
 			visibleDataLayers.Remove(dataLayer);
 		}
 
-		if (OnShowGrid != null)
-			OnShowGrid(layer, false);
+		OnShowGrid?.Invoke(layer, false);
 
 		Destroy(layer.gameObject);
 
@@ -105,6 +109,19 @@ public class GridLayerController : MapLayerControllerT<GridMapLayer>
 		}
 	}
 
+	public void AutoGamma(GridMapLayer mapLayer)
+	{
+		var mean = mapLayer.PatchData.patch.SiteRecord.layerSite.mean;
+		if (mean < MeanThreshold)
+		{
+			mapLayer.SetGamma(Mathf.Log(mean) * InvMeanThresholdLog);
+		}
+		else
+		{
+			mapLayer.SetGamma(1f);
+		}
+	}
+
 
 	//
 	// Private Methods
@@ -118,31 +135,50 @@ public class GridLayerController : MapLayerControllerT<GridMapLayer>
 		}
 		else if (mapLayers.Count > 1)
 		{
-			int count = 0;
-			foreach (var dataLayer in visibleDataLayers)
+			if (offCenter > 0)
 			{
-				if (dataLayer.patchesInView[0] is GridPatch)
-					count++;
-			}
-
-			float invCount = 1f / count;
-			float radians = Mathf.Deg2Rad * 360f * invCount;
-			float distance = offCenter * (1f - invCount);
-			int index = 0;
-			foreach (var dataLayer in visibleDataLayers)
-			{
-				var rad = index * radians;
-				var xOffset = distance * Mathf.Cos(rad);
-				var yOffset = distance * Mathf.Sin(rad);
-				foreach (var patch in dataLayer.loadedPatchesInView)
+				int count = 0;
+				foreach (var dataLayer in visibleDataLayers)
 				{
-					var mapLayer = patch.GetMapLayer() as GridMapLayer;
-					if (mapLayer != null && patch is GridPatch)
-					{
-						mapLayer.SetOffset(xOffset, yOffset);
-					}
+					if (!dataLayer.IsTemp && dataLayer.patchesInView[0] is GridPatch)
+						count++;
 				}
-				index++;
+
+				float invCount = 1f / count;
+				float radians = Mathf.Deg2Rad * 360f * invCount;
+				float distance = offCenter * (1f - invCount);
+				int index = 0;
+				foreach (var dataLayer in visibleDataLayers)
+				{
+					float xOffset, yOffset;
+					if (dataLayer.IsTemp)
+					{
+						xOffset = yOffset = 0;
+					}
+					else
+					{
+						var rad = index * radians;
+						xOffset = distance * Mathf.Cos(rad);
+						yOffset = distance * Mathf.Sin(rad);
+					}
+
+					foreach (var patch in dataLayer.loadedPatchesInView)
+					{
+						var mapLayer = patch.GetMapLayer() as GridMapLayer;
+						if (mapLayer != null && patch is GridPatch)
+						{
+							mapLayer.SetOffset(xOffset, yOffset);
+						}
+					}
+					index++;
+				}
+			}
+			else
+			{
+				foreach (var mapLayer in mapLayers)
+				{
+					mapLayer.SetOffset(0, 0);
+				}
 			}
 		}
 	}
@@ -155,15 +191,7 @@ public class GridLayerController : MapLayerControllerT<GridMapLayer>
 		if (string.IsNullOrEmpty(patch.Filename))
 			return;
 
-		var layerSite = patch.SiteRecord.layerSite;
-		if (layerSite.mean < MeanThreshold)
-		{
-			float autoGamma = Mathf.Log(layerSite.mean) * InvMeanThresholdLog;
-			mapLayer.SetGamma(autoGamma);
-		}
-		else
-		{
-			mapLayer.SetGamma(1f);
-		}
+		AutoGamma(mapLayer);
 	}
+
 }

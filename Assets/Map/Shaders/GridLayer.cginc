@@ -39,7 +39,7 @@ sampler1D Projection;
 
 #if CATEGORIZED
 	// Categorized Grid Only Properties
-	fixed4 CategoryColors[128];
+	fixed4 CategoryColors[256];
 #else
 	// Default Grid Only Properties
 	float FilterMinValue;
@@ -186,19 +186,24 @@ fixed4 frag(v2f i) : SV_Target
 		#endif
 		#endif
 
-		value = filter * stripes / StripesCount;
+		value = stripes / StripesCount;
 	#else
 		// Normalize the value
-		value = pow(value - MinValue, Gamma) * InvValueRange;
+		value = (value - MinValue) * InvValueRange;
 
 		#if STRIPES_UNIFORM
 			value = ceil(value * StripesCount) / StripesCount;
 		#elif STRIPES_UNIFORM_REVERSE
 			value = ceil(StripesCount - value * StripesCount) / StripesCount;
+		#elif GRADIENT_REVERSE
+			value = 1 - value;
 		#endif
 
-		value = saturate(value * filter);
+		// Apply gamma (need to saturate value to avoid negative numbers)
+		value = pow(saturate(value), Gamma);
 	#endif
+	
+	value = saturate(value * filter);
 
 #endif
 

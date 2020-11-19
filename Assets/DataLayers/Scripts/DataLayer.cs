@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -74,6 +74,19 @@ public class DataLayer
 		this.dataManager = dataManager;
 	}
 
+	public void Remove()
+	{
+		HidePatchesInView();
+
+		var sites = GetSites();
+		foreach (var site in sites)
+		{
+			site.RemoveLayer(this);
+		}
+
+		Group.RemoveLayer(this);
+	}
+
 	public void ChangeName(string newName)
 	{
 		if (string.IsNullOrWhiteSpace(newName) || Name == newName)
@@ -135,8 +148,8 @@ public class DataLayer
 
 		foreach (var level in levels)
 		{
-			foreach (var site in level.layerSites)
-				UpdateSitePatchesMinMaxFilters(site);
+			foreach (var layerSite in level.layerSites)
+				layerSite.UpdatePatchesMinMaxFilters(min, max);
 		}
 	}
 
@@ -441,6 +454,19 @@ public class DataLayer
 		return loadedPatchesInView.Count > 0;
 	}
 
+	public bool HasPatches()
+	{
+		foreach (var level in levels)
+		{
+			foreach (var layerSite in level.layerSites)
+			{
+				if (layerSite.LastRecord.patches.Count > 0)
+					return true;
+			}
+		}
+		return false;
+	}
+
 	public bool HasPatches(Site site, int levelIndex, double west, double east, double north, double south)
 	{
 		foreach (var layerSite in levels[levelIndex].layerSites)
@@ -603,6 +629,16 @@ public class DataLayer
 		return false;
 	}
 
+	public void UpdateAfterValuesChange(GridData gridData)
+	{
+		var layerSite = gridData.patch.SiteRecord.layerSite;
+		layerSite.RecalculateMinMax();
+		layerSite.RecalculateMean(true);
+		layerSite.UpdatePatchesMinMaxFilters(MinFilter, MaxFilter);
+
+		UpdateLoadedVisibleRange();
+	}
+
 
 	//
 	// Event Methods
@@ -759,55 +795,24 @@ public class DataLayer
 
 	private void UpdateValueRanges(GridData gridData)
 	{
-		bool siteValueRangeHasChanged = false;
-
 		// Update site's value range
 		var layerSite = gridData.patch.SiteRecord.layerSite;
-		if (layerSite.minValue == 0 && layerSite.maxValue == 0)
-		{
-			layerSite.minValue = gridData.minValue;
-			layerSite.maxValue = gridData.maxValue;
-			siteValueRangeHasChanged = true;
-		}
-		else if (gridData.minValue < layerSite.minValue || gridData.maxValue > layerSite.maxValue)
-		{
-			layerSite.minValue = Mathf.Min(layerSite.minValue, gridData.minValue);
-			layerSite.maxValue = Mathf.Max(layerSite.maxValue, gridData.maxValue);
-			siteValueRangeHasChanged = true;
-		}
+		bool siteValueRangeHasChanged = layerSite.UpdateMinMax(gridData.minValue, gridData.maxValue);
 
 		if (gridData.patch is GridPatch)
-			UpdateSiteMean(layerSite, siteValueRangeHasChanged);
+			layerSite.RecalculateMean(siteValueRangeHasChanged);
 		else
 			layerSite.mean = 1;
 
 		if (MinFilter != 0 || MaxFilter != 1)
-			UpdateSitePatchesMinMaxFilters(layerSite);
+			layerSite.UpdatePatchesMinMaxFilters(MinFilter, MaxFilter);
 
 		// Update layer's value range
 		MinVisibleValue = Mathf.Min(MinVisibleValue, gridData.minValue);
 		MaxVisibleValue = Mathf.Max(MaxVisibleValue, gridData.maxValue);
 	}
 
-	private void UpdateSiteMean(LayerSite layerSite, bool recalculateMean)
-	{
-		layerSite.mean = 0;
-		foreach (var record in layerSite.records.Values)
-		{
-			//var record = visibleYear == -1 ? layerSite.LastRecord : layerSite.records[visibleYear];
-			foreach (var patch in record.patches)
-			{
-				if (patch.Data is GridData grid && grid.IsLoaded())
-				{
-					double mean = grid.GetMean(layerSite.minValue, recalculateMean);
-					float meanPercent = Mathf.InverseLerp(layerSite.minValue, layerSite.maxValue, (float)mean);
-					layerSite.mean = Mathf.Max(layerSite.mean, meanPercent);
-				}
-			}
-		}
-	}
-
-    private void UpdateLoadedVisibleRange()
+	private void UpdateLoadedVisibleRange()
     {
 		InitVisibleRange();
 		if (loadedPatchesInView.Count > 0)
@@ -841,23 +846,6 @@ public class DataLayer
     {
         MinVisibleValue = float.MaxValue;
         MaxVisibleValue = float.MinValue;
-	}
-
-	private void UpdateSitePatchesMinMaxFilters(LayerSite layerSite)
-	{
-		float siteMin = Mathf.Lerp(layerSite.minValue, layerSite.maxValue, MinFilter);
-		float siteMax = Mathf.Lerp(layerSite.minValue, layerSite.maxValue, MaxFilter);
-
-		foreach (var record in layerSite.records.Values)
-		{
-			foreach (var patch in record.patches)
-			{
-				if (patch is GridPatch)
-				{
-					(patch as GridPatch).SetMinMaxFilter(siteMin, siteMax);
-				}
-			}
-		}
 	}
 
 	private void RenamePatches(string newName)

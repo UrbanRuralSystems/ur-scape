@@ -10,6 +10,15 @@ using UnityEngine;
 
 public class ToolLayerController : MapLayerControllerT<GridMapLayer>
 {
+    public T CreateMapLayer<T>(T prefab, string layerName, GridData gridData = null) where T : GridMapLayer
+    {
+        T mapLayer = Instantiate(prefab);
+        var grid = gridData == null ? new GridData() : new GridData(gridData);
+        Add(mapLayer, grid, layerName, Color.white);
+
+        return mapLayer;
+    }
+
     public void Add(GridMapLayer layer, GridData grid, string name, Color color)
     {
         layer.Init(map, grid);

@@ -252,6 +252,7 @@ public static class PatchDataIO
 				}
 				catch (Exception e)
 				{
+					UnityEngine.Debug.LogError("Exception thrown file parsing " + taskData.filename);
 					UnityEngine.Debug.LogException(e);
 				}
 

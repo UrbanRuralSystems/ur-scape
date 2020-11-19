@@ -1088,6 +1088,19 @@ class CheckLayer:
     def processNoData(self,setup,path):
         #Get values list from raster
         inRaster = gdal.Open(path,GA_ReadOnly)
+        
+        # Prepare variables for saving temp files
+        today = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_")
+        tempFolder = QgsProcessingUtils.tempFolder()
+        filename, file_extension = os.path.splitext(path)
+        
+        inRaster = gdal.Open(path)
+
+        # Transalte when dataset is not Geotiff because it can be scaled (e.g. NetCDF format)
+        if  file_extension != ".tif":
+            translatedPath = tempFolder + '/Translated_' + today + name
+            inRaster = gdal.Translate(translatedPath,rawRaster,**{'unscale': True})
+        
         countX = inRaster.RasterXSize
         countY = inRaster.RasterYSize
 
@@ -1101,8 +1114,7 @@ class CheckLayer:
         
         # Create Output Raster
         driver = gdal.GetDriverByName('GTiff')
-        today = datetime.datetime.now()
-        newRasterPath = QgsProcessingUtils.tempFolder() + '/' + today.strftime("%Y%m%d_%H%M%S_") + name
+        newRasterPath = tempFolder + '/' + today + name
 
         raster = driver.Create(newRasterPath, countX, countY, 1, gdal.GDT_Float64)
         raster.SetGeoTransform(inRaster.GetGeoTransform() )

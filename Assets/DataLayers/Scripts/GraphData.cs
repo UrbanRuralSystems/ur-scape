@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -14,16 +14,16 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public static class ClassificationIndex
+public enum ClassificationIndex
 {
-	public const int None = 0;
-	public const int Other = 1;
-	public const int Secondary = 2;
-	public const int Primary = 3;
-	public const int HighwayLink = 4;
-	public const int Highway = 5;
+	None = 0,
+	Other = 1,
+	Secondary = 2,
+	Primary = 3,
+	HighwayLink = 4,
+	Highway = 5,
 
-	public const int Count = 6;
+	Count = 6,
 }
 
 public static class ClassificationValue
@@ -38,86 +38,134 @@ public static class ClassificationValue
 	public const int Count = 6;
 }
 
+public static class ClassificationMap
+{
+	public static readonly int[][] ToValues = InitToValuesArray();
+	private static int[][] InitToValuesArray()
+	{
+		int lastClassificationIndex = (int)ClassificationIndex.Count - 1;
+		int[][] map = new int[(int)Math.Pow(2, lastClassificationIndex)][];
+		map[0] = new int[] { 0 };
+
+		int count = map.Length;
+		for (int i = 1; i < count; i++)
+		{
+			var arr = map[i] = new int[CountBits(i)];
+
+			int index = 0;
+			for (int j = 0; j < lastClassificationIndex; j++)
+			{
+				if ((i & (1 << j)) != 0)
+					arr[index++] = (1 << j);
+			}
+		}
+		return map;
+	}
+
+	private static int CountBits(int value)
+	{
+		int count = 0;
+		while (value != 0)
+		{
+			count++;
+			value &= value - 1;
+		}
+		return count;
+	}
+}
+
+
 public class GraphNode
 {
     public readonly double longitude;
     public readonly double latitude;
-    
-    public readonly List<GraphNode> links = new List<GraphNode>();
-    public readonly List<float> distances = new List<float>();
-    public readonly List<int> classifications = new List<int>();
+	public int classifications;
 
-	public int value;
-    public float cost;
-    public int index;
+	public readonly List<GraphNode> links = new List<GraphNode>();
+    public readonly List<float> linkDistances = new List<float>();
+    public readonly List<int> linkClassifications = new List<int>();
 
-    public GraphNode(double longitude, double latitude, int value)
+    public float cost;	// cost is dynamically calculated based on the start point(s)
+    public int index;	// the index to the cell in the GridData
+
+	public GraphNode(double longitude, double latitude, int classifications, int index)
+	{
+		this.longitude = longitude;
+		this.latitude = latitude;
+		this.classifications = classifications;
+		this.index = index;
+	}
+
+	public static void AddLink(GraphNode nodeA, GraphNode nodeB, float distance, int classification)
     {
-        this.value = value;
-        this.longitude = longitude;
-        this.latitude = latitude;
-    }
-
-    public GraphNode(double longitude, double latitude)
-    {
-        this.longitude = longitude;
-        this.latitude = latitude;
-    }
-
-    public static void AddLink(GraphNode nodeA, GraphNode nodeB, float distance, int classification)
-    {
-        if (classification == ClassificationValue.None)
-        {
-            if (!nodeA.links.Contains(nodeB))
-            {
-                AddLinkData(nodeA, nodeB, distance, classification);
-            }
-			if (!nodeB.links.Contains(nodeA))
-			{
-				AddLinkData(nodeB, nodeA, distance, classification);
-			}
-		}
-
-		// Seperate links with different classification
-		for (int i = 0; i < ClassificationIndex.Highway; i++)
-        {
-			int classificationMask = 1 << i;
-
-			if ((classification & classificationMask) > 0)
-            {
-				AddLinkData(nodeA, nodeB, distance, classificationMask);
-				AddLinkData(nodeB, nodeA, distance, classificationMask);
-			}
-		}            
-    }
-
-    public static void RemoveLink(GraphNode nodeA, GraphNode nodeB, int classification)
-    {
-        for (int i = 0; i < nodeA.links.Count; i++)
-        {
-            if (nodeA.links[i].Equals(nodeB) && nodeA.classifications[i] == classification)
-            {
-                nodeA.links.RemoveAt(i);
-                nodeA.distances.RemoveAt(i);
-                nodeA.classifications.RemoveAt(i);
-            }
-        }
-
-		for (int i = 0; i < nodeB.links.Count; i++)
+		if (classification == ClassificationValue.None)
 		{
-			if (nodeB.links[i].Equals(nodeA) && nodeB.classifications[i] == classification)
+			AddLinkData(nodeA, nodeB, distance, classification);
+			AddLinkData(nodeB, nodeA, distance, classification);
+		}
+		else
+		{
+			// Seperate links with different classification
+			var classValues = ClassificationMap.ToValues[classification];
+			int count = classValues.Length;
+			for (int i = 0; i < count; i++)
 			{
-				nodeB.links.RemoveAt(i);
-				nodeB.distances.RemoveAt(i);
-				nodeB.classifications.RemoveAt(i);
+				AddLinkData(nodeA, nodeB, distance, classValues[i]);
+				AddLinkData(nodeB, nodeA, distance, classValues[i]);
 			}
 		}
 	}
 
-    private static void AddLinkData(GraphNode node, GraphNode link, float distance, int classification)
+    public static void RemoveLink(GraphNode nodeA, GraphNode nodeB, int classification)
+    {
+		for (int i = nodeA.links.Count - 1; i >= 0; --i)
+        {
+            if (nodeA.links[i] == nodeB && nodeA.linkClassifications[i] == classification)
+            {
+                nodeA.links.RemoveAt(i);
+                nodeA.linkDistances.RemoveAt(i);
+                nodeA.linkClassifications.RemoveAt(i);
+				break;
+            }
+        }
+
+		for (int i = nodeB.links.Count - 1; i >= 0; --i)
+		{
+			if (nodeB.links[i] == nodeA && nodeB.linkClassifications[i] == classification)
+			{
+				nodeB.links.RemoveAt(i);
+				nodeB.linkDistances.RemoveAt(i);
+				nodeB.linkClassifications.RemoveAt(i);
+				break;
+			}
+		}
+	}
+
+	public void RemoveLink(int index)
+	{
+		var nodeB = links[index];
+		int classification = linkClassifications[index];
+
+		links.RemoveAt(index);
+		linkDistances.RemoveAt(index);
+		linkClassifications.RemoveAt(index);
+
+		for (int i = nodeB.links.Count - 1; i >= 0; --i)
+		{
+			if (nodeB.links[i] == this && nodeB.linkClassifications[i] == classification)
+			{
+				nodeB.links.RemoveAt(i);
+				nodeB.linkDistances.RemoveAt(i);
+				nodeB.linkClassifications.RemoveAt(i);
+				break;
+			}
+		}
+	}
+
+	private static void AddLinkData(GraphNode node, GraphNode link, float distance, int classification)
     {
 #if SAFETY_CHECK
-		if (node.Equals(link) || node.index == link.index)
+		if (node == link || node.index == link.index)
 		{
 			Debug.LogError("A node can't have a link to itself!  Node: " + node.index);
 			return;
@@ -125,17 +173,20 @@ public class GraphNode
 #endif
 		for (int i = 0; i < node.links.Count; i++)
 		{
-			if (node.links[i].Equals(link) && node.classifications[i] == classification)
+			if (node.links[i] == link && node.linkClassifications[i] == classification)
 			{
-				Debug.LogWarning("Duplicate link found between node " + node.index + " and " + link.index + " with classification: " + classification);
-				node.distances[i] = Mathf.Min(node.distances[i], distance);
+#if SAFETY_CHECK
+				// Duplicate links should be avoided. Old csv files may have duplicate links due to bugs in the export tool
+				//+	Debug.LogWarning("Duplicate link found between node " + node.index + " and " + link.index + " with classification: " + classification);
+#endif
+				node.linkDistances[i] = distance < node.linkDistances[i] ? distance : node.linkDistances[i];
 				return;
 			}
 		}
 
 		node.links.Add(link);
-		node.distances.Add(distance);
-		node.classifications.Add(classification);
+		node.linkDistances.Add(distance);
+		node.linkClassifications.Add(classification);
     }
 }
 
@@ -177,155 +228,20 @@ public class GraphData : PatchData
 		grid.minValue = float.MaxValue;
 		grid.maxValue = float.MinValue;
 
-		double kX = 1.0 / cellSizeX;
-		double kY = 1.0 / cellSizeY;
-
 		for (int i = nodes.Count - 1; i >= 0; i--)
 		{
 			var node = nodes[i];
-			int index = (int)((node.longitude - west) * kX) + grid.countX * (int)((north - node.latitude) * kY);
-			int value = node.value;
-			int indexCopy = index;
+			int classification = node.classifications;
+			int index = Math.Abs(node.index);
 
-			if (value == ClassificationValue.Highway)	// 16
-			{
-				// not distinguish highway and highwaylink
-				value = ClassificationValue.HighwayLink;	// 8
-				// highway and other road are on the different layer, they could be overlapped
-				indexCopy = -index;
-			}
-
-			node.index = indexCopy;
-
-			int gridValue = (int)grid.values[index];
-
-			gridValue = Math.Max(value, gridValue);
+			int gridValue = classification + (int)grid.values[index];
 			grid.values[index] = gridValue;
-			grid.minValue = Mathf.Min(grid.minValue, gridValue);
-			grid.maxValue = Mathf.Max(grid.maxValue, gridValue);
+			grid.minValue = gridValue < grid.minValue ? gridValue : grid.minValue;
+			grid.maxValue = gridValue > grid.maxValue ? gridValue : grid.maxValue;
 		}
 
 		grid.minFilter = grid.minValue;
 		grid.maxFilter = grid.maxValue;
-	}
-
-	public void CreatePotentialNetwork(GridData grid)
-	{
-		int existingNodeCount = nodes.Count;
-
-		for (int i = grid.countX * grid.countY - 1; i >= 0; i--)
-		{
-			if (indexToNode.ContainsKey(i) && indexToNode.ContainsKey(-i)) // there are both highway and highway link
-			{
-				if (indexToNode[i].value >= ClassificationValue.HighwayLink)	// 8
-					CreateHighwayLink(i);
-			}
-
-			if (grid.values[i] == ClassificationValue.None)	// 0
-			{
-				// Create new nodes
-				int row = i / grid.countX;
-				int column = i - row * grid.countX;
-				double lonX = column * cellSizeX + west;
-				double latY = north - row * cellSizeY;
-
-				GraphNode newNode = new GraphNode(lonX, latY, 0);
-				newNode.index = i;
-				nodes.Add(newNode);
-				indexToNode.Add(i, newNode);
-			}
-		}
-
-		double x, y;
-		GeoCalculator.GetDistanceInMeters(west, south, east, north, out x, out y);
-		x /= grid.countX;
-		y /= grid.countY;
-		float distanceXY = (float)Math.Pow(x * x + y * y, 0.5);
-		float distanceX = (float)x;
-		float distanceY = (float)y;
-
-		// create links for each new node
-		int nodeCount = nodes.Count;
-		for (int i = existingNodeCount; i < nodeCount; i++)
-		{
-			GraphNode node = nodes[i];
-			if (node.value == 0)
-			{
-				int thisIndex = node.index;
-				int row = thisIndex / grid.countX;
-				int column = thisIndex - row * grid.countX;
-				if (row > 0)
-				{
-					int upIndex = thisIndex - grid.countX;
-					if (indexToNode.ContainsKey(upIndex))
-						GraphNode.AddLink(node, indexToNode[upIndex], distanceY, ClassificationValue.None);
-				}
-
-				if (column > 0) // not on the left edge
-				{
-					int leftIndex = thisIndex - 1;
-					if (indexToNode.ContainsKey(leftIndex))
-						GraphNode.AddLink(node, indexToNode[leftIndex], distanceX, ClassificationValue.None);
-				}
-
-				if (row < grid.countY - 1) // not on the bottom
-				{
-					int downIndex = thisIndex + grid.countX;
-					if (indexToNode.ContainsKey(downIndex))
-						GraphNode.AddLink(node, indexToNode[downIndex], distanceY, ClassificationValue.None);
-				}
-
-				if (column < grid.countX - 1)
-				{
-					int rightIndex = thisIndex + 1;
-					if (indexToNode.ContainsKey(rightIndex))
-						GraphNode.AddLink(node, indexToNode[rightIndex], distanceX, ClassificationValue.None);
-				}
-
-				if (row > 0 && column > 0)
-				{
-					int upleftIndex = thisIndex - grid.countX - 1;
-					if (indexToNode.ContainsKey(upleftIndex))
-						GraphNode.AddLink(node, indexToNode[upleftIndex], distanceXY, ClassificationValue.None);
-				}
-
-				if (row > 0 && column < grid.countX - 1)
-				{
-					int uprightIndex = thisIndex - grid.countX + 1;
-					if (indexToNode.ContainsKey(uprightIndex))
-						GraphNode.AddLink(node, indexToNode[uprightIndex], distanceXY, ClassificationValue.None);
-				}
-
-				if (row < grid.countY - 1 && column > 0)
-				{
-					int downleftIndex = thisIndex + grid.countX - 1;
-					if (indexToNode.ContainsKey(downleftIndex))
-						GraphNode.AddLink(node, indexToNode[downleftIndex], distanceXY, ClassificationValue.None);
-				}
-
-				if (row < grid.countY - 1 && column < grid.countX - 1)
-				{
-					int downrightIndex = thisIndex + grid.countX + 1;
-					if (indexToNode.ContainsKey(downrightIndex))
-						GraphNode.AddLink(node, indexToNode[downrightIndex], distanceXY, ClassificationValue.None);
-				}
-			}
-		}
-	}
-
-	private void CreateHighwayLink(int index)
-	{
-		GraphNode highwayNode = indexToNode[-index];
-		GraphNode linkNode = indexToNode[index];
-
-		for (int i = 0; i < linkNode.links.Count; i++)
-		{
-			if (linkNode.classifications[i] == ClassificationValue.HighwayLink)	// 8
-			{
-				GraphNode.AddLink(highwayNode, linkNode.links[i], linkNode.distances[i], ClassificationValue.HighwayLink); // 8
-				GraphNode.RemoveLink(linkNode, linkNode.links[i], ClassificationValue.HighwayLink); // 8
-			}
-		}
 	}
 
 }

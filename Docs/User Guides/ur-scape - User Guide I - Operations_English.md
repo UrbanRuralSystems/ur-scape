@@ -224,14 +224,24 @@ Step 5: In the 'Data' folder, open the 'backgrounds.csv' file. Create a new row 
 + To switch on a data layer, click on the button with the name of the data layer on it.
 + The button will be highlighted in its respective colour and the data will be displayed on the main frame. 
 
+![](Images\20200131_UI_ 01.png)
+
 **Filtering Uncategorised Data**
+
 + To filter uncategorised data, click on the icon next to the data layer button. 
+
 + A box will appear displaying a slider.
+
 + You may manually drag the triangles on both ends to filter the data you want displayed. 
+
 + Alternatively, you may click on the number and manually key in specific values.
+
 + Once you're done filtering the data, click on the icon button next to the data layer to hide the box.
 
+  ![](Images\20200131_UI_ 02.png)
+
 **Filtering Categorised Data**
+
 + To filter uncategorised data, click on the icon button next to the data layer.
 + A box will appear displaying a list of categories with a checkbox each. Categories that are displayed will have checkboxes with fill colour.
 + To have a quick preview of the data in each category of a layer, you can use your cursor to hover over each category. The data for that category will be highlighted on the main frame.
@@ -242,9 +252,14 @@ Step 5: In the 'Data' folder, open the 'backgrounds.csv' file. Create a new row 
   + Multiple categories displayed, double-click on a category <u>twice</u>. All categories will be displayed.
 + Once you're done filtering the data, click on the icon button next to the data layer to hide the box.
 
+![](Images\20200131_UI_ 03.png)
+
 **Activating A Tool** 
+
 + Click on the tool to activate.
 + To use more than one tool at a time, click the 'Add' tab to select an additional tool.
+
+![](Images\20200131_UI_ 04.png)
 
 **Changing Map Background**
 
@@ -252,18 +267,21 @@ Step 5: In the 'Data' folder, open the 'backgrounds.csv' file. Create a new row 
 + Map backgrounds are loaded on the fly from Mapbox and will require Internet connection.
 + Tip: to view areas with different backgrounds ur-scape without Internet connection, pre-load the tiles for these areas prior with  Internet connection. The tiles will be saved in the 'Tiles' folder.
 
+![](Images\20200131_UI_ 05.png)
+
 **Re-orienting Map**
+
 + To re-orient map to face true north, click on the north arrow on the compass.
 
 <div style="page-break-after: always;"></div>
+![](Images\20200131_UI_ 06.png)
+
 **View/ Pan Map in 3D**
 
 + To view/ pan map in 3D, 'Right-click, Hold + Drag'.
 + To exit 3D view, click on the north arrow on the compass.
 
-<br>
-<br>
-<br>
+![](Images\20200131_UI_ 07.png)
 
 <div style="page-break-after: always;"></div>
 ## 2.3 Organising Layers & Groups
@@ -271,15 +289,15 @@ Step 5: In the 'Data' folder, open the 'backgrounds.csv' file. Create a new row 
 A key feature of ur-scape is the multiple data layers. Before delving into how these data layers and their groups can be organised, users should understand how layers and groups work.<br>
 
 For each site in ur-scape, it contains its own unique set of data layers that can be overlaid for visualisation and analyses (as illustrated below). Essentially every individual data set being imported into ur-scape will be an individual data layer. 
-![](Images\20190524 ur-scape16- 1.png)
-The order of these layers is organised across all sites, using the 'Organise Layers' function. Any changes made to a layer (i.e. spelling, display colour, order) will be made to all instances of that layer across <u>all</u> sites.<br>
-![](Images\20190524 ur-scape17- 1.png)<br>
-![](Images\20190524 ur-scape18- 1.png)
+![](Images\20200131_Layer_ 01.png)
+The order of these layers is organised across all sites, using the 'Organise Layers' function. Any changes made to a layer (i.e. spelling, display colour, order) will be made to all instances of that layer across <u>all</u> sites.<br>![](Images\20200131_Layer_ 03.png)
+<br>
+![](Images\20200131_Layer_ 02.png)
 
 
 
 <div style="page-break-after: always;"></div>
-To customise data layers and groups, click on the hamburger icon to reveal the secondary menu.<br>
+To customise data layers and groups, click on the hamburger icon to reveal the secondary menu. <br>
 
 ![](Images\20190523 ur-scape4-01.png)
 
@@ -380,20 +398,31 @@ The Contours tool demarcates areas where defined data of one or more layers inte
 
 - Select data layers to be used by clicking on them.
 
+  ![](Images/20200131_Tools_Contours_01.png)
+
 **Step 2: Activate Contours Tool**
 
 - Click on the 'Contours' tool to activate it.
+
 - This will generate the resultant contour areas which demarcate where data from your selected data layers spatially intersect.
+
+  ![](Images/20200131_Tools_Contours_02.png)
 
 **Step 3: Filter Data**
 
 - You may filter the data for each layer as you wish.
+
 - The contour areas will be updated as you do so.
+
+  ![](Images/20200131_Tools_Contours_03.png)
 
 **Step 4: Store a Copy of Contours (optional)**
 
-+ Once you are satisfied with the contour areas generated, click on the 'Store a copy of Contours' to save a snapshot. Your snapshot will be saved.
++ Once you are satisfied with the contour areas generated, click on the 'Take Snapshot' to save a snapshot. Your snapshot will be saved.
+
 + Note: You may save up to 3 snapshots, after which you will be prompted to delete a snapshot to allow for more snapshots to be taken. 
+
+  ![](Images/20200131_Tools_Contours_04.png)
 
 **Additional Contours Settings**
 
@@ -420,34 +449,54 @@ Note: The Reachability tool can only be used where Road Network data is availabl
 **Step 1: Activate the Tool**
 
 - Click on the 'Reachability' tool to activate it.
+
 - Once the road network data layer is loaded, the tool is ready to be used. 
+
 - Note: Starting this tool may require some waiting time depending on the volume of the road network data.
+
+  ![](Images/20200131_Tools_Accessibility_01.png)
 
 **Step 2: Select Single or Multiple Points**
 
 - Click on either the 'Single Point' or 'Multiple Points' button.
+
 - If you would like to only view the reachability of one point, select the former;
+
 - Or select the latter for reachability of multiple points.
+
+  ![](Images/20200131_Tools_Accessibility_02.png)
 
 **Step 3: Select the Mobility Mode**
 
 - The modes available by default are Car, Motorbike and Walk - with the Car being selected by default.
+
 - You may choose to change the mobility mode.
+
+  ![](Images/20200131_Tools_Accessibility_03.png)
 
 **Step 4: Setting Total Travel Time**
 
 - To set the total travel time, drag across the slider.
 
+  ![](Images/20200131_Tools_Accessibility_04.png)
+
 **Step 5: Begin Pinning Point(s)**
 
 - Begin clicking on the map to pin the point(s).
+
 - You should immediately see the reachability of the point being generated in blue.
+
 - Tip: You may want to switch on a data layer that could guide the placement of these points (For example, jurisdiction data layer, healthcare amenities data layer).
+
+  ![](Images/20200131_Tools_Accessibility_06.png)
 
 **Step 5: Filter Reachability Time**
 
 - On running the 'Reachability' tool, a data layer named Reachability will be generated and added to the data layers panel on the left.
+
 - As the data is uncategorised, you may filter the reachability data displayed using the slider. 
+
+  ![](Images/20200131_Tools_Accessibility_05.png)
 
 <div style="page-break-after: always;"></div>
 ## 3.3 Planning
@@ -459,20 +508,29 @@ The Planning tool allows for the exploration of hypothetical planning scenarios 
 **Step 1: Activate the Tool**
 
 - Zoom to a case study site.
+
 - Click on the 'Planning' tool to activate it.
+
 - Note: At least one data set must be selected for the tool to work.
+
+  ![](Images/20200131_Tools_Planning_01.png)
 
 **Step 2: Select Drawing Tool**
 
 - You may select either the 'Draw cell by cell' or 'Draw by shape' tool to draw.
   - 'Draw cell by cell' tool: You may select individual cells to draw typologies.
   - 'Draw by shape' tool: Use a polygon or free-form lasso to draw typologies over multiple cells.
+
 - To select the tool, click on the icon representing the tool. 
+
+  ![](Images/20200131_Tools_Planning_02.png)
 
 **Step 3: Select Typology**
 
 - There are 10 typologies available: _Ruko_ (Shop House), _Rumah Tinggal_ (Residential House), _Apartemen Tingkat Rendah_ (Low-Rise Apartment), _Apartemen Tingkat Tinggi_ (High-Rise Apartment), _Rumah Tambah_ (Expandable House), _Ruang Terbuka_ (Public Space), _Panen Bernilai Rendah_ (Low Value Crop), _Panen Bernilai Tinggi_ (High Value Crop), Pedestrian Bioswale and _Tanah Kosong_ (Bare Land).
 - Select the typology to be drawn by clicking on the icon above it.
+
+![](Images/20200131_Tools_Planning_06.png)
 
 **Step 4: Begin Drawing**
 
@@ -490,14 +548,22 @@ The Planning tool allows for the exploration of hypothetical planning scenarios 
 
   - A summary of the outcome of the scenarios displayed in the Output panel on the right. This quantifies the changes across the five planning parameters: population, crops production, green cover, gross floor area and cost summary.
 
+    ![](Images/20200131_Tools_Planning_05.png)
+
 - 'Erase Typology' tool
   - If you make a mistake and would like to remove the typology drawn over a particular cell or cells, click on the 'Erase typology' tool.
+
   - Once this tool is selected, click over the cell that you would like to erase.
+
+    ![](Images/20200131_Tools_Planning_03.png)
 
 **Step 5: Explore on Your Own** 
 
 - Draw multiple areas of different typologies: Repeat Steps 2-4, but change the typology.
+
 - Customise the bar charts: By default, the two planning parameters shows are Population and Crops production. This can be changed or more parameters can be added by marking the checkbox in the output panel.
+
+  ![](Images/20200131_Tools_Planning_04.png)
 
 <div style="page-break-after: always;"></div>
 ## 3.4 Timeline
@@ -510,13 +576,20 @@ The Timeline tool displays one or more data layers over time, and allows users t
 **Step 1: Switch On Data Layer with Data Over Time**
 
 - Data layer must have data over time for the given view frame - or pan to an area with data across time.
+
 - You may select one or more data layers.
+
+  ![](Images/20200131_Tools_Timeline_01.png)
 
 **Step 2: Activate the Tool**
 
 - Click on the 'Timeline' tool to activate it.
+
 - The timeline(s) will appear with the corresponding date of the data set.
+
 - To navigate across time, 'Click + Drag' across the timeline. The main frame will display the data for the corresponding data.
+
+  ![](Images/20200131_Tools_Timeline_02.png)
 
 <div style="page-break-after: always;"></div>
 ## 3.5 Municipal Budget
@@ -528,7 +601,10 @@ The Municipal Budget tool is a customised tool developed for the City of Bandung
 **Step 1: Activate the Tool**
 
 + Zoom to the City of Bandung using the Site Browser.
+
 + Click on the 'Municipal Budget' tool to activate it.
+
+  ![](Images/20200131_Tools_Budget_01.png)
 
 **Step 2: Select Data Layers**
 
@@ -537,22 +613,25 @@ The Municipal Budget tool is a customised tool developed for the City of Bandung
   - Create vertical sliders on the toolbar panel with the name of the data layer beneath it;
   - Generate an list of the _kelurahans_ with a corresponding percentage next to each _kelurahan_ in the Information Panel. This percentage represents the respective percentage proportion each _kelurahan_ should receive out of the total municipal budget (of 100%).
 
+  ![](Images/20200131_Tools_Budget_02.png)
+
 **Step 3: Adjust Weighting of Data Layers**
 
 + The vertical sliders will be used to adjust the weight of the importance of each data layer.
+
 + By sliding down, this decreases the importance of the data layer in the overall municipal budget consideration; and vice versa.
+
 + You will notice that as you adjust the weight of the data layers, the percentage proportion of budget each _kelurahan_ will receive changes dynamically.
 
-**Step 4: Transect Locator**
+  ![](Images/20200131_Tools_Budget_03.png)
 
-+ A transect can be seen to cut across Bandung by default.
-+ This transect displays the distribution of one or more data layers, and the final weighted average (in white) across the transect displayed.
-+ By using the Transect Locator, you can adjust the transect to see different segments of Bandung.
-
-**Step 5: Explore Output**
+**Step 4: Explore Output**
 
 + As mentioned in Step 2, a list of _kelurahans_ are generated in the Information Panel with the corresponding percentage of budget proportion next to each _kelurahan_. By hovering the cursor over each _kelurahan_ name on the list, this will generate an outline on the map to indicate the location of the _kelurahan_.
+
 + Likewise, by hovering the cursor over the map on the main frame, the name of the _kelurahan_ will be lit up in the Information Panel. 
+
+  ![](Images/20200131_Tools_Budget_04.png)
 
 <div style="page-break-after: always;"></div>
 ## 3.6 Word Cloud
@@ -564,12 +643,18 @@ The Word Cloud tool is a customised tool developed for the City of Bandung to co
 **Step 1: Activate the Tool**
 
 + Zoom to the City of Bandung using the Site Browser.
+
 + Click on the 'Word Cloud' tool to activate it.
+
 + Click on the 'Group Items' icon
+
+  ![](Images/20200131_Tools_Word Cloud_01.png)
 
 **Step 2: Click on the E-Musrembang icon**
 
 + You may view the survey data in either Bahasa Indonesia, or English.
+
+  ![](Images/20200131_Tools_Word Cloud_02.png)
 
 <br>
 <br>
@@ -585,26 +670,40 @@ The Export tool is developed to allow users to export graphic and text files fro
 
 + Click on the 'Export' tool to activate it.
 
+  ![](Images/20200131_Tools_Export_01.png)
+
 **Step 2: Select Export Format Options**
 
 - Four export format options are available:
   1. Full Interface: A .PNG file that captures the entire application interface, including the main frame display (with all selected layers and background displayed as a single graphic) will be exported.
+
   2. Background & Layers Combined: A .PNG file that captures only the main frame, including the display on the main frame as the user sees it (with all selected layers and background displayed as a single graphic) will be exported.
+
   3. Background & Layers Separate: A .PNG file that captures only the main frame, including the display on the main frame but with all selected layers and background as separate files, will be exported.
+
   4. Output Report: A .CSV file will be exported - containing the values of the layers selected/filtered, and from any tools used.
+
+     ![](Images/20200131_Tools_Export_02.png)
 
 
 **Step 3: Select Additional Export Settings**
 
 + On selecting any of the export format options, a secondary menu will appear.
   + If you selected Export Format Options 1, 2 or 3 (refer to Step 2), you have the option of selecting the Image Size - Small, Medium or Large.
-  + If you selected Export Format Option 4 (refer to Step 2), you currently have the option of selecting the file format as .CSV file. The .PDF export format is currently work in progress and will be subsequently released once ready. 
+
+  + If you selected Export Format Option 4 (refer to Step 2), you currently have the option of selecting the file format as .CSV file. The .PDF export format is currently work in progress and will be subsequently released once ready.
+
+    ![](Images/20200131_Tools_Export_03.png) 
 
 **Step 4: Run Tool**
 
 + Once you have selected the export format(s), click on the 'Export' icon at the end of the toolbar.
+
 + A new folder named 'Export' will be created in the main folder which contains the ur-scape application - and the exported files will be saved here.
+
 + Note: When exporting is in progress, the screen may momentarily switch to the frame that it is exporting. The screen will revert to the original interface once the export is done.
+
+  ![](Images/20200131_Tools_Export_04.png)
 
 <div style="page-break-after: always;"></div>
 # Chapter 4: Tutorials & Useful Links

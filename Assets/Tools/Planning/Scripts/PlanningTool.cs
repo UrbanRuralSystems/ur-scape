@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -75,7 +75,7 @@ public class PlanningTool : Tool
     // Events
     //
 
-    public override void OnToggleTool(bool isOn)
+    protected override void OnToggleTool(bool isOn)
     {
         if (isOn)
         {
@@ -87,10 +87,8 @@ public class PlanningTool : Tool
         }
     }
 
-    public override void OnActiveTool(bool isActive)
+    protected override void OnActiveTool(bool isActive)
     {
-		base.OnActiveTool(isActive);
-
 		if (isActive)
 		{
 			siteBrowser.OnBeforeActiveSiteChange += OnBeforeActiveSiteChange;

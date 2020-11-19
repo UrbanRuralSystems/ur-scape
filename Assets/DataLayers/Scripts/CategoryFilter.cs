@@ -9,7 +9,7 @@
 
 public class CategoryFilter
 {
-	public const int MaxCategories = 128;
+	public const int MaxCategories = 256;
 	public const int MaxCategoryIndex = MaxCategories - 1;
 	public const int ArraySize = (MaxCategories + 31) / 32;
 	public const int DefaultValue = -1;

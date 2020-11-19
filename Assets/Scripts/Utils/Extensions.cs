@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2020 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -364,4 +364,15 @@ public static class RectTransformExtensions
 	{
 		return rt.rect.Contains(rt.InverseTransformPoint(pos));
 	}
+}
+
+public static class DateTimeExtensions
+{
+	private static readonly DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+
+	public static DateTime FromUnixTime(long unixtime)
+	{
+		return dtDateTime.AddMilliseconds(unixtime).ToLocalTime();
+	}
+
 }
