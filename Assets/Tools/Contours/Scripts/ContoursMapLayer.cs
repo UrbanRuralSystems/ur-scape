@@ -23,6 +23,7 @@ public class ContoursMapLayer : GridMapLayer
 
 	public readonly List<GridData> grids = new List<GridData>();
 	private readonly HashSet<DataLayer> layers = new HashSet<DataLayer>();
+	public readonly Dictionary<GridData, List<float>> inspectedGridsData = new Dictionary<GridData, List<float>>();
 	private bool layersNeedUpdate;
 
 	public int SelectedContour { get; private set; }
@@ -172,6 +173,8 @@ public class ContoursMapLayer : GridMapLayer
 		otherGrid.OnFilterChange += OnOtherGridFilterChange;
         
         grids.Add(otherGrid);
+        if(!inspectedGridsData.ContainsKey(otherGrid))
+			inspectedGridsData.Add(otherGrid, new List<float>());
 		layersNeedUpdate = true;
 	}
 
@@ -182,6 +185,7 @@ public class ContoursMapLayer : GridMapLayer
 		otherGrid.OnFilterChange -= OnOtherGridFilterChange;
 
         grids.Remove(otherGrid);
+        inspectedGridsData.Remove(otherGrid);
 
 		if (grids.Count == 0)
 			layers.Clear();
@@ -198,6 +202,7 @@ public class ContoursMapLayer : GridMapLayer
 			g.OnFilterChange -= OnOtherGridFilterChange;
         }
         grids.Clear();
+        inspectedGridsData.Clear();
 		layers.Clear();
 	}
 
@@ -290,6 +295,93 @@ public class ContoursMapLayer : GridMapLayer
         return sum;
     }
 
+    public void CalculateSelectedContourValues()
+    {
+        double thisDegreesPerCellX = (grid.east - grid.west) / grid.countX;
+		double thisDegreesPerCellY = (grid.south - grid.north) / grid.countY;
+		double thisCellsPerDegreeX = 1.0 / thisDegreesPerCellX;
+		double thisCellsPerDegreeY = 1.0 / thisDegreesPerCellY;
+
+        // Cache grid transformations
+        var gridCoordsToCell = new Distance(grid.countX / (grid.east - grid.west), grid.countY / (grid.south - grid.north));
+        var gridCellToCoords = new Distance((grid.east - grid.west) / grid.countX, (grid.south - grid.north) / grid.countY);
+
+		for (int i = 0; i < grids.Count; i++)
+		{
+			var g = grids[i];
+			inspectedGridsData[g].Clear();
+
+			var patchCellsPerDegreeX = g.countX / (g.east - g.west);
+			var patchCellsPerDegreeY = g.countY / (g.south - g.north);
+
+			double scaleX = patchCellsPerDegreeX * thisDegreesPerCellX;
+			double scaleY = patchCellsPerDegreeY * thisDegreesPerCellY;
+
+			double offsetX = (grid.west - g.west) * patchCellsPerDegreeX + 0.5 * scaleX;
+			double offsetY = (grid.north - g.north) * patchCellsPerDegreeY + 0.5 * scaleY;
+
+            int startX = (int)((g.west - grid.west) * thisCellsPerDegreeX + 0.5);
+			int startY = (int)((g.north - grid.north) * thisCellsPerDegreeY + 0.5);
+			int endX = (int)((g.east - grid.west) * thisCellsPerDegreeX + 0.5);
+			int endY = (int)((g.south - grid.north) * thisCellsPerDegreeY + 0.5);
+
+			int count = g.values.Length;
+			if (g.IsCategorized)
+			{
+				if (g.values != null)
+                {
+                    for (int y = startY; y < endY; y++)
+                    {
+                        int pY = grid.countX * (int)(offsetY + y * scaleY);
+                        int thisIndex = y * grid.countX + startX;
+                        for (int x = startX; x < endX; x++, thisIndex++)
+                        {
+                            int pX = (int)(offsetX + x * scaleX);
+                            int patchIndex = pY + pX;
+
+                            if (grid.values[thisIndex] == SelectedContour)
+                            {
+                                if (patchIndex >= 0 && patchIndex < grid.values.Length)
+                                {
+                                    int value = (int)g.values[patchIndex];
+                                    byte mask = grid.valuesMask == null ? (byte)1 : grid.valuesMask[patchIndex];
+                                    float valToAdd = mask == 1 ? g.categoryFilter.IsSetAsInt(value) : 0;
+                                    inspectedGridsData[g].Add(valToAdd);
+                                }
+                            }
+                        }
+                    }
+                }
+			}
+			else
+			{
+                if (g.values != null)
+                {
+                    for (int y = startY; y < endY; y++)
+                    {
+                        int pY = grid.countX * (int)(offsetY + y * scaleY);
+                        int thisIndex = y * grid.countX + startX;
+                        for (int x = startX; x < endX; x++, thisIndex++)
+                        {
+                            int pX = (int)(offsetX + x * scaleX);
+                            int patchIndex = pY + pX;
+
+                            if (grid.values[thisIndex] == SelectedContour)
+                            {
+                                if (patchIndex >= 0 && patchIndex < grid.values.Length)
+                                {
+                                    int value = (int)g.values[patchIndex];
+                                    byte mask = grid.valuesMask == null ? (byte)1 : grid.valuesMask[patchIndex];
+                                    if (mask == 1 && value >= g.minFilter && value <= g.maxFilter)
+                                        inspectedGridsData[g].Add(value);
+                                }
+                            }
+                        }
+                    }
+                }
+			}
+		}
+    }
 
 	//
 	// Private Methods

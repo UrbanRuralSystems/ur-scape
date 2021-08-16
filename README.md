@@ -2,7 +2,7 @@
 
 Support tool for planning and design of rapidly developing towns, cities and regions.
 
-Development by [Urban-Rural Systems (URS)](urs.fcl.sg) at [Future Cities Laboratory (FCL)](fcl.ethz.ch) with the support of the [Asian Development Bank (ADB)](www.adb.org) and the [Swiss Secretariat for Economic Affairs (SECO)](http://www.seco.admin.ch). FCL was established by ETH Zürich and the National Research Foundation (NRF) in Singapore.
+Development by [Urban-Rural Systems (URS)](urs.sec.sg) at [Future Cities Laboratory (FCL)](fcl.ethz.ch) with the support of the [Asian Development Bank (ADB)](www.adb.org) and the [Swiss Secretariat for Economic Affairs (SECO)](http://www.seco.admin.ch). FCL was established by ETH Zürich and the National Research Foundation (NRF) in Singapore.
 
 
 ### Screenshots
@@ -20,7 +20,7 @@ Hardware:
 
 Software:
 
-* [Unity](www.unity3d.com) 2019.2.0f1
+* [Unity](www.unity3d.com) 2020.1.2f1
 * [Mapbox](www.mapbox.com) account
 
 

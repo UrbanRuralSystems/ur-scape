@@ -80,3 +80,6 @@ crashlytics-build.properties
 /[Dd]ata/MapboxToken.txt
 /[Ee]xport/
 ios_post.sh
+/[Cc]ache
+*__pycache__*
+*venv*

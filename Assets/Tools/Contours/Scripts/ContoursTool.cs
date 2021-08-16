@@ -66,6 +66,7 @@ public class ContoursTool : Tool
 	private int runningSnapshotCounter;
 	private bool allowInfoUpdate = true;
 
+    public bool IsToggled { get; private set; }
 
 	//
 	// Inheritance Methods
@@ -207,6 +208,8 @@ public class ContoursTool : Tool
 
 	protected override void OnToggleTool(bool isOn)
     {
+        IsToggled = isOn;
+        var inspectorTool = ComponentManager.Instance.Get<InspectorTool>();
         if (isOn)
         {
 			runningSnapshotCounter = 1;
@@ -332,7 +335,13 @@ public class ContoursTool : Tool
 			CancelRemoveSnapshotMode();
 
 			LocalizationManager.Instance.OnLanguageChanged -= OnLanguageChanged;
+
+            if (inspectorTool.InspectOutput)
+                inspectorTool.InspectOutput.AreaOutput.ResetAndClearContourOutput();
 		}
+
+        if (inspectorTool.InspectOutput)
+            inspectorTool.InspectOutput.AreaOutput.ShowAreaTypeHeaderAndDropdown(isOn);
 	}
 
 	protected override void OnActiveTool(bool isActive)
@@ -447,6 +456,9 @@ public class ContoursTool : Tool
         {
 			DeselectContour();
 			DestroyAnalyzer();
+            var inspectorTool = ComponentManager.Instance.Get<InspectorTool>();
+            if (inspectorTool.InspectOutput)
+                inspectorTool.InspectOutput.AreaOutput.ResetAndClearContourOutput();
             inputHandler.OnLeftMouseUp -= OnLeftMouseUp;
          }
     }
@@ -484,6 +496,15 @@ public class ContoursTool : Tool
             {
 				contourSelectionCoords = map.GetCoordinatesFromUnits(worldPos.x, worldPos.z);
 				UpdateSelectedContour(true);
+
+                var inspectorTool = ComponentManager.Instance.Get<InspectorTool>();
+                if (inspectorTool.InspectOutput)
+                {
+                    var areaInspector = inspectorTool.areaInspectorPanel.areaInspector;
+                    
+                    inspectorTool.InspectOutput.ShowHeader(InspectorTool.InspectorType.Area, true);
+                    inspectorTool.InspectOutput.ShowPropertiesAndSummaryLabel(InspectorTool.InspectorType.Area, true);
+                }
             }
         }
     }
@@ -783,6 +804,11 @@ public class ContoursTool : Tool
 				{
 					var sqm = ContourUtils.GetContoursSquareMeters(grid, true, index);
 					infoPanel.UpdateEntry("SC", sqm);
+
+                    contoursLayer.CalculateSelectedContourValues();
+                    var inspectorTool = ComponentManager.Instance.Get<InspectorTool>();
+                    if (inspectorTool.InspectOutput)
+                        inspectorTool.InspectOutput.AreaOutput.UpdateContourInspectorOutput(dataLayers);
 				}
 				return;
 			}

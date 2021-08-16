@@ -16,10 +16,10 @@ public class InspectorOutputItemLabel: MonoBehaviour
 	public RectTransform panel;
 	public Text unitsValue;
 	public Text maxValue;
+	public Text meanValue;
 	public Text medianValue;
 	public Text minValue;
-
-	private const int MaxValueLength = 20;
+	public Text sumValue;
 
 	public void SetName(string nameString)
     {
@@ -41,10 +41,30 @@ public class InspectorOutputItemLabel: MonoBehaviour
 		maxValue.text = val;
 	}
 
+    public void SetMeanValue(string val)
+	{
+		meanValue.text = val;
+	}
+
+    public void ShowMean(bool show)
+    {
+        meanValue.transform.parent.gameObject.SetActive(show);
+    }
+
 	public void SetMedianValue(string val)
 	{
 		medianValue.text = val;
 	}
+
+    public void SetSumValue(string val)
+	{
+		sumValue.text = val;
+	}
+
+    public void ShowSum(bool show)
+    {
+        sumValue.transform.parent.gameObject.SetActive(show);
+    }
 
 	public void SetDotColor(Color color)
 	{

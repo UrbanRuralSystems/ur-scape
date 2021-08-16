@@ -44,6 +44,7 @@ public class TransectChartController : MonoBehaviour, IPointerEnterHandler, IPoi
 	private MapController map;
     private GridLayerController gridLayerController;
     private Material material;
+    private InspectorTool inspectorTool;
 
 	private LineInfo lineInfo = null;
 
@@ -77,6 +78,7 @@ public class TransectChartController : MonoBehaviour, IPointerEnterHandler, IPoi
         }
 
         map = ComponentManager.Instance.Get<MapController>();
+        inspectorTool = ComponentManager.Instance.Get<InspectorTool>();
         if (map != null)
         {
             gridLayerController = map.GetLayerController<GridLayerController>();
@@ -163,6 +165,17 @@ public class TransectChartController : MonoBehaviour, IPointerEnterHandler, IPoi
         highlight.gameObject.SetActive(updateHighlight);
     }
 
+    public void ShowHighlight(bool show)
+    {
+        highlight.gameObject.SetActive(show);
+    }
+
+    public void UpdateHighlightPos(float percent)
+    {
+        var pos = highlight.anchoredPosition;
+        pos.x = percent * rt.sizeDelta.x;
+        highlight.anchoredPosition = pos;
+    }
 
     //
     // Event Methods
@@ -253,7 +266,12 @@ public class TransectChartController : MonoBehaviour, IPointerEnterHandler, IPoi
 			Add(otherGrid, otherGrid.patch.DataLayer.Color, layerCharts, chartsContainer);
 			chart = layerCharts[otherGrid];
 		}
-		chart.SetLineInfo(lineInfo);
+        
+        if (inspectorTool != null)
+        {
+            if (inspectorTool.InspectType == InspectorTool.InspectorType.Line)
+                chart.SetLineInfo(lineInfo);
+        }
 	}
 
 	public void SetLineInfo(LineInfo lineInfo)

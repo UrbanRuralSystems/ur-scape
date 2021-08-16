@@ -6,7 +6,6 @@
 //
 // Author:  Muhammad Salihin Bin Zaol-kefli
 
-using System;
 using UnityEngine;
 using UnityEngine.UI;
 

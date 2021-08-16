@@ -1,27 +1,15 @@
-<div id="gameAndButtonContainer">
-  <div id="gameContainer" style="width: %UNITY_WIDTH%px; height: %UNITY_HEIGHT%px;"></div>
-  <img src="%UNITY_CUSTOM_BASE_URL%/WebResources/fullscreen.png" id="fs_button" title="Fullscreen" onclick="ToFullScreen();" />
-  <div id="fs_label">Fullscreen</div>
+<div id="unity-container" class="unity-desktop">
+	<canvas id="unity-canvas"></canvas>
+	<div id="unity-loading-bar">
+		<div id="unity-progress-bar"></div>
+		<div id="unity-progress-message">Loading ...</div>
+	</div>
+	<img id="unity-fullscreen-button" src="{{{ BASE_URL }}}/WebResources/fullscreen.png" style="visibility: hidden;" />
+	<div id="unity-fullscreen-label" style="visibility: hidden;">Fullscreen</div>
 </div>
-<pre>
-<link rel="stylesheet" type="text/css" href="%UNITY_CUSTOM_BASE_URL%/WebResources/style.css">
-<script src="%UNITY_CUSTOM_BASE_URL%/WebResources/UnityProgress.js"></script>
-<script src="%UNITY_CUSTOM_BASE_URL%/WebResources/EventsHandler.js"></script>
-<script src="%UNITY_CUSTOM_BASE_URL%/%UNITY_WEBGL_LOADER_URL%"></script>
-<script>
-  function GetDataPath() {
-    return "%UNITY_CUSTOM_BASE_URL%/";
-  }
-
-  var gameInstance = UnityLoader.instantiate("gameContainer", "%UNITY_CUSTOM_BASE_URL%/%UNITY_WEBGL_BUILD_URL%", {
-    onProgress: UnityProgress,
-    Module: {
-      onRuntimeInitialized: function () {
-        UnityProgress(gameInstance, "complete");
-      }
-    }
-  });
-</script>
+<pre style="margin: 0; padding: 0; white-space: unset;">	
+	<link rel="stylesheet" type="text/css" href="{{{ BASE_URL }}}/WebResources/style.css">
+	<script src="{{{ BASE_URL }}}/WebResources/code.js"></script>
 </pre>
 <br><br><br>
 Note: For the best experience using the web version of ur-scape,

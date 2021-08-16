@@ -1,23 +1,8 @@
-#gameAndButtonContainer {
-	flex-basis: 100%;
-	overflow: hidden;
-	/* Initially hide the gameAndButtonContainer */
-	display: none;
-}
-#gameContainer {
-	background-color: black;
-	display: block;
-	margin-bottom: 15px;
-}
-#gameContainer canvas {
-	display: block;
-	position: relative;
-	width: 100%;
-	height: 100%;
-}
-#fs_label { position: relative; height: 38px; line-height: 38px; padding: 0 10px; margin: 0 1px 0 0; float: right; text-align: right; font-size: 18px; }
-#fs_button { float: right; position: relative; border: 1px solid #444; cursor: pointer; }
-#fs_button:hover { filter: brightness(130%); }
-#progressFrame { position: absolute; width: 22%; height: 2%; border: 1px solid #444; top: calc(47% - 26px); left: 50%; transform: translate(-50%, -50%); padding: 1px; background-color: black; }
-#progressBar { height: 100%; background-color: #444; }
-#messageArea { position: absolute; left: 0; top: calc(42% - 55px); width: 100%; text-align: center; }
+#unity-container { position: relative; display: none; }
+#unity-canvas { width: 100%; height: 100%; background: {{{ BACKGROUND_COLOR }}}; }
+#unity-loading-bar { position: absolute; width: 22%; height: 2%; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 1.5px solid #bbb; padding: 1.5px; background-color: #0008;	}
+#unity-progress-bar { width: 0%; height: 100%; background-color: #bbb; }
+#unity-progress-message { position: absolute; left: 0; top: calc(50% - 13px); width: 100%; text-align: center; color: #ccc; mix-blend-mode: difference; }
+#unity-fullscreen-button { float: right; cursor: pointer; }
+#unity-fullscreen-button:hover { filter: brightness(150%); }
+#unity-fullscreen-label { position: relative; height: 38px; line-height: 38px; padding: 0 10px; margin: 0 1px 0 0; float: right; text-align: right; font-size: 18px; }

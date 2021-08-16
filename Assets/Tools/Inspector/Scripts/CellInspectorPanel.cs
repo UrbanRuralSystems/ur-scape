@@ -49,7 +49,7 @@ public class CellInspectorPanel : MonoBehaviour
 		Coordinate coords = map.GetCoordinatesFromUnits(worldPos.x, worldPos.z);
 
 		int index = 0;
-		foreach (var layerPanel in dataLayers.activeSiteLayerPanels)
+		foreach (var layerPanel in dataLayers.activeLayerPanels)
 		{
 			var layer = layerPanel.DataLayer;
 			if (!dataLayers.availableLayers.Contains(layer))

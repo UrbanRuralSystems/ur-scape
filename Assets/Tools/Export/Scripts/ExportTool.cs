@@ -558,7 +558,7 @@ public class ExportTool : Tool
 #endif
 	}
 
-	private void WriteFile(string filename, byte[] data)
+	public void WriteFile(string filename, byte[] data)
 	{
 #if UNITY_WEBGL
 		var zipItem = zip.CreateEntry(filename);

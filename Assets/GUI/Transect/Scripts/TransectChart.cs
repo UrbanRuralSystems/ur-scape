@@ -204,7 +204,11 @@ public class TransectChart : MonoBehaviour
 	{
 		if (lineInfo != null)
 		{
-			GridData lineGrid = lineInfo.mapLayer.Grid;
+            var lineMapLayer = lineInfo.mapLayer;
+            if (lineMapLayer == null)
+                return;
+            
+			GridData lineGrid = lineMapLayer.Grid;
 
 			// Initizlize values
 			int length = lineInfo.mapLayer.numOfSamples;
@@ -263,7 +267,7 @@ public class TransectChart : MonoBehaviour
 			{
 				if (grid.values != null)
 				{
-					for (int j = 0; j < lineInfo.mapLayer.numOfSamples; ++j)
+					for (int j = 0; j < length; ++j)
 					{
 						if (grid.IsInside(startLon, startLat))
 						{
@@ -292,7 +296,7 @@ public class TransectChart : MonoBehaviour
 			{
 				float gridMin = grid.minValue;
 				float invRange = 1f / (grid.maxValue - grid.minValue);
-				if (lineInfo.mapLayer.useFilters)
+				if (lineMapLayer.useFilters)
 				{
 					if (grid.values != null)
 					{
@@ -328,7 +332,7 @@ public class TransectChart : MonoBehaviour
 				{
 					if (grid.values != null)
 					{
-						for (int j = 0; j < lineInfo.mapLayer.numOfSamples; ++j)
+						for (int j = 0; j < length; ++j)
 						{
 							if (grid.IsInside(startLon, startLat))
 							{

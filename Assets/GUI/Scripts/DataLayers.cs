@@ -40,6 +40,8 @@ public class DataLayers : UrsComponent
     public DataLayerGroupPanel guiGroupPrefab;
     public DataLayerPanel layerPanelPrefab;
 
+    public float?[,] CorrCoeffs { set; get; }
+
     public event OnLayerChangeDelegate OnLayerVisibilityChange;
 	public event OnLayerChangeDelegate OnLayerAvailabilityChange;
 

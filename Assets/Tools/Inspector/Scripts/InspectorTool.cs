@@ -6,7 +6,6 @@
 //
 // Author:  Muhammad Salihin Bin Zaol-kefli
 
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,26 +15,19 @@ using AreaInfo = AreaInspector.AreaInspectorInfo;
 public class InspectorTool : Tool
 {
 	[Header("Prefabs")]
-    public InspectorToggle inspectorTogglePrefab;
     public RectTransform inspectorContainerPrefab;
-    // Drawing tools
-	public LassoTool lassoToolPrefab;
-    // Prefab for LineInspectorInfo's lineInspection
     public RectTransform inspectionPrefab;
     // Line Renderer for line
     public LineRenderer linePrefab;
+    public LineRenderer areaPrefab;
     // Output
     public InspectorOutput outputPrefab;
 
     [Header("UI References")]
-	public Transform areaInspectorPanel;
 	public Toggle lineModeToggle;
 	public Toggle areaModeToggle;
- //   public Toggle adjustmentControlsToggle;
-    public Transform areaInspectionsList;
-	public Toggle createAreaInspectionToggle;
-	public Toggle removeAreaInspectionToggle;
     public LineInspectorPanel lineInspectorPanel;
+    public AreaInspectorPanel areaInspectorPanel;
 
     [Header("Miscellaneous")]
     public int maxInspectionCount = 3;
@@ -60,18 +52,6 @@ public class InspectorTool : Tool
 		Area
 	}
 
-	// Constants
-	private const int StartPtIndex = 0;
-	private const int EndPtIndex = 1;
-	private const int MidPtIndex = 2;
-
-	private const float LineWidth = 0.01f;
-	private const float HalfLineWidth = LineWidth * 0.5f;
-
-	private const string newAreaInspectionPrefix = "Inspection Area";
-
-	// Prefab Instances
-	private LassoTool lassoTool;
 	private RectTransform inspectorContainer;
     public RectTransform InspectContainer
     {
@@ -114,7 +94,7 @@ public class InspectorTool : Tool
     private LineInfo[] lineInfos;
 
 	// Area Inspector
-	private AreaInspector areaInspector = new AreaInspector();
+	private AreaInspector areaInspector;
 	private AreaInfo[] areaInfos;
 
 	//
@@ -134,13 +114,15 @@ public class InspectorTool : Tool
 		canvas = GameObject.FindWithTag("Canvas").GetComponent<Canvas>();
 		infoPanel = FindObjectOfType<InfoPanel>();
 
-
+        // Initialize line inspector
 		lineInspectorPanel.Init(toolLayers, canvas, maxInspectionCount);
         lineInspector = lineInspectorPanel.lineInspector;
         lineInfos = lineInspectorPanel.lineInfos;
 
-		areaInspector.Init(toolLayers);
-		InitAreaInspectorInfo();
+        // Initialize area inspector
+        areaInspectorPanel.Init(toolLayers, maxInspectionCount);
+		areaInspector = areaInspectorPanel.areaInspector;
+        areaInfos = areaInspectorPanel.areaInfos;
 	}
 
 	protected override void OnToggleTool(bool isOn)
@@ -148,6 +130,10 @@ public class InspectorTool : Tool
         if (isOn)
         {
             TurnOn();
+            
+            var contoursTool = ComponentManager.Instance.Get<ContoursTool>();
+            if (contoursTool != null && inspectorOutput != null)
+				inspectorOutput.AreaOutput?.ShowAreaTypeHeaderAndDropdown(contoursTool.IsToggled);
         }
         else
         {
@@ -167,6 +153,16 @@ public class InspectorTool : Tool
 				var currLine = lineInfos[lineInspector.CurrLineInspection];
 				lineInspectorPanel.UpdateTransectChartAndOutput(currLine, true);
 			}
+
+            if (inspectorType == InspectorType.Area && areaInspector.CurrAreaInspection >= 0)
+            {
+                var currArea = areaInfos[areaInspector.CurrAreaInspection];
+				areaInspectorPanel.UpdateGridsAndOutput(currArea, true);
+
+                var contoursTool = ComponentManager.Instance.Get<ContoursTool>();
+                if (contoursTool != null)
+                    inspectorOutput.AreaOutput.ShowAreaTypeHeaderAndDropdown(contoursTool.IsToggled);
+            }
 		}
 		else
 		{
@@ -204,10 +200,11 @@ public class InspectorTool : Tool
 		if (isOn)
 		{
 			inspectorType = InspectorType.Line;
-			inspectorOutput.ActivateEntryInfo(inspectorType);
+			inspectorOutput.ActivateOutputPanel(inspectorType);
 
             ActivatePanels(isOn);
             lineInspectorPanel.UpdateControlPtsAndInspectionDel();
+			lineInspector.ShowLinesAndControlPts(isOn, lineInfos);
 
 			if (lineInspectorPanel.lineInspectorPanelFirstActive)
             {
@@ -221,7 +218,8 @@ public class InspectorTool : Tool
 			}
 
 			// Update transect chart
-			lineInspectorPanel.UpdateTransectLineInfoAndAllGridDatas(lineInfos[lineInspector.CurrLineInspection]);
+            if (lineInspector.CurrLineInspection >= 0)
+			    lineInspectorPanel.UpdateTransectLineInfoAndAllGridDatas(lineInfos[lineInspector.CurrLineInspection]);
 		}
 		areaInspector.ShowAreaLines(false, areaInfos);
 	}
@@ -233,112 +231,24 @@ public class InspectorTool : Tool
 		if (isOn)
 		{
 			inspectorType = InspectorType.Area;
-			inspectorOutput.ActivateEntryInfo(inspectorType);
+			inspectorOutput.ActivateOutputPanel(inspectorType);
 
 			ActivatePanels(isOn);
+            areaInspectorPanel.UpdateAreasPtsInspectionDel();
 			areaInspector.ShowAreaLines(isOn, areaInfos);
 
-			for (int i = 0; i < maxInspectionCount; ++i)
+			// for (int i = 0; i < maxInspectionCount; ++i)
+			// {
+			// 	areaInspector.UpdateAreaInspectorToggle(areaInfos[i], i == areaInspector.CurrAreaInspection);
+			// }
+
+            foreach (var layer in gridLayerController.mapLayers)
 			{
-				areaInspector.UpdateAreaInspectorToggle(areaInfos[i], i == areaInspector.CurrAreaInspection);
+				OnShowGrid(layer, true);
 			}
 		}
+		lineInspector.ShowLinesAndControlPts(false, lineInfos);
 	}
-
-    private void OnAdjustmentControlsToggleChanged(bool isOn)
-    {
-        foreach(var line in lineInfos)
-        {
-            foreach (var controlPtTB in line.controlPtsTB)
-            {
-                controlPtTB.gameObject.SetActive(isOn);
-            }
-        }
-    }
-
-	private void OnRemoveAreaInspection(AreaInfo areaInfo)
-	{
-		// Remove Inspector Toggle event listeners
-		areaInfo.uiElement.RemoveOnPointerExitEvent();
-		areaInfo.uiElement.RemoveOnPointerEnterEvent();
-
-		areaInspector.RemoveAreaInspectorInfoProperties(areaInfo);
-		areaInfo.uiElement.ResetToggle();
-		--areaInspector.AreaInspectionCount;
-
-		if (areaInspector.AreaInspectionCount == 0)
-		{
-			SetAction(Action.None);
-			areaInspector.CurrAreaInspection = -1;
-			removeAreaInspectionToggle.interactable = false;
-
-			// Update Inspector Toggles
-			for (int i = 0; i < maxInspectionCount; ++i)
-			{
-				if (areaInfos[i] == null)
-					continue;
-
-				areaInspector.UpdateAreaInspectorToggle(areaInfos[i], false);
-				areaInfos[i].uiElement.transform.SetSiblingIndex(i);
-			}
-
-			// Update output
-			inspectorOutput.UpdateAreaInspectorOutput(null, dataLayers);
-		}
-		else
-		{
-			int index = areaInfo.uiElement.transform.GetSiblingIndex();
-			if (index < areaInspector.AreaInspectionCount)
-			{
-				// Push active inspection UI elements to the front of array
-				for (int i = index; i < areaInspector.AreaInspectionCount; ++i)
-				{
-					var temp = areaInfos[i];
-					areaInfos[i] = areaInfos[i + 1];
-
-					var tempIndex = areaInfos[i + 1].uiElement.transform.GetSiblingIndex();
-					areaInfo.uiElement.transform.SetSiblingIndex(tempIndex);
-
-					areaInfos[i + 1] = temp;
-				}
-			}
-
-			// Update currAreaInspection value
-			if (areaInspector.CurrAreaInspection == index)
-				areaInspector.CurrAreaInspection = Mathf.Clamp(index - 1, 0, 2);
-			else
-				Mathf.Clamp(--areaInspector.CurrAreaInspection, 0, 2);
-
-			UpdateAreasElements();
-		}
-
-		createAreaInspectionToggle.interactable = true;
-	}
-
-	private void OnAreaInspectionToggleChanged(AreaInfo areaInfo, bool isOn)
-	{
-		for (int i = 0; i < maxInspectionCount; ++i)
-		{
-			bool currArea = areaInfos[i] == areaInfo;
-			areaInspector.UpdateAreaInspectorToggle(areaInfos[i], currArea);
-
-			if (currArea)
-				SetCurrInspection(i);
-		}
-	}
-
-    private void OnDrawArea(DrawingInfo info)
-    {
-        var lassoInfo = info as LassoDrawingInfo;
-        var areaInfo = areaInfos[areaInspector.AreaInspectionCount];
-        int count = areaInspector.CreatedAreaInspectionCount + 1;
-        areaInspector.CreateAreaInspection(areaInfo, count, inspectionPrefab, inspectorContainer);
-        areaInspector.CreateArea(areaInfo, count, linePrefab, lassoInfo.points);
-
-        AddAreaInspection();
-        createAreaInspectionToggle.isOn = false;
-        SetCursorTexture(cursorDefault);
-    }
 
     private void OnShowGrid(GridMapLayer mapLayer, bool show)
     {
@@ -354,29 +264,9 @@ public class InspectorTool : Tool
 
 		if(inspectorType == InspectorType.Line)
 			lineInspectorPanel.LineShowGridAndUpdateOutput(mapLayer, show);
+        else
+            areaInspectorPanel.AreaShowGridAndUpdateOutput(mapLayer, show);
     }
-	private void InitAreaInspectorInfo()
-	{
-		// Instantiate and initialize InspectorToggles
-		areaInfos = new AreaInfo[maxInspectionCount];
-		for (int i = 0; i < maxInspectionCount; ++i)
-		{
-			var areaInfo = new AreaInfo
-			{
-				uiElement = Instantiate(inspectorTogglePrefab, areaInspectionsList, false),
-				areaInspection = null,
-				coords = new List<Coordinate>(),
-				line = null
-			};
-
-			var areaInfoUIElem = areaInfo.uiElement;
-			areaInfoUIElem.toggle.onValueChanged.AddListener((isOn) => OnAreaInspectionToggleChanged(areaInfo, isOn));
-			areaInfoUIElem.button.onClick.AddListener(() => OnRemoveAreaInspection(areaInfo));
-			areaInfoUIElem.ResetToggle();
-
-			areaInfos[i] = areaInfo;
-		}
-	}
 
 	private void TurnOn()
     {
@@ -397,15 +287,15 @@ public class InspectorTool : Tool
     {
 		// Remove listeners
 		// Area Inspectors
-		foreach (var area in areaInfos)
-		{
-			var areaInfoUIElem = area.uiElement;
-			areaInfoUIElem.toggle.onValueChanged.RemoveListener((isOn) => OnAreaInspectionToggleChanged(area, isOn));
-			areaInfoUIElem.button.onClick.RemoveListener(() => OnRemoveAreaInspection(area));
-		}
+		// foreach (var area in areaInfos)
+		// {
+		// 	var areaInfoUIElem = area.uiElement;
+		// 	areaInfoUIElem.toggle.onValueChanged.RemoveListener((isOn) => areaInspectorPanel.OnAreaInspectionToggleChanged(area, isOn));
+		// 	areaInfoUIElem.button.onClick.RemoveListener(() => areaInspectorPanel.OnRemoveAreaInspection(area));
+		// }
 
-		createAreaInspectionToggle.onValueChanged.RemoveListener(OnCreateInspectionChanged);
-		removeAreaInspectionToggle.onValueChanged.RemoveListener(OnRemoveInspectionChanged);
+		areaInspectorPanel.createAreaInspectionToggle.onValueChanged.RemoveListener(OnCreateInspectionChanged);
+		areaInspectorPanel.removeAreaInspectionToggle.onValueChanged.RemoveListener(OnRemoveInspectionChanged);
 		lineModeToggle.onValueChanged.RemoveListener(OnLinePanelToggleChange);
 		areaModeToggle.onValueChanged.RemoveListener(OnAreaPanelToggleChange);
 
@@ -419,7 +309,6 @@ public class InspectorTool : Tool
 
 		// Remove Output panel
 		outputPanel.SetPanel(null);
-		//outputPanel.RemovePanel(inspectorOutput.transform);
 		if(inspectorOutput != null)
 			Destroy(inspectorOutput.gameObject);
 
@@ -457,16 +346,20 @@ public class InspectorTool : Tool
 
         lineInspectorPanel.InitComponentsAndListeners();
         lineInspectorPanel.gameObject.SetActive(false);
-
         lineInspector.LineInspectionCount = 0;
         lineInspector.CreatedLineInspectionCount = 0;
 		lineInspector.CurrLineInspection = 0;
+
+        areaInspectorPanel.InitComponentsAndListeners();
+        areaInspectorPanel.gameObject.SetActive(false);
+        areaInspector.AreaInspectionCount = 0;
+        areaInspector.CreatedAreaInspectionCount = 0;
+		areaInspector.CurrAreaInspection = -1;
+
 		SetCursorTexture(cursorDefault);
 
         // UI listeners
-		createAreaInspectionToggle.onValueChanged.AddListener(OnCreateInspectionChanged);
-		removeAreaInspectionToggle.onValueChanged.AddListener(OnRemoveInspectionChanged);
-		lineModeToggle.onValueChanged.AddListener(OnLinePanelToggleChange);
+        lineModeToggle.onValueChanged.AddListener(OnLinePanelToggleChange);
 		areaModeToggle.onValueChanged.AddListener(OnAreaPanelToggleChange);
 
 		gridLayerController.OnShowGrid += OnShowGrid;
@@ -483,7 +376,7 @@ public class InspectorTool : Tool
 	{
         if (inspectorType == InspectorType.Line)
 		{
-			//lineModeToggle.isOn = areaModeToggle.interactable = isOn; // Enable only when Area inspection is available
+			lineModeToggle.isOn = areaModeToggle.interactable = isOn;
 			lineModeToggle.interactable = areaModeToggle.isOn = !isOn;
 			lineInspectorPanel.gameObject.SetActive(isOn);
 			areaInspectorPanel.gameObject.SetActive(!isOn);
@@ -514,73 +407,13 @@ public class InspectorTool : Tool
 		areaInspector.DeleteAllAreaInspection(areaInfos);
 	}
 
-	private void AllowRemoveAreaInspections(bool allow)
-	{
-		for (int i = 0; i < maxInspectionCount; ++i)
-		{
-			if (areaInfos[i].line == null)
-				continue;
-
-			areaInfos[i].uiElement.AllowRemove(allow);
-
-			var line = areaInfos[i].line;
-
-			if (allow)
-			{
-				// Thinner line width
-				line.widthMultiplier = HalfLineWidth;
-
-				// Add Inspector Toggle event listeners
-				areaInfos[i].uiElement.AddOnPointerEnterEvent();
-				areaInfos[i].uiElement.AddOnPointerExitEvent();
-			}
-			else
-			{
-				// Remove Inspector Toggle event listeners
-				areaInfos[i].uiElement.RemoveOnPointerExitEvent();
-				areaInfos[i].uiElement.RemoveOnPointerEnterEvent();
-
-				// Revert curr area
-				if (i == areaInspector.CurrAreaInspection)
-				{
-					// Normal line width
-					line.widthMultiplier = LineWidth;
-				}
-			}
-		}
-	}
-
 	private void AllowRemoveInspections(bool allow)
     {
 		if (inspectorType == InspectorType.Line)
 			lineInspectorPanel.AllowRemoveLineInspections(allow);
 		else
-			AllowRemoveAreaInspections(allow);
+			areaInspectorPanel.AllowRemoveAreaInspections(allow);
     }
-
-	private void AddAreaInspection()
-	{
-		if (areaInspector.AreaInspectionCount == maxInspectionCount)
-			return;
-
-		++areaInspector.AreaInspectionCount;
-		areaInspector.CurrAreaInspection = areaInspector.AreaInspectionCount - 1;
-		++areaInspector.CreatedAreaInspectionCount;
-
-		var areaInfo = areaInfos[areaInspector.CurrAreaInspection];
-
-		areaInspector.UpdateAreaInspectorToggleProperties(areaInfo, newAreaInspectionPrefix);
-
-		UpdateAreasElements();
-
-		removeAreaInspectionToggle.interactable = true;
-
-		if (areaInspector.AreaInspectionCount == maxInspectionCount)
-		{
-			createAreaInspectionToggle.interactable = false;
-			SetAction(Action.None);
-		}
-	}
 
 	private bool changingAction = false;
     public void SetAction(Action newAction)
@@ -599,14 +432,14 @@ public class InspectorTool : Tool
                 lineInspectorPanel.FinishCreateLineInspector();
                 break;
             case Action.CreateAreaInspection:
-				createAreaInspectionToggle.isOn = false;
-				FinishCreateAreaInspector();
+				areaInspectorPanel.createAreaInspectionToggle.isOn = false;
+				areaInspectorPanel.FinishCreateAreaInspector();
 				break;
             case Action.RemoveInspection:
 				if (inspectorType == InspectorType.Line)
                     lineInspectorPanel.removeLineInspectionToggle.isOn = false;
 				else
-					removeAreaInspectionToggle.isOn = false;
+					areaInspectorPanel.removeAreaInspectionToggle.isOn = false;
                 AllowRemoveInspections(false);
                 break;
         }
@@ -619,7 +452,7 @@ public class InspectorTool : Tool
                 lineInspectorPanel.StartCreateLineInspector();
                 break;
             case Action.CreateAreaInspection:
-				StartCreateAreaInspector();
+				areaInspectorPanel.StartCreateAreaInspector();
                 break;
             case Action.RemoveInspection:
                 AllowRemoveInspections(true);
@@ -629,51 +462,6 @@ public class InspectorTool : Tool
         action = newAction;
         changingAction = false;
     }
-
-	private void StartCreateAreaInspector()
-	{
-		if (lassoTool == null)
-		{
-			lassoTool = Instantiate(lassoToolPrefab);
-			lassoTool.name = lassoToolPrefab.name;
-			lassoTool.CanDraw = true;
-			lassoTool.OnDraw += OnDrawArea;
-			//lassoTool.OnCancel += OnLineToolCancel;
-		}
-
-		lassoTool.Activate();
-	}
-
-	private void FinishCreateAreaInspector()
-	{
-		if (lassoTool != null)
-		{
-			lassoTool.Deactivate();
-			lassoTool.CanDraw = false;
-			lassoTool.OnDraw -= OnDrawArea;
-			//lassoTool.OnCancel -= OnLineToolCancel;
-
-			Destroy(lassoTool.gameObject);
-			lassoTool = null;
-		}
-	}
-
-	private void UpdateAreasElements()
-	{
-		for (int i = 0; i < maxInspectionCount; ++i)
-		{
-			if (areaInfos[i].line == null)
-				continue;
-
-			bool currArea = (i == areaInspector.CurrAreaInspection);
-			areaInspector.UpdateAreaInspectorToggle(areaInfos[i], currArea);
-			//UpdateTransectChartAndOutput(lineInfos[i], currArea);
-			
-			// Change line width according to current area inspection
-			var line = areaInfos[i].line;
-			line.widthMultiplier = (!currArea) ? HalfLineWidth : LineWidth;
-		}
-	}
 
 	//
 	// Public Methods
@@ -694,11 +482,5 @@ public class InspectorTool : Tool
 
 		GridData g = (patch as GridedPatch).grid;
 		return coorPoint.Longitude >= g.west && coorPoint.Longitude <= g.east && coorPoint.Latitude >= g.south && coorPoint.Latitude <= g.north;
-	}
-
-	public void SetCurrInspection(int index)
-    {
-		areaInspector.CurrAreaInspection = index;
-		UpdateAreasElements();
 	}
 }

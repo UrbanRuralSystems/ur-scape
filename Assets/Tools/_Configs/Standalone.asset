@@ -30,4 +30,4 @@ MonoBehaviour:
     state: 0
   - config: {fileID: 11400000, guid: 585a4e9c0046bca4c954279d4cd35f45, type: 2}
     state: 0
-  includeOtherTools: 1
+  includeOtherTools: 0

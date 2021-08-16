@@ -186,6 +186,34 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
 		{
 			WriteContourInfo(entry.Value, csv);
 		}
+
+        // Export only when there is a selected contour
+        var contoursTool = ComponentManager.Instance.Get<ContoursTool>();
+        if (contoursTool.ContoursLayer.SelectedContour > 1)
+        {
+            string exportPath = "";
+
+#if !UNITY_WEBGL || UNITY_EDITOR
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+		    exportPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop);
+            exportPath += Path.DirectorySeparatorChar + "ur-scape ";
+#else
+            exportPath = System.Environment.CurrentDirectory + Path.DirectorySeparatorChar; // Export to where the executable is
+#endif
+            exportPath += "Export" + Path.DirectorySeparatorChar;
+
+            // Create export directory
+            Directory.CreateDirectory(exportPath);
+#endif
+
+            // Add the date as a file prefix
+#if UNITY_WEBGL
+            var filesPath = System.DateTime.Now.ToString("yyyyMMdd_HHmmss_");
+#else
+            var filesPath = exportPath + System.DateTime.Now.ToString("yyyyMMdd_HHmmss_");
+#endif
+            WriteSelectedContourInfo(filesPath + "SelectedContour.csv");
+        }
 	}
 
 
@@ -243,6 +271,60 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
     {
 		string value = entry.pair.GetValue();
         csv.WriteLine("{0},{1}", entry.pair.GetKey().ToUpper(), CsvHelper.Escape(value));
+    }
+
+    private void WriteSelectedContourInfo(string filename)
+    {
+        var contoursTool = ComponentManager.Instance.Get<ContoursTool>();
+        var dataLayers = ComponentManager.Instance.Get<DataLayers>();
+		var translator = LocalizationManager.Instance;
+
+        var contourGrids = contoursTool.ContoursLayer.grids;
+        var contourInspectedGrids = contoursTool.ContoursLayer.inspectedGridsData;
+
+        int contourGridsLength = contourGrids.Count;
+
+        Dictionary<string, string> lines = new Dictionary<string, string>();
+
+        using (var memStream = new MemoryStream())
+		{
+			using (var csv = new StreamWriter(memStream, System.Text.Encoding.UTF8))
+            {
+                csv.Write("{0},", translator.Get("Cells"));
+                for (int i = 0; i < contourGridsLength; ++i)
+                {
+                    var layerName = dataLayers.activeLayerPanels[i].name;
+                    int contourInspectedGridsLength = contourInspectedGrids[contourGrids[i]].Count;
+                    string units = contourGrids[i].units;
+
+                    csv.Write("{0},", $"{translator.Get(layerName)} ({translator.Get(units)})");
+
+                    for (int j = 0; j < contourInspectedGridsLength; ++j)
+                    {
+                        string index = (j + 1).ToString();
+                        float value = contourInspectedGrids[contourGrids[i]][j];
+
+                        if (!lines.ContainsKey(index))
+                        {
+                            lines.Add(index, value.ToString());
+                        }
+                        else
+                        {
+                            lines[index] += $",{value}";
+                        }
+                    }
+                }
+
+                csv.WriteLine();
+                foreach (var line in lines)
+                {
+                    var lineToWrite = $"{line.Key},{line.Value}";
+                    csv.WriteLine(lineToWrite);
+                }
+            }
+            var exportTool = ComponentManager.Instance.Get<ExportTool>();
+            exportTool.WriteFile(filename, memStream.GetBuffer());
+        }
     }
 
 	private void UpdateNote()
