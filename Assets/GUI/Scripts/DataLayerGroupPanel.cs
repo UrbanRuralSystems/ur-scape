@@ -13,21 +13,53 @@ using UnityEngine.UI;
 public class DataLayerGroupPanel : MonoBehaviour
 {
     [Header("UI References")]
+    public Toggle groupToggle;
     public Text title;
+    public Image arrow;
     public RectTransform layersContainer;
+
+    //
+    // Unity Methods
+    //
+
+    private void Start()
+    {
+        groupToggle.onValueChanged.AddListener(OnGroupToggleChanged);
+        ComponentManager.Instance.Get<SiteBrowser>().OnAfterActiveSiteChange += OnAfterActiveSiteChange;
+    }
+
+    //
+    // Event Methods
+    //
+
+    private void OnGroupToggleChanged(bool isOn)
+    {
+        arrow.rectTransform.eulerAngles = new Vector3(0.0f, 0.0f, isOn ? 0.0f : -90.0f);
+        layersContainer.gameObject.SetActive(isOn);
+        GuiUtils.RebuildLayout(transform);
+    }
+
+    private void OnAfterActiveSiteChange(Site site, Site previousSite)
+    {
+        groupToggle.isOn = true;
+    }
+
+    //
+    // Public Methods
+    //
 
     public void Init(string name)
     {
-		UpdateName(name);
-	}
+        UpdateName(name);
+    }
 
-	public void UpdateName(string name)
-	{
-		this.name = name;
-		title.text = name;
-	}
+    public void UpdateName(string name)
+    {
+        this.name = name;
+        title.text = name;
+    }
 
-	public DataLayerPanel AddLayer(DataLayerPanel prefab, DataLayer layer)
+    public DataLayerPanel AddLayer(DataLayerPanel prefab, DataLayer layer)
     {
         // Create a new instance of the layer prefab and initialize it
         var layerCtrl = Instantiate(prefab);
@@ -38,25 +70,25 @@ public class DataLayerGroupPanel : MonoBehaviour
         return layerCtrl;
     }
 
-	public void Show(bool show)
-	{
-		if (gameObject.activeSelf != show)
-			gameObject.SetActive(show);
-	}
+    public void Show(bool show)
+    {
+        if (gameObject.activeSelf != show)
+            gameObject.SetActive(show);
+    }
 
-	public void UpdateVisibility()
-	{
-		int count = layersContainer.childCount;
-		for (int i = 0; i < count; ++i)
-		{
-			if (layersContainer.GetChild(i).gameObject.activeSelf)
-			{
-				if (!gameObject.activeSelf)
-					gameObject.SetActive(true);
-				return;
-			}
-		}
-		if (gameObject.activeSelf)
-			gameObject.SetActive(false);
-	}
+    public void UpdateVisibility()
+    {
+        int count = layersContainer.childCount;
+        for (int i = 0; i < count; ++i)
+        {
+            if (layersContainer.GetChild(i).gameObject.activeSelf)
+            {
+                if (!gameObject.activeSelf)
+                    gameObject.SetActive(true);
+                return;
+            }
+        }
+        if (gameObject.activeSelf)
+            gameObject.SetActive(false);
+    }
 }

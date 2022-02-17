@@ -80,7 +80,7 @@ public class TimelineTool : Tool
 
 		containerMaxOffset = (int)layersContainer.offsetMax.y;
 
-		UpdateTransectSize();
+		UpdateChartSize();
 	}
 
 	protected override void OnDestroy()
@@ -102,7 +102,7 @@ public class TimelineTool : Tool
 	{
 		if (material != null)
 		{
-			UpdateTransectSize();
+			UpdateChartSize();
 		}
 	}
 
@@ -163,7 +163,7 @@ public class TimelineTool : Tool
 		if (mat != material)
 		{
 			material = mat;
-			UpdateTransectSize();
+			UpdateChartSize();
 		}
 	}
 
@@ -459,7 +459,7 @@ public class TimelineTool : Tool
 	}
 
 
-	private void UpdateTransectSize()
+	private void UpdateChartSize()
 	{
 		var rect = GetComponent<RectTransform>().rect;
 		material.SetFloat("Width", rect.width);

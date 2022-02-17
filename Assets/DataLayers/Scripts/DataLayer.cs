@@ -21,6 +21,7 @@ public class DataLayer
 {
 	public string Name { get; private set; }
 	public Color Color { get; private set; }
+	public int MapLayerDataColoring { get; private set; }
 	public LayerGroup Group { get; private set; }
 
 	public float MinFilter { get; private set; } = 0;
@@ -42,7 +43,7 @@ public class DataLayer
 	public bool IsTemp { get; private set; }
 
 	private readonly DataManager dataManager;
-
+	private bool defaultColoringAssigned = false;
 
 	//
 	// Events
@@ -120,6 +121,15 @@ public class DataLayer
 		}
 	}
 
+	//+
+	public void UpdateColoring(int coloring)
+	{
+        foreach (var patch in loadedPatchesInView)
+        {
+            UpdateMapLayerDataColoring(patch, coloring);
+        }
+    }
+
 	public void ChangeYear(int oldYear, int newYear, Site site)
 	{
 		foreach (var level in levels)
@@ -169,15 +179,24 @@ public class DataLayer
 				{
 					foreach (var patch in record.patches)
 					{
-						var mapLayer = patch.GetMapLayer() as GridMapLayer;
-						if (mapLayer != null)
+						if (patch.GetMapLayer() is GridMapLayer gridMapLayer)
 						{
-							mapLayer.SetUserOpacity(opacity);
-							mapLayer.SetToolOpacity(opacity);
+							gridMapLayer.SetUserOpacity(opacity);
+							gridMapLayer.SetToolOpacity(opacity);
 						}
+						else if (patch.GetMapLayer() is PointMapLayer pointMapLayer)
+						{
+							pointMapLayer.SetUserOpacity(opacity);
+							pointMapLayer.SetToolOpacity(opacity);
+						}
+
 						if (patch is GridPatch gridPatch && gridPatch.grid.values != null)
 						{
 							gridPatch.ResetFilter();
+						}
+						else if (patch is PointPatch pointPatch && pointPatch.pointData.values != null)
+						{
+							pointPatch.ResetFilter();
 						}
 					}
 				}
@@ -205,6 +224,13 @@ public class DataLayer
 								Mathf.Lerp(grid.minValue, grid.maxValue, min),
 								Mathf.Lerp(grid.minValue, grid.maxValue, max));
 						}
+						if (patch is PointPatch pointPatch && pointPatch.pointData.values != null)
+						{
+							var pointData = pointPatch.pointData;
+							pointPatch.SetMinMaxFilter(
+								Mathf.Lerp(pointData.minValue, pointData.maxValue, min),
+								Mathf.Lerp(pointData.minValue, pointData.maxValue, max));
+						}
 					}
 				}
 			}
@@ -222,10 +248,14 @@ public class DataLayer
 				{
 					foreach (var patch in record.patches)
 					{
-						var mapLayer = patch.GetMapLayer() as GridMapLayer;
-						if (mapLayer != null)
+						var mapLayer = patch.GetMapLayer();
+						if (mapLayer is GridMapLayer gridMapLayer)
 						{
-							mapLayer.SetUserOpacity(opacity);
+							gridMapLayer.SetUserOpacity(opacity);
+						}
+						else if (mapLayer is PointMapLayer pointMapLayer)
+						{
+							pointMapLayer.SetUserOpacity(opacity);
 						}
 					}
 				}
@@ -245,10 +275,14 @@ public class DataLayer
 				{
 					foreach (var patch in record.patches)
 					{
-						var mapLayer = patch.GetMapLayer() as GridMapLayer;
-						if (mapLayer != null)
+						var mapLayer = patch.GetMapLayer();
+						if (mapLayer is GridMapLayer gridMapLayer)
 						{
-							mapLayer.SetToolOpacity(opacity);
+							gridMapLayer.SetToolOpacity(opacity);
+						}
+						else if (mapLayer is PointMapLayer pointMapLayer)
+						{
+							pointMapLayer.SetToolOpacity(opacity);
 						}
 					}
 				}
@@ -416,6 +450,10 @@ public class DataLayer
 		if (type.Equals(GridDataIO.FileSufix))
 		{
 			yield return Patch.Create(this, filename, GridPatch.Create, GridDataIO.GetPatchHeaderLoader, OnPatchCreated);
+		}
+		else if (type.Equals(PointDataIO.FileSufix))
+		{
+			yield return Patch.Create(this, filename, PointPatch.Create, PointDataIO.GetPatchHeaderLoader, OnPatchCreated);
 		}
 		else if (type.Equals(GraphDataIO.FileSufix))
 		{
@@ -629,16 +667,6 @@ public class DataLayer
 		return false;
 	}
 
-	public void UpdateAfterValuesChange(GridData gridData)
-	{
-		var layerSite = gridData.patch.SiteRecord.layerSite;
-		layerSite.RecalculateMinMax();
-		layerSite.RecalculateMean(true);
-		layerSite.UpdatePatchesMinMaxFilters(MinFilter, MaxFilter);
-
-		UpdateLoadedVisibleRange();
-	}
-
 
 	//
 	// Event Methods
@@ -731,6 +759,7 @@ public class DataLayer
 		loadedPatchesInView.Add(patch);
 
 		dataManager.ShowPatch(patch);
+        UpdateMapLayerDataColoring(patch, MapLayerDataColoring);
 
 		if (OnPatchVisibilityChange != null)
             OnPatchVisibilityChange(this, patch, true);
@@ -776,30 +805,89 @@ public class DataLayer
             OnPatchVisibilityChange(this, patch, false);
 	}
 
-	private void UpdateValueRanges(Patch patch)
-	{
-		if (patch.Data is GridData)
-		{
-			UpdateValueRanges(patch.Data as GridData);
+    private void UpdateMapLayerDataColoring(Patch patch, int coloring)
+    {
+		if (patch.GetMapLayer() is GridMapLayer gridMapLayer)
+        {
+			if (!defaultColoringAssigned)
+			{
+				MapLayerDataColoring = (int)gridMapLayer.Grid.coloring;
+				defaultColoringAssigned = true;
+			}
+			else
+			{
+				MapLayerDataColoring = coloring;
+				gridMapLayer.Grid.coloring = (GridData.Coloring)MapLayerDataColoring;
+			}
 
+			if (patch.Data is GridData gridData)
+			{
+				if (!gridData.IsCategorized)
+                {
+					if (gridMapLayer.Grid.coloring == GridData.Coloring.ReverseSingle
+						|| gridMapLayer.Grid.coloring == GridData.Coloring.ReverseMulti
+						|| gridMapLayer.Grid.coloring == GridData.Coloring.Reverse)
+						gridMapLayer.SetColoringKeyword("GRADIENT_REVERSE");
+					else
+						gridMapLayer.SetColoringKeyword("GRADIENT");
+				}
+			}
+        }
+        else if (patch.GetMapLayer() is PointMapLayer pointMapLayer)
+        {
+			if (!defaultColoringAssigned)
+			{
+				MapLayerDataColoring = (int)pointMapLayer.PointData.coloring;
+				defaultColoringAssigned = true;
+			}
+			else
+			{
+				MapLayerDataColoring = coloring;
+				pointMapLayer.PointData.coloring = (PointData.Coloring)MapLayerDataColoring;
+			}
+
+			if (patch.Data is PointData pointData)
+			{
+				if (!pointData.IsCategorized)
+                {
+					if (pointMapLayer.PointData.coloring == PointData.Coloring.ReverseSingle
+						|| pointMapLayer.PointData.coloring == PointData.Coloring.ReverseMulti
+						|| pointMapLayer.PointData.coloring == PointData.Coloring.Reverse)
+						pointMapLayer.SetColoringKeyword("GRADIENT_REVERSE");
+					else
+						pointMapLayer.SetColoringKeyword("GRADIENT");
+				}
+			}
+        }
+    }
+
+    private void UpdateValueRanges(Patch patch)
+	{
+		if (patch.Data is GridData gridData)
+		{
+			UpdateValueRanges(patch, gridData.minValue, gridData.maxValue);
 		}
 		else if (patch.Data is MultiGridData)
 		{
 			var multigrid = patch.Data as MultiGridData;
 			foreach (var c in multigrid.categories)
 			{
-				UpdateValueRanges(c.grid);
+				UpdateValueRanges(c.grid.patch, c.grid.minValue, c.grid.maxValue);
 			}
+		}
+		else if (patch.Data is PointData pointData)
+		{
+			UpdateValueRanges(patch, pointData.minValue, pointData.maxValue);
 		}
 	}
 
-	private void UpdateValueRanges(GridData gridData)
+	private void UpdateValueRanges(Patch patch, float minValue, float maxValue)
 	{
 		// Update site's value range
-		var layerSite = gridData.patch.SiteRecord.layerSite;
-		bool siteValueRangeHasChanged = layerSite.UpdateMinMax(gridData.minValue, gridData.maxValue);
+		var layerSite = patch.SiteRecord.layerSite;
+		bool siteValueRangeHasChanged = layerSite.UpdateMinMax(minValue, maxValue);
 
-		if (gridData.patch is GridPatch)
+		if (patch is GridPatch || patch is PointPatch)
 			layerSite.RecalculateMean(siteValueRangeHasChanged);
 		else
 			layerSite.mean = 1;
@@ -808,8 +896,8 @@ public class DataLayer
 			layerSite.UpdatePatchesMinMaxFilters(MinFilter, MaxFilter);
 
 		// Update layer's value range
-		MinVisibleValue = Mathf.Min(MinVisibleValue, gridData.minValue);
-		MaxVisibleValue = Mathf.Max(MaxVisibleValue, gridData.maxValue);
+		MinVisibleValue = Mathf.Min(MinVisibleValue, minValue);
+		MaxVisibleValue = Mathf.Max(MaxVisibleValue, maxValue);
 	}
 
 	private void UpdateLoadedVisibleRange()
@@ -819,11 +907,15 @@ public class DataLayer
         {
             foreach (var patch in loadedPatchesInView)
             {
-				if (patch is GridPatch)
+				if (patch is GridPatch gridPatch)
 				{
-					var gridPatch = patch as GridPatch;
 					MinVisibleValue = Mathf.Min(MinVisibleValue, gridPatch.grid.minValue);
 					MaxVisibleValue = Mathf.Max(MaxVisibleValue, gridPatch.grid.maxValue);
+				}
+				else if (patch is PointPatch pointPatch)
+				{
+					MinVisibleValue = Mathf.Min(MinVisibleValue, pointPatch.pointData.minValue);
+					MaxVisibleValue = Mathf.Max(MaxVisibleValue, pointPatch.pointData.maxValue);
 				}
 			}
 
@@ -838,6 +930,10 @@ public class DataLayer
 			if (patch is GridPatch)
 			{
 				(patch.GetMapLayer() as GridMapLayer).UpdateRange();
+			}
+			else if (patch is PointPatch)
+			{
+				(patch.GetMapLayer() as PointMapLayer).UpdateRange();
 			}
 		}
 	}

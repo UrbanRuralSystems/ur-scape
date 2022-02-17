@@ -119,15 +119,18 @@ public class GridMapLayer : PatchMapLayer
         if (grid.patch != null)
         {
             SetUserOpacity(grid.patch.DataLayer.UserOpacity);
-			SetToolOpacity(grid.patch.DataLayer.ToolOpacity);
-		}
-		else
-		{
-			SetUserOpacity(1f);
-			SetToolOpacity(1f);
-		}
+            SetToolOpacity(grid.patch.DataLayer.ToolOpacity);
+        }
+        else
+        {
+            SetUserOpacity(1f);
+            SetToolOpacity(1f);
+        }
 
-        if (grid.coloring == GridData.Coloring.ReverseSingle)
+        //+
+        if (grid.coloring == GridData.Coloring.ReverseSingle
+            || grid.coloring == GridData.Coloring.ReverseMulti
+            || grid.coloring == GridData.Coloring.Reverse)
             SetColoringKeyword("GRADIENT_REVERSE");
     }
 
@@ -135,6 +138,11 @@ public class GridMapLayer : PatchMapLayer
     //
     // Public Methods
     //
+
+    public void SetColor(Color color)
+    {
+        material.SetColor("Tint", color);
+    }
 
     public void SetOffset(float x, float y)
     {
@@ -157,24 +165,6 @@ public class GridMapLayer : PatchMapLayer
 		material.SetFloat("ToolOpacity", opacity);
 	}
 
-    public bool IsTransectEnabled()
-    {
-        return material.IsKeywordEnabled("TRANSECT");
-    }
-
-	public void ShowTransect(bool show)
-    {
-        if (show)
-            material.EnableKeyword("TRANSECT");
-        else
-            material.DisableKeyword("TRANSECT");
-    }
-
-    public void SetTransect(float position)
-    {
-        material.SetFloat("TransectPosition", position);
-    }
-
 	// A stripe marker separates 2 stripes
 	// Number of stripes == Stripe markers + 1
 	// The stripe values should be between grid min and max
@@ -182,7 +172,10 @@ public class GridMapLayer : PatchMapLayer
     {
         if (stripeMarkers == null)
         {
-            if (grid.coloring == GridData.Coloring.ReverseSingle)
+            //+
+            if (grid.coloring == GridData.Coloring.ReverseSingle
+                || grid.coloring == GridData.Coloring.ReverseMulti
+                || grid.coloring == GridData.Coloring.Reverse)
                 SetColoringKeyword("GRADIENT_REVERSE");
             else
                 SetColoringKeyword("GRADIENT");
@@ -212,7 +205,10 @@ public class GridMapLayer : PatchMapLayer
         count = Mathf.Clamp(count, 0, 4);
         if (count == 0)
         {
-            if (grid.coloring == GridData.Coloring.ReverseSingle)
+            //+
+            if (grid.coloring == GridData.Coloring.ReverseSingle
+                || grid.coloring == GridData.Coloring.ReverseMulti
+                || grid.coloring == GridData.Coloring.Reverse)
                 SetColoringKeyword("GRADIENT_REVERSE");
             else
                 SetColoringKeyword("GRADIENT");
@@ -497,7 +493,7 @@ public class GridMapLayer : PatchMapLayer
 		material.SetFloat("Gamma", gamma);
     }
 
-	protected void CreateValuesBuffer()
+    protected void CreateValuesBuffer()
     {
         ReleaseValuesBuffer();
 

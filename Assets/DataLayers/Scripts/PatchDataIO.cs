@@ -52,6 +52,60 @@ public class ParseTaskData
 }
 
 
+/* Binary File Format
+
+Meaning			Offset	Type		Example (Hex)				Example Value
+BIN_TOKEN		0000	UInt32		0D F0 0D 60					(0x600DF00D)
+BIN_VERSION		0004	UInt32		0D 00 00 00					(13)
+West			0008	Double		00 00 00 00 00 80 66 C0		(-180)
+East			0010	Double		00 00 00 00 00 80 66 40		(180)
+North			0018	Double		00 00 00 00 00 00 42 40		(36)
+South			0020	Double		00 00 00 00 00 00 42 C0		(-36)
+CategoryCount	0028	Int32		00 00 00 00					(0)
+Min Value		002C	Float		00 00 00 00					(0)
+Max Value		0030	Float		00 88 18 46					(9762)
+Count X			0034	Int32		60 03 00 00					(864)
+Count Y			0038	Int32		AD 00 00 00					(173)
+Units			003C	String		00 00 00 00					("")
+Coloring		----	UInt8		00							(0)
+
+---Metadata---
+Count					Int32		00 00 00 01					(1)
+{
+	Key					String		...
+	Value				String		...
+}
+---Metadata---
+
+---Categories---
+{
+	Name				String		...
+	Value				Int32		00 00 00 00					(0)
+}
+---Categories---
+
+---Values---
+{
+	Value				Float		00 00 00 00					(0)
+}
+---Values---
+
+---Mask---
+HasMask					Bool		00 00 00 01					(true)
+{
+	Value				UInt8		00 00 00 00					(0)	
+}
+---Mask---
+
+---Distribution---
+Size					UInt8		01							(1)
+{
+	Value				UInt32		00 00 00 00					(0)
+}
+---Distribution---
+
+*/
+
 public static class PatchDataIO
 {
 	public static readonly uint BIN_TOKEN = 0x600DF00D;
@@ -180,6 +234,26 @@ public static class PatchDataIO
 			return null;
 
 		return metadata;
+	}
+
+	public static void ReadArray(BinaryReader br, ref byte[] bytes, Array arr, int elementBytes = 1)
+	{
+		int readSize = arr.Length * elementBytes;
+		if (readSize > 0)
+		{
+			if (bytes == null || bytes.Length < readSize)
+			{
+				bytes = new byte[readSize];
+			}
+
+			int read;
+			if ((read = br.Read(bytes, 0, readSize)) != readSize)
+			{
+				UnityEngine.Debug.LogError("Couldn't read all values. Expected (" + arr.Length + "), Read(" + (read / elementBytes) + ")");
+				readSize = read;
+			}
+			Buffer.BlockCopy(bytes, 0, arr, 0, readSize);
+		}
 	}
 
 

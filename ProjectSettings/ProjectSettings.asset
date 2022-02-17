@@ -125,7 +125,7 @@ PlayerSettings:
     16:10: 1
     16:9: 1
     Others: 1
-  bundleVersion: 0.9.94
+  bundleVersion: 0.9.95
   preloadedAssets: []
   metroInputSource: 0
   wsaTransparentSwapchain: 0
@@ -175,9 +175,9 @@ PlayerSettings:
     iPhone: sg.fcl.urs.ur-scape
     tvOS: com.Company.ProductName
   buildNumber:
-    Standalone: 0.9.94
-    iPhone: 0.9.94
-  AndroidBundleVersionCode: 9094
+    Standalone: 0.9.95
+    iPhone: 0.9.95
+  AndroidBundleVersionCode: 9095
   AndroidMinSdkVersion: 19
   AndroidTargetSdkVersion: 0
   AndroidPreferredInstallLocation: 1

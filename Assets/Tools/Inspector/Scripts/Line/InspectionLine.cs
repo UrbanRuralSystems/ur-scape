@@ -6,6 +6,7 @@
 //
 // Author:  Muhammad Salihin Bin Zaol-kefli  (mzaolkefli@ethz.ch)
 
+using System;
 using UnityEngine;
 
 using LineInfo = LineInspector.LineInspectorInfo;
@@ -24,8 +25,15 @@ public class InspectionLine : MonoBehaviour
 
     // Constants
     private const int StartPtIndex = 0;
+    private const int EndPtIndex = 1;
 
-    private bool needsUpdate = false;
+    private enum DragType
+    {
+        None,
+        Move
+    }
+    private DragType dragType = DragType.None;
+    private Vector3 dragOrigin;
 
     //
     // Unity Methods
@@ -42,7 +50,7 @@ public class InspectionLine : MonoBehaviour
     private void Update()
     {
         // Incomplete line or in delete or draw mode
-        if (lineInfo.controlPts.Count < 3 || lineInspectorPanel.removeLineInspectionToggle.isOn ||
+        if (lineInfo.controlPts.Count < 2 || lineInspectorPanel.removeLineInspectionToggle.isOn ||
             lineInspectorPanel.createLineInspectionToggle.isOn || lineInspector.CurrLineInspection == -1)
             return;
 
@@ -69,7 +77,7 @@ public class InspectionLine : MonoBehaviour
             if (lineInspector.IsCursorNearLine(lineInfo, mousePosition, midPtOffset) && isCursorWithinMapViewArea)
             {
                 lineInspectorPanel.ChangeKnobsAndLine(lineInfo, false);
-                if (inputHandler.IsLeftMouseDown)
+                if (inputHandler.IsLeftMouseDown && !inputHandler.IsDraggingLeft)
                     SelectLine();
             }
             else
@@ -77,13 +85,41 @@ public class InspectionLine : MonoBehaviour
         }
     }
 
-    private void LateUpdate()
-    {
-        if(needsUpdate)
-        {
-            needsUpdate = false;
+    //
+    // Event Methods
+    //
 
-            MoveLine();
+    private void OnLeftMouseDragStart()
+    {
+        if (dragType == DragType.None)
+        {
+            dragType = DragType.Move;
+            StartMove();
+        }
+    }
+
+    private void OnLeftMouseDrag()
+    {
+        if (dragType == DragType.Move)
+        {
+            float deltaX = inputHandler.MouseDelta.x;
+            float deltaY = inputHandler.MouseDelta.y;
+            if (Math.Abs(deltaX) > 0 || Math.Abs(deltaY) > 0)
+            {
+                MoveLine();
+            }
+        }
+    }
+
+    private void OnLeftMouseDragEnd()
+    {
+        if (dragType == DragType.Move)
+        {
+            inputHandler.OnLeftMouseDragStart -= OnLeftMouseDragStart;
+            inputHandler.OnLeftMouseDrag -= OnLeftMouseDrag;
+            inputHandler.OnLeftMouseDragEnd -= OnLeftMouseDragEnd;
+
+            dragType = DragType.None;
         }
     }
 
@@ -108,14 +144,39 @@ public class InspectionLine : MonoBehaviour
         if (Application.isPlaying)
 #endif
         {
-            needsUpdate = true;
+            inspectorTool.SetCursorTexture(inspectorTool.cursorMove);
+
+            inputHandler.OnLeftMouseDragStart += OnLeftMouseDragStart;
+            inputHandler.OnLeftMouseDrag += OnLeftMouseDrag;
+            inputHandler.OnLeftMouseDragEnd += OnLeftMouseDragEnd;
         }
+    }
+
+    private void StartMove()
+    {
+        dragOrigin = Input.mousePosition;
     }
 
     private void MoveLine()
     {
-        inspectorTool.SetCursorTexture(inspectorTool.cursorMove);
-        lineInspector.UpdateMidPtPos(lineInfo);
+        Vector3 point = Input.mousePosition;
+        var offset = point - dragOrigin;
+
+        var startPt = lineInfo.controlPts[StartPtIndex] as EndPt;
+        var endPt = lineInfo.controlPts[EndPtIndex] as EndPt;
+
+        var targetStartPtPos = startPt.transform.position + new Vector3(offset.x, offset.y, 0.0f);
+        var targetEndPtPos = endPt.transform.position + new Vector3(offset.x, offset.y, 0.0f);
+
+        if (inspectorTool.IsPosWithinMapViewArea(targetStartPtPos) && inspectorTool.IsPosWithinMapViewArea(targetEndPtPos))
+        {
+            startPt.UpdatePosition(targetStartPtPos);
+            endPt.UpdatePosition(targetEndPtPos);
+
+            lineInspectorPanel.SetCurrInspection(lineInfo.controlPts[StartPtIndex].InspectionIndex);
+        }
+
+        dragOrigin = point;
     }
 
     private void SelectLine()

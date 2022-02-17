@@ -107,12 +107,13 @@ public class FilterPanel : LayerOptionsPanel
         {
 			foreach (var site in dataLayer.loadedPatchesInView)
 			{
-				var data = site.Data as GridData;
-				data.OnGridChange += OnGridChange;
-				data.OnValuesChange += OnValuesChange;
-			}
+                if (site.Data is GridData gridData)
+                    AddEvents(gridData);
+                else if (site.Data is PointData pointData)
+                    AddEvents(pointData);
+            }
 
-			minSlider.onValueChanged.AddListener(OnMinSliderChanged);
+            minSlider.onValueChanged.AddListener(OnMinSliderChanged);
             maxSlider.onValueChanged.AddListener(OnMaxSliderChanged);
 
             minSlider.OnClick += OnSliderClick;
@@ -172,8 +173,6 @@ public class FilterPanel : LayerOptionsPanel
 
         base.OnPatchVisibilityChange(dataLayer, patch, visible);
 
-		var data = patch.Data as GridData;
-
 		if (visible)
         {
 			bool changedLevel = patch.Level != currentLevel;
@@ -185,31 +184,35 @@ public class FilterPanel : LayerOptionsPanel
                 SetMinMaxFilters(GetNonlinearValue(minSlider.value), GetNonlinearValue(maxSlider.value));
             }
 
-			data.OnGridChange += OnGridChange;
-			data.OnValuesChange += OnValuesChange;
+            if (patch.Data is GridData gridData)
+                AddEvents(gridData);
+            else if (patch.Data is PointData pointData)
+                AddEvents(pointData);
 		}
 		else
 		{
-			data.OnGridChange -= OnGridChange;
-			data.OnValuesChange -= OnValuesChange;
+            if (patch.Data is GridData gridData)
+                RemoveEvents(gridData);
+            else if (patch.Data is PointData pointData)
+                RemoveEvents(pointData);
 
 			UpdateDistributionChart();
 		}
     }
 
-	private void OnGridChange(GridData grid)
+    private void OnPatchtDataChange(PatchData patchtData)
 	{
-		OnValuesChange(grid);
-	}
+        OnPatchDataValuesChange(patchtData);
+    }
 
-	private void OnValuesChange(GridData grid)
-	{
-		UpdateValueRange(grid.patch);
-		UpdateFilters();
-		UpdateChart();
-	}
+    private void OnPatchDataValuesChange(PatchData patchtData)
+    {
+        UpdateValueRange(patchtData.patch);
+        UpdateFilters();
+        UpdateChart();
+    }
 
-	private void OnSliderClick()
+    private void OnSliderClick()
     {
         if (Time.time < nextDoubleClickTime)
         {
@@ -418,24 +421,52 @@ public class FilterPanel : LayerOptionsPanel
 	{
 		currentLevel = patch.Level;
 
-		unitsLabel.text = (patch.Data as GridData).units;
+        if (patch.Data is GridData gridData)
+		    unitsLabel.text = gridData.units;
+        else if (patch.Data is PointData pointData)
+            unitsLabel.text = pointData.units;
 
-		UpdateValueRange(patch);
+        UpdateValueRange(patch);
 		UpdateFilters();
 		UpdateChart();
     }
 
-	private void RemoveVisibleGridEvents()
+    private void AddEvents(GridData gridData)
+    {
+        gridData.OnGridChange += OnPatchtDataChange;
+        gridData.OnValuesChange += OnPatchDataValuesChange;
+    }
+
+    private void AddEvents(PointData pointData)
+    {
+        pointData.OnPointDataChange += OnPatchtDataChange;
+        pointData.OnValuesChange += OnPatchDataValuesChange;
+    }
+
+    private void RemoveVisibleGridEvents()
 	{
 		foreach (var site in dataLayer.loadedPatchesInView)
 		{
-			var data = site.Data as GridData;
-			data.OnGridChange -= OnGridChange;
-			data.OnValuesChange -= OnValuesChange;
-		}
-	}
+            if (site.Data is GridData gridData)
+                RemoveEvents(gridData);
+            else if (site.Data is PointData pointData)
+                RemoveEvents(pointData);
+        }
+    }
 
-	private void UpdateValueRange(Patch patch)
+    private void RemoveEvents(GridData gridData)
+    {
+        gridData.OnGridChange -= OnPatchtDataChange;
+        gridData.OnValuesChange -= OnPatchDataValuesChange;
+    }
+
+    private void RemoveEvents(PointData pointData)
+    {
+        pointData.OnPointDataChange -= OnPatchtDataChange;
+        pointData.OnValuesChange -= OnPatchDataValuesChange;
+    }
+
+    private void UpdateValueRange(Patch patch)
     {
 		var layerSite = patch.SiteRecord.layerSite;
 		siteMinValue = layerSite.minValue;
@@ -572,37 +603,51 @@ public class FilterPanel : LayerOptionsPanel
 
 		ClearChartValues();
 
+        float patchMinValue;
+        float patchMaxValue;
         float minValue = float.MaxValue;
         float maxValue = float.MinValue;
 		float minRange;
 		float maxRange;
         float minVal = (filterValsInPercent) ? siteMinPercent : siteMinValue;
         float maxVal = (filterValsInPercent) ? siteMaxPercent : siteMaxValue;
+        int[] dv;
 
         for (int i = 0; i < dataLayer.loadedPatchesInView.Count; i++)
         {
-            GridPatch patch = dataLayer.loadedPatchesInView[i] as GridPatch;
-            if (patch == null)
+            var patch = dataLayer.loadedPatchesInView[i];
+            if (patch is GridPatch gridPatch)
+			{
+                var grid = gridPatch.grid;
+                patchMinValue = grid.minValue;
+                patchMaxValue = grid.maxValue;
+                dv = grid.DistributionValues;
+            }
+            else if (patch is PointPatch pointPatch)
+            {
+                var pointData = pointPatch.pointData;
+                patchMinValue = pointData.minValue;
+                patchMaxValue = pointData.maxValue;
+                dv = pointData.DistributionValues;
+            }
+            else
                 continue;
 
-            var grid = patch.grid;
+            if (patchMinValue != float.MaxValue)
+            {
+                minValue = Mathf.Min(minValue, patchMinValue);
+                maxValue = Mathf.Max(maxValue, patchMaxValue);
+                minRange = Mathf.InverseLerp(minVal, maxVal, patchMinValue);
+                maxRange = Mathf.InverseLerp(minVal, maxVal, patchMaxValue);
+            }
+            else
+            {
+                minValue = 0;
+                maxValue = 0;
+                minRange = 0;
+                maxRange = 0;
+            }
 
-			if (grid.minValue != float.MaxValue)
-			{
-				minValue = Mathf.Min(minValue, grid.minValue);
-				maxValue = Mathf.Max(maxValue, grid.maxValue);
-                minRange = Mathf.InverseLerp(minVal, maxVal, grid.minValue);
-				maxRange = Mathf.InverseLerp(minVal, maxVal, grid.maxValue);
-			}
-			else
-			{
-				minValue = 0;
-				maxValue = 0;
-				minRange = 0;
-				maxRange = 0;
-			}
-
-			var dv = grid.DistributionValues;
             int distribSize = 0;
             if (dv != null)
                 distribSize = dv.Length;

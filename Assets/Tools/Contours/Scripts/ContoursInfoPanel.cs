@@ -9,26 +9,29 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class ContoursInfoPanel : MonoBehaviour, IOutput
 {
-	private class InfoPanelEntry
+	public class InfoPanelEntry
 	{
-		public KeyValuePair pair;
+		public SnapshotInfo snapshotInfo;
 		public double? sqm = null;
 	}
 
 	[Header("UI References")]
 	public Dropdown unitsDropdown;
+	public GameObject relativeToSnapshotPanel;
+	public Dropdown relativeToSnapshotDropdown;
 	public GameObject message;
 	public GameObject stats;
 	public Transform container;
 	public Text note;
 
 	[Header("Prefabs")]
-	public KeyValuePair itemPrefab;
+	public SnapshotInfo itemPrefab;
 
 	[Header("Settings")]
 	public AreaUnit[] units = new AreaUnit[]
@@ -50,12 +53,23 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
 			name = "Square Meters"/*translatable*/,
 			symbol = "m\u00B2",
 			factor = 1
-		}
+		},
+		new AreaUnit
+		{
+			name = "Percentage"/*translatable*/,
+			symbol = "%",
+			factor = 100
+		},
 	};
 
 
 	private readonly Dictionary<string, InfoPanelEntry> entries = new Dictionary<string, InfoPanelEntry>();
 	private AreaUnit selectedUnit = null;
+	private ContoursTool contoursTool;
+	private InfoPanelEntry selectedEntry = null;
+	private bool isPercentage = false;
+	private int prevUnitsOption = 0;
+	private int selectedRelativeSnapshotValue = 0;
 
 	//
 	// Unity Methods
@@ -64,7 +78,9 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
 	private void Awake()
 	{
 		LocalizationManager.Instance.OnLanguageChanged += OnLanguageChanged;
+		contoursTool = ComponentManager.Instance.Get<ContoursTool>();
 		UpdateNote();
+		Init();
 	}
 
 	public void Init()
@@ -82,6 +98,8 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
 		unitsDropdown.onValueChanged.RemoveListener(OnUnitsChanged);
 		unitsDropdown.onValueChanged.AddListener(OnUnitsChanged);
 
+		relativeToSnapshotPanel.SetActive(false);
+
 		ShowStats(false);
 	}
 
@@ -97,8 +115,32 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
 	private void OnUnitsChanged(int value)
 	{
 		selectedUnit = units[value];
+
+		isPercentage = value == (units.Length - 1);
+		relativeToSnapshotPanel.SetActive(isPercentage);
+
+		if (isPercentage)
+		{
+			string key = $"S{selectedRelativeSnapshotValue}";
+			selectedEntry = entries.ContainsKey(key) ? entries[key] : entries.Values.First();
+		}
+		else
+		{
+			selectedEntry = null;
+			prevUnitsOption = value;
+		}
+
 		UpdateAll();
 	}
+
+	private void OnRelativeToSnapshotChanged(int value)
+    {
+		// Convert all to previous selected unit first,
+		// Then convert to percentage relative to selected snapshot
+		selectedRelativeSnapshotValue = value;
+		OnUnitsChanged(prevUnitsOption);
+		OnUnitsChanged(units.Length - 1);
+    }
 
 	private void OnLanguageChanged()
 	{
@@ -108,8 +150,8 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
 		// Retranslate the "N/A"
 		foreach (var entry in entries.Values)
 		{
-			if (entry.pair.Disabled)
-				entry.pair.SetValue(Translator.Get("N/A"));
+			if (entry.snapshotInfo.Disabled)
+				entry.snapshotInfo.SetValue(Translator.Get("N/A"));
 		}
 	}
 
@@ -124,17 +166,18 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
 		stats.SetActive(show);
 	}
 
-	public void AddEntry(string id, string keylabel)
+	public void AddEntry(string id, string titlelabel, bool isSnapshot = false)
     {
 		// Hide "no data layers" message
 		message.SetActive(false);
 
-        var pair = Instantiate(itemPrefab, container, false);
-		pair.SetKey(keylabel);
+        var info = Instantiate(itemPrefab, container, false);
+		info.SetTitle(titlelabel);
+		info.SetAsSnapshot(isSnapshot);
 
 		var entry = new InfoPanelEntry
 		{
-			pair = pair,
+			snapshotInfo = info,
 		};
 		entries.Add(id, entry);
 
@@ -142,7 +185,7 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
     }
 
 	// Called after renaming a snapshot
-	public void RenameEntry(string id, string keyLabel)
+	public void RenameEntry(string id, string titleLabel)
 	{
 		if (!entries.TryGetValue(id, out InfoPanelEntry entry))
 		{
@@ -150,7 +193,15 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
 			return;
 		}
 
-		entry.pair.SetKey(keyLabel);
+		entry.snapshotInfo.SetTitle(titleLabel);
+
+		if (contoursTool.LegendPanl.LegendItems.TryGetValue(id, out LegendItem item))
+		{
+			item.SetDisplayName(titleLabel);
+		}
+
+		UpdateRelativeToSnapshotDropdown();
+		UpdateAll();
 	}
 
 	public void UpdateEntry(string id, double sqm)
@@ -160,7 +211,12 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
 			entry.sqm = sqm;
 			UpdateEntryValue(entry);
 		}
-    }
+
+		if (contoursTool.LegendPanl.LegendItems.TryGetValue(id, out LegendItem item))
+		{
+			(item as SnapshotLegendItem).SetArea(sqm, selectedUnit, isPercentage, selectedEntry);
+		}
+	}
 
 	public void ClearEntry(string id)
 	{
@@ -168,6 +224,16 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
 		{
 			entry.sqm = null;
 			ClearEntry(entry);
+		}
+	}
+
+	public void RemoveEntry(string id)
+    {
+		if (entries.TryGetValue(id, out InfoPanelEntry entry))
+		{
+			Destroy(entry.snapshotInfo.gameObject);
+			entries.Remove(id);
+			GuiUtils.RebuildLayout(container);
 		}
 	}
 
@@ -188,7 +254,6 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
 		}
 
         // Export only when there is a selected contour
-        var contoursTool = ComponentManager.Instance.Get<ContoursTool>();
         if (contoursTool.ContoursLayer.SelectedContour > 1)
         {
             string exportPath = "";
@@ -216,6 +281,43 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
         }
 	}
 
+	public void SetSnapshotProperties(string id, int num, Color color)
+	{
+		if (entries.TryGetValue(id, out InfoPanelEntry entry))
+		{
+			entry.snapshotInfo.snapshotColour.color = color;
+		}
+	}
+
+	public void UpdateSnapshotColour(string id, Color color)
+    {
+		if (entries.TryGetValue(id, out InfoPanelEntry entry))
+		{
+			entry.snapshotInfo.snapshotColour.color = color;
+		}
+	}
+
+	public void UpdateRelativeToSnapshotDropdown()
+    {
+		if (entries.Count > 0)
+		{
+			int prevOption = relativeToSnapshotDropdown.value;
+
+			relativeToSnapshotDropdown.onValueChanged.RemoveListener(OnRelativeToSnapshotChanged);
+			relativeToSnapshotDropdown.ClearOptions();
+
+			foreach (var entry in entries.Values)
+			{
+				if (entry == entries["CC"] || entry == entries["SC"])
+					continue;
+
+				relativeToSnapshotDropdown.options.Add(new Dropdown.OptionData(entry.snapshotInfo.title.text));
+			}
+			relativeToSnapshotDropdown.onValueChanged.AddListener(OnRelativeToSnapshotChanged);
+			relativeToSnapshotDropdown.value = Mathf.Clamp(prevOption - 1, 0, relativeToSnapshotDropdown.options.Count - 1);
+			relativeToSnapshotDropdown.RefreshShownValue();
+		}
+	}
 
 	//
 	// Private Methods
@@ -223,16 +325,30 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
 
 	private void ClearEntry(InfoPanelEntry entry)
 	{
-		entry.pair.SetValue(Translator.Get("N/A"));
-		if (!entry.pair.Disabled)
-			entry.pair.Disabled = true;
+		entry.snapshotInfo.SetValue(Translator.Get("N/A"));
+		if (!entry.snapshotInfo.Disabled)
+			entry.snapshotInfo.Disabled = true;
 	}
 
 	private void UpdateAll()
     {
 		foreach (var entry in entries.Values)
-        {
+		{
+			if (isPercentage && entry == selectedEntry)
+				continue;
+
 			UpdateEntryValue(entry);
+		}
+
+		foreach (var id in entries.Keys)
+		{
+			if (entries[id] == selectedEntry)
+				continue;
+
+			if (contoursTool.LegendPanl.LegendItems.TryGetValue(id, out LegendItem item))
+			{
+				(item as SnapshotLegendItem).SetArea(entries[id].sqm.Value, selectedUnit, isPercentage, selectedEntry);
+			}
 		}
 	}
 
@@ -245,37 +361,45 @@ public class ContoursInfoPanel : MonoBehaviour, IOutput
 		}
 
 		var sufix = "";
-		float area = (float)(entry.sqm * selectedUnit.factor);
-		if (area > 1e+12)
-		{
-			area *= 1e-12f;
-			sufix = Translator.Get("trillion");
-		}
-		else if (area > 1e+9)
-		{
-			area *= 1e-9f;
-			sufix = Translator.Get("billion");
-		}
-		else if (area > 1e+6)
-		{
-			area *= 1e-6f;
-			sufix = Translator.Get("million");
-		}
+		float area = !isPercentage ?
+						(float)(entry.sqm * selectedUnit.factor) :
+						(float)(entry.sqm * selectedUnit.factor / selectedEntry?.sqm.Value);
 
-		entry.pair.SetValue(area.ToString("N") + " " + sufix + " " + selectedUnit.symbol);
-		if (entry.pair.Disabled)
-			entry.pair.Disabled = false;
+		if (!isPercentage)
+		{
+			if (area > 1e+12)
+			{
+				area *= 1e-12f;
+				sufix = Translator.Get("trillion");
+			}
+			else if (area > 1e+9)
+			{
+				area *= 1e-9f;
+				sufix = Translator.Get("billion");
+			}
+			else if (area > 1e+6)
+			{
+				area *= 1e-6f;
+				sufix = Translator.Get("million");
+			}
+
+			entry.snapshotInfo.SetValue(area.ToString("N") + " " + sufix + " " + selectedUnit.symbol);
+		}
+		else
+			entry.snapshotInfo.SetValue($"{(int)area} {selectedUnit.symbol} of {selectedEntry?.snapshotInfo.GetTitle()}");
+
+		if (entry.snapshotInfo.Disabled)
+			entry.snapshotInfo.Disabled = false;
 	}
 
 	private void WriteContourInfo(InfoPanelEntry entry, TextWriter csv)
     {
-		string value = entry.pair.GetValue();
-        csv.WriteLine("{0},{1}", entry.pair.GetKey().ToUpper(), CsvHelper.Escape(value));
+		string value = entry.snapshotInfo.GetValue();
+        csv.WriteLine("{0},{1}", entry.snapshotInfo.GetTitle().ToUpper(), CsvHelper.Escape(value));
     }
 
     private void WriteSelectedContourInfo(string filename)
     {
-        var contoursTool = ComponentManager.Instance.Get<ContoursTool>();
         var dataLayers = ComponentManager.Instance.Get<DataLayers>();
 		var translator = LocalizationManager.Instance;
 

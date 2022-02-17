@@ -6,6 +6,7 @@
 //
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 
+using Catfood.Shapefile;
 using SFB;
 using System.Collections;
 using System.Collections.Generic;
@@ -19,9 +20,15 @@ public class ImportDataPanel : MonoBehaviour
     public GameObject propertiesPanel;
     public Text fileLabel;
     public Button openFile;
-    public DropdownWithInput siteDropdown;
+    public Text fieldLabel;
+	public Dropdown fieldDropdown;
+	public DropdownWithInput siteDropdown;
     public DropdownWithInput groupDropdown;
     public DropdownEx layerDropdown;
+	public Toggle categorisedCheckbox;
+	public Text categoriesLabel;
+	public InputField categoryInput;
+    public Button loadCategoriesButton;
 	public DropdownEx resolutionDropdown;
 	public InputField unitsInput;
 	public InputField yearInput;
@@ -32,6 +39,7 @@ public class ImportDataPanel : MonoBehaviour
 	public RectTransform warningIcon;
 	public Text warningMessage;
 	public RectTransform mask;
+	public RectTransform categories;
 
 	[Header("Prefabs")]
     public Text labelPrefab;
@@ -95,22 +103,29 @@ public class ImportDataPanel : MonoBehaviour
 		IncorrectYearWarning = translator.Get("Please enter a year between 1800 and 2500");
 		IncorrectMonthWarning = translator.Get("Please enter a month value between 1 and 12");
 
+		OnCategorisedCheckboxChanged(false);
+
 		openFile.onClick.AddListener(OnOpenFileClick);
 		addButton.onClick.AddListener(OnAddClick);
 
 		siteDropdown.OnTextChangedWithoutValueChange += OnSiteInputChangedWithoutValueChange;
-		groupDropdown.OnTextChangedWithoutValueChange += OnGroupInputChangedWithoutValueChange;
-		unitsInput.onEndEdit.AddListener(OnUnitsInputEndEdit);
+        groupDropdown.OnTextChangedWithoutValueChange += OnGroupInputChangedWithoutValueChange;
+		categorisedCheckbox.onValueChanged.AddListener(OnCategorisedCheckboxChanged);
+		loadCategoriesButton.onClick.AddListener(OnLoadCategoriesClicked);
+        categoryInput.onValueChanged.AddListener(OnCategoryInputChanged);
+        categoryInput.onEndEdit.AddListener(OnCategoryInputEndEdit);
+        unitsInput.onEndEdit.AddListener(OnUnitsInputEndEdit);
 		yearInput.onEndEdit.AddListener(OnYearInputEndEdit);
 		monthInput.onEndEdit.AddListener(OnMonthInputEndEdit);
 	}
 
-	private void Start()
+    private void Start()
 	{
 		// These callbacks need to be registered in Start and not in Awake to allow dropboxes to register their callbacks first
         AddOnEndEditEvent(siteDropdown.input);
         AddOnEndEditEvent(groupDropdown.input);
-		AddOnEndEditEvent(unitsInput);
+		AddOnEndEditEvent(categoryInput);
+        AddOnEndEditEvent(unitsInput);
 		AddOnEndEditEvent(yearInput);
         AddOnEndEditEvent(monthInput);
         AddOnEndEditEvent(sourceInput);
@@ -163,7 +178,20 @@ public class ImportDataPanel : MonoBehaviour
 		interpreter = Interpreter.Get(FullFilename);
 		fileInfo = interpreter.GetBasicInfo(FullFilename);
 
-		ShowWarningMessage(translator.Get("Invalid file"), openFile, fileInfo == null);
+		if (fileInfo == null)
+		{
+			ShowWarningMessage(translator.Get("Invalid file"), openFile, true);
+			return;
+		}
+
+		// Update field dropdown if file is vector data
+		bool isVectorData = interpreter is ShapefileInterpreter;
+		if (isVectorData)
+			UpdateFieldDropdown(FullFilename);
+
+		// Show/hide field label and dropdown depending on vector or raster data
+		fieldLabel.gameObject.SetActive(isVectorData);
+		fieldDropdown.gameObject.SetActive(isVectorData);
 
 		var filename_lc = filename.ToLower();
 
@@ -226,7 +254,37 @@ public class ImportDataPanel : MonoBehaviour
 		UpdateProgress();
     }
 
-    private void OnInputEndEdit(InputField input, string text)
+	private void OnLoadCategoryFile(string[] paths)
+    {
+		if (paths == null || paths.Length == 0 || string.IsNullOrWhiteSpace(paths[0]))
+        {
+			return;
+        }
+
+		ResetCategoryInputs();
+
+		// Automatically fill in categories from csv file
+		using (StreamReader sr = new StreamReader(paths[0]))
+		{
+            // Read first line for first category input
+            string category = sr.ReadLine();
+            categoryInput.text = category;
+
+			// Read rest of line for rest of categories
+			while (!sr.EndOfStream)
+            {
+                category = sr.ReadLine();
+                UpdateMask(unitsInput);
+                AddCategoryInput(category);
+                GuiUtils.RebuildLayout(transform);
+            }
+            UpdateMask(unitsInput);
+            AddCategoryInput();
+            GuiUtils.RebuildLayout(transform);
+        }
+	}
+
+	private void OnInputEndEdit(InputField input, string text)
     {
         if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
         {
@@ -283,6 +341,77 @@ public class ImportDataPanel : MonoBehaviour
         resolutionDropdown.captionText.text = Translator.Get(res.name, false) + "  (" + res.ToMetersString(true, true) + ")";
         UpdateProgress();
 		resolutionItemIndex = 0;
+	}
+
+	private void OnCategorisedCheckboxChanged(bool isOn)
+	{
+		loadCategoriesButton.interactable = isOn;
+		categoriesLabel.gameObject.SetActive(isOn);
+		categories.gameObject.SetActive(isOn);
+
+		var categoriesInputs = categories.GetComponentsInChildren<InputField>();
+		int count = categories.childCount;
+
+		if (count > 1)
+		{
+			var lastCategoryInput = categoriesInputs[count - 1];
+			var placeholder = lastCategoryInput.placeholder;
+			placeholder.GetComponent<LocalizedText>().text = translator.Get("New Category");
+		}
+
+		if (isOn)
+			UpdateMask(unitsInput);
+		else
+			UpdateMask(resolutionDropdown);
+		GuiUtils.RebuildLayout(transform);
+	}
+
+	private void OnLoadCategoriesClicked()
+	{
+		SelectCategoryFile();
+	}
+
+	private void OnCategoryInputChanged(string text)
+	{
+		var currTextLen = text.Length;
+
+		// Text changed from empty
+		if ((currTextLen - 1) == 0)
+		{
+			UpdateMask(resolutionDropdown);
+			AutoAddCategoryInput();
+		}
+
+		// Delete category input when text changed to empty
+		if (string.IsNullOrEmpty(text))
+        {
+			var categoriesInputs = categories.GetComponentsInChildren<InputField>();
+			int count = categories.childCount;
+
+			if (count > 1)
+            {
+				for (int i = 1; i < count; ++i)
+				{
+					var input = categoriesInputs[i];
+					if (string.IsNullOrEmpty(input.text))
+					{
+						input.onEndEdit.RemoveListener(OnCategoryInputEndEdit);
+						input.onValueChanged.RemoveListener(OnCategoryInputChanged);
+						Destroy(input.gameObject);
+
+						UpdateMask(categories);
+						GuiUtils.RebuildLayout(categories);
+
+						break;
+					}
+				}
+			}
+        }
+	}
+
+	private void OnCategoryInputEndEdit(string text)
+	{
+		UpdateProgress();
 	}
 
 	private void OnUnitsInputEndEdit(string text)
@@ -362,8 +491,7 @@ public class ImportDataPanel : MonoBehaviour
                     result.shouldClose = false;
             }
         };
-    }
-
+	}
 
     //
     // Public Methods
@@ -409,6 +537,25 @@ public class ImportDataPanel : MonoBehaviour
 		return Path.Combine(Paths.Sites, siteName, patchFilename + "." + Patch.BIN_EXTENSION);
 	}
 
+	public string[] GetCategories()
+    {
+		var categoryInputs = categories.GetComponentsInChildren<InputField>();
+		int length = categoryInputs.Length - 1;
+
+		if (categorisedCheckbox.isOn && length > 0)
+		{
+			string[] categoryNames = new string[length];
+
+			for (int i = 0; i < length; ++i)
+			{
+				categoryNames[i] = categoryInputs[i].text;
+			}
+
+			return categoryNames;
+		}
+
+		return null;
+    }
 
 	//
 	// Private Methods
@@ -531,6 +678,17 @@ public class ImportDataPanel : MonoBehaviour
 
 		StandaloneFileBrowser.OpenFilePanelAsync(translator.Get("Select file to import"), "", extFilters, false, OnLoadFiles);
     }
+
+	private void SelectCategoryFile()
+    {
+		List<string> allExtensions = new List<string>();
+		allExtensions.Add("csv");
+		var formats = Interpreter.DataFormats;
+		var extFilters = new ExtensionFilter[1];
+		extFilters[0] = new ExtensionFilter(translator.Get("Category File") + " ", allExtensions.ToArray());
+
+		StandaloneFileBrowser.OpenFilePanelAsync(translator.Get("Select category file"), "", extFilters, false, OnLoadCategoryFile);
+	}
 
     private void UpdatePanelUI()
     {
@@ -759,5 +917,66 @@ public class ImportDataPanel : MonoBehaviour
 			}
 		}
 		return null;
+	}
+
+	private void AutoAddCategoryInput()
+    {
+		bool hasEmpty = false;
+		var categoriesInputs = categories.GetComponentsInChildren<InputField>();
+
+		// Check if there already exists 1 empty category input
+        foreach (var input in categoriesInputs)
+        {
+			if (string.IsNullOrEmpty(input.text))
+            {
+				hasEmpty = true;
+				break;
+            }
+        }
+
+		// Add new category input to categories
+		if (!hasEmpty)
+        {
+			AddCategoryInput();
+		}
+	}
+
+	private void ResetCategoryInputs()
+    {
+		var categoriesInputs = categories.GetComponentsInChildren<InputField>();
+		int length = categoriesInputs.Length;
+
+        for (int i = 1; i < length; ++i)
+        {
+			var categoryInput = categoriesInputs[i];
+
+			categoryInput.onEndEdit.RemoveAllListeners();
+			categoryInput.onValueChanged.RemoveListener(OnCategoryInputChanged);
+
+			Destroy(categoryInput.gameObject);
+        }
+	}
+
+	private void AddCategoryInput(string text = null)
+	{
+		var catInput = Instantiate(inputPrefab, categories);
+		catInput.interactable = true;
+		catInput.placeholder.GetComponent<LocalizedText>().text = translator.Get("New Category");
+		catInput.name = $"CategoryInput{catInput.transform.GetSiblingIndex()}";
+
+		catInput.onValueChanged.AddListener(OnCategoryInputChanged);
+		catInput.onEndEdit.AddListener(OnCategoryInputEndEdit);
+		AddOnEndEditEvent(catInput);
+
+		if (!string.IsNullOrEmpty(text))
+			catInput.text = text;
+	}
+
+	private void UpdateFieldDropdown(string filename)
+    {
+		fieldDropdown.ClearOptions();
+
+		Shapefile shapefile = new Shapefile(filename);
+		fieldDropdown.AddOptions(new List<string>(shapefile.FieldNames));
 	}
 }

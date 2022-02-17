@@ -108,11 +108,15 @@ public class CellInspectorPanel : MonoBehaviour
 		foreach (var mapLayer in toolLayers.mapLayers)
 		{
 			string cellValue = "N/A";
-			var grid = mapLayer.Grid;
-			if (grid is GridData gridData)
+			var gridLayer = mapLayer as GridMapLayer;
+			if (gridLayer != null)
 			{
-				if (GetGridDataValue(gridData, coords, true, out cellValue))
-					UpdateRow(index++, mapLayer.name, "", Color.gray, cellValue);
+				var grid = gridLayer.Grid;
+				if (grid is GridData gridData)
+				{
+					if (GetGridDataValue(gridData, coords, true, out cellValue))
+						UpdateRow(index++, mapLayer.name, "", Color.gray, cellValue);
+				}
 			}
 		}
 #endif

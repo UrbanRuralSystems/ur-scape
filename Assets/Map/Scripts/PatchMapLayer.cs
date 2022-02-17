@@ -6,9 +6,6 @@
 //
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 
-using UnityEngine;
-
-[RequireComponent(typeof(MeshRenderer))]
 public class PatchMapLayer : AreaMapLayer
 {
     protected PatchData patchData;
@@ -47,18 +44,6 @@ public class PatchMapLayer : AreaMapLayer
         // Register events
         patchData.OnBoundsChange += OnPatchBoundsChange;
     }
-
-	public override void UpdateContent()
-	{
-		// Update the position
-		var offset = areaCenterInMeters - map.MapCenterInMeters;
-		var units = GeoCalculator.RelativeMetersToPixels(offset, map.ZoomLevel) * map.PixelsToUnits;
-		transform.localPosition = new Vector3((float)units.x, (float)units.y, -0.001f);
-
-		// Update the size
-		units = GeoCalculator.RelativeMetersToPixels(areaSizeInMeters, map.ZoomLevel) * map.PixelsToUnits;
-		transform.localScale = new Vector3((float)units.x, (float)units.y, 1);
-	}
 
 
 	//

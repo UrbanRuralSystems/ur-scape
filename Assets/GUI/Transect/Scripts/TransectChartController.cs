@@ -71,11 +71,11 @@ public class TransectChartController : MonoBehaviour, IPointerEnterHandler, IPoi
 		// Wait InitialFrames frame for UI to finish layout, so that charts have the right size for the shader
 		yield return WaitFor.Frames(WaitFor.InitialFrames);
 
-        var transectLocator = ComponentManager.Instance.GetOrNull<TransectLocator>();
+        /*- var transectLocator = ComponentManager.Instance.GetOrNull<TransectLocator>();
         if (transectLocator != null)
         {
 			transectLocator.OnLocatorChange += OnLocatorChange;
-        }
+        }*/
 
         map = ComponentManager.Instance.Get<MapController>();
         inspectorTool = ComponentManager.Instance.Get<InspectorTool>();
@@ -191,7 +191,7 @@ public class TransectChartController : MonoBehaviour, IPointerEnterHandler, IPoi
         }
     }
 
-    private void OnLocatorChange(float locator)
+    /*- private void OnLocatorChange(float locator)
     {
         this.locator = locator;
 
@@ -203,7 +203,7 @@ public class TransectChartController : MonoBehaviour, IPointerEnterHandler, IPoi
 		{
 			chart.SetLocator(locator);
 		}
-	}
+	}-*/
 
 	private void OnShowGrid(GridMapLayer mapLayer, bool show)
     {

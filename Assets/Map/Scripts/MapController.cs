@@ -106,6 +106,7 @@ public class MapController : UrsComponent
     public Distance MapCenterInMeters { get { return currentMeters; } }
 
     private Rect viewBounds = new Rect(0, 0, 0, 0);   // Measured in units
+    public Rect ViewBounds { get => viewBounds; }
 
     private AreaBounds mapCoordBounds = new AreaBounds(0,0,0,0); // Measured in degrees (Lon/Lat)
     public AreaBounds MapCoordBounds { get => mapCoordBounds; }
@@ -486,7 +487,12 @@ public class MapController : UrsComponent
         return GeoCalculator.MetersToLonLat(currentMeters.x + x * unitsToMeters, currentMeters.y + y * unitsToMeters);
     }
 
-	public Vector3 GetUnitsFromCoordinates(Coordinate coords)
+    public Distance GetMetersFromUnits(float x, float y)
+    {
+        return new Distance(currentMeters.x + x * unitsToMeters, currentMeters.y + y * unitsToMeters);
+    }
+
+    public Vector3 GetUnitsFromCoordinates(Coordinate coords)
     {
         var distance = GeoCalculator.LonLatToMeters(coords.Longitude, coords.Latitude) - currentMeters;
         return new Vector3((float)distance.x * metersToUnits, (float)distance.y * metersToUnits, 0);

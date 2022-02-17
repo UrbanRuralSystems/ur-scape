@@ -357,8 +357,13 @@ public class AreaInspectorOutput : MonoBehaviour
 
     public void ShowHeader(bool show)
     {
-        if (areaTypeDropdown.value.Equals(Area))
-            areaPSUIRef.ShowHeader(show && !areaPSUIRef.summaryDropdown.value.Equals(AreaPS.Correlation));
+        bool isArea = areaTypeDropdown.value.Equals(Area);
+        var areaInspector = inspectorTool.areaInspectorPanel.areaInspector;
+        bool areaAvailable = areaInspector.CurrAreaInspection > -1;
+        bool correlationEnabled = areaPSUIRef.summaryDropdown.value.Equals(AreaPS.Correlation);
+
+        if (isArea)
+            areaPSUIRef.ShowHeader(show && areaAvailable && !correlationEnabled);
         else
         {
             if (contoursTool)
@@ -368,8 +373,13 @@ public class AreaInspectorOutput : MonoBehaviour
 
     public void ShowPropertiesAndSummaryLabel(bool show)
     {
-        if (areaTypeDropdown.value.Equals(Area))
-            areaPSUIRef.ShowPropertiesAndSummaryLabel(show && !areaPSUIRef.summaryDropdown.value.Equals(AreaPS.Correlation), areaTypeDropdown.value);
+        bool isArea = areaTypeDropdown.value.Equals(Area);
+        var areaInspector = inspectorTool.areaInspectorPanel.areaInspector;
+        bool areaAvailable = areaInspector.CurrAreaInspection > -1;
+        bool correlationEnabled = areaPSUIRef.summaryDropdown.value.Equals(AreaPS.Correlation);
+
+        if (isArea)
+            areaPSUIRef.ShowPropertiesAndSummaryLabel(show && areaAvailable && !correlationEnabled, areaTypeDropdown.value);
         else
         {
             if (contoursTool)
@@ -686,9 +696,9 @@ public class AreaInspectorOutput : MonoBehaviour
             bool areaAvailable = areaInspector.CurrAreaInspection > -1;
             bool correlationEnabled = areaPSUIRef.summaryDropdown.value.Equals(AreaPS.Correlation);
 
+            ShowCorrelationOutput(correlationEnabled);
             areaPSUIRef.ShowHeader(areaAvailable && !correlationEnabled);
             areaPSUIRef.ShowPropertiesAndSummaryLabel(areaAvailable && !correlationEnabled, areaTypeDropdown.value);
-            ShowCorrelationOutput(correlationEnabled);
         }
         else
         {

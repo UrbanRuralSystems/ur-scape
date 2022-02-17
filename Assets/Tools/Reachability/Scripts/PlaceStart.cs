@@ -48,7 +48,7 @@ public class PlaceStart : MonoBehaviour
 	private readonly List<Coordinate> startPoints = new List<Coordinate>();
 	public bool HasStartPoints => startPoints.Count > 0;
 
-	private MarkerContainer markerContainer;
+	public MarkerContainer MarkrContainer { private set; get; }
     private List<RoadLayer> newRoads;
 
     private bool isActive = false;
@@ -98,10 +98,10 @@ public class PlaceStart : MonoBehaviour
 	{
 		StopGridGeneration();
 
-		if (markerContainer != null)
+		if (MarkrContainer != null)
 		{
-			Destroy(markerContainer.gameObject);
-			markerContainer = null;
+			Destroy(MarkrContainer.gameObject);
+			MarkrContainer = null;
 		}
 	}
 
@@ -127,10 +127,10 @@ public class PlaceStart : MonoBehaviour
 		inputHandler.OnLeftMouseUp += OnSetPoint;
         inputHandler.OnRightMouseUp += OnCancel;
 
-		if (markerContainer == null)
+		if (MarkrContainer == null)
 		{
-			markerContainer = Instantiate(markerContainerPrefab, map.transform, false);
-			markerContainer.Init();
+			MarkrContainer = Instantiate(markerContainerPrefab, map.transform, false);
+			MarkrContainer.Init();
 		}
 	}
 
@@ -232,11 +232,11 @@ public class PlaceStart : MonoBehaviour
 			if (!isMultiStart)
 			{
 				startPoints.Clear();
-				markerContainer.ClearMarkers();
+				MarkrContainer.ClearMarkers();
 			}
 
 			startPoints.Add(coord);
-			markerContainer.AddMarker(coord);
+			MarkrContainer.AddMarker(coord);
 
 			UpdateGrid();
 		}

@@ -38,12 +38,11 @@ public class DataManager : UrsComponent
 	public readonly List<Site> sites = new List<Site>();
 	private readonly Dictionary<string, Site> nameToSite = new Dictionary<string, Site>();
 
-    private List<GridMapLayer> visibleGrids = new List<GridMapLayer>();
     private Dictionary<Patch, PatchRequest> requestedPatches = new Dictionary<Patch, PatchRequest>();
 
     private GridLayerController gridLayers;
+	private VectorLayerController vectorLayers;
 
-    private bool showFilteredDataOnly = true;
     private int maxRequests;
 
 	public event UnityAction OnDataLoaded;
@@ -88,19 +87,6 @@ public class DataManager : UrsComponent
     //
     // Public Methods
     //
-
-    public void ShowOnlyFilteredData(bool show)
-    {
-        if (showFilteredDataOnly != show)
-        {
-            showFilteredDataOnly = show;
-
-            foreach (var g in visibleGrids)
-            {
-                g.EnableFilters(show);
-            }
-        }
-    }
 
 	public void ChangeActiveSite(Site site)
 	{
@@ -213,17 +199,27 @@ public class DataManager : UrsComponent
 	// Called from DataLayer. Don't call directly
 	public void ShowPatch(Patch patch)
 	{
-		if (patch.Data is GridData)
+		var patchData = patch.Data;
+		if (patchData is GridData)
 		{
-			CreateGridMapLayer(patch.Data as GridData);
+			//var mapLayer = 
+			CreateGridMapLayer(patchData as GridData);
 
 			// Enable these lines to show the patch id in the GameObject's name
 			//Patch.SplitFileName(patch.Filename, out _, out _, out int patchId, out _, out _, out _, out _);
-			//visibleGrids[visibleGrids.Count - 1].name += "_" + patchId;
+			//mapLayer.name += "_" + patchId;
 		}
-		else if (patch.Data is MultiGridData)
+		else if (patchData is PointData)
 		{
-			CreateMultiGridMapLayer(patch.Data as MultiGridData);
+			CreatePointMapLayer(patchData as PointData);
+		}
+		else if (patchData is MultiGridData)
+		{
+			CreateMultiGridMapLayer(patchData as MultiGridData);
+		}
+		else
+		{
+			Debug.LogWarning("Trying to show unknown patch type. This layer won't be visible on the map.");
 		}
 
 		RemoveFromCache(patch);
@@ -245,7 +241,6 @@ public class DataManager : UrsComponent
 			if (gridMapLayer != null)
 			{
 				gridLayers.Remove(gridMapLayer);
-				visibleGrids.Remove(gridMapLayer);
 			}
 			patch.SetMapLayer(null);
 		}
@@ -256,9 +251,17 @@ public class DataManager : UrsComponent
 			foreach (var mapLayer in mapLayers)
 			{
 				gridLayers.Remove(mapLayer);
-				visibleGrids.Remove(mapLayer);
 			}
 			multigrid.ClearMapLayers();
+		}
+		if (patch is PointPatch)
+		{
+			var vectorMapLayer = patch.GetMapLayer() as VectorMapLayer;
+			if (vectorMapLayer != null)
+			{
+				vectorLayers.Remove(vectorMapLayer);
+			}
+			patch.SetMapLayer(null);
 		}
 	}
 
@@ -497,15 +500,23 @@ public class DataManager : UrsComponent
 	private void InitMapControllers()
     {
         gridLayers = map.GetLayerController<GridLayerController>();
-    }
+		vectorLayers = map.GetLayerController<VectorLayerController>();
+	}
 
-    private void CreateGridMapLayer(GridData grid)
+    private GridMapLayer CreateGridMapLayer(GridData grid)
     {
         // Add map layer
-        GridMapLayer mapLayer = gridLayers.Add(grid);
-		visibleGrids.Add(mapLayer);
+        var mapLayer = gridLayers.Add(grid);
+		mapLayer.EnableFilters(true);
+		return mapLayer;
+	}
 
-		mapLayer.EnableFilters(showFilteredDataOnly);
+	private PointMapLayer CreatePointMapLayer(PointData pointData)
+	{
+		// Add map layer
+		var mapLayer = vectorLayers.Add(pointData);
+		mapLayer.EnableFilters(true);
+		return mapLayer;
 	}
 
 	private void CreateMultiGridMapLayer(MultiGridData multigrid)
@@ -515,10 +526,10 @@ public class DataManager : UrsComponent
 		{
 			if (multigrid.gridFilter.IsSet(i))
 			{
-				CreateGridMapLayer(multigrid.categories[i].grid);
+				var mapLayer = CreateGridMapLayer(multigrid.categories[i].grid);
 
 				// Change the map layer's color to the category's one (by default it will have the datalayer's color)
-				visibleGrids[visibleGrids.Count - 1].SetColor(multigrid.categories[i].color);
+				mapLayer.SetColor(multigrid.categories[i].color);
 			}
 		}
 	}

@@ -16,10 +16,11 @@ using UnityEngine.UI;
 
 public class ContoursTool : Tool
 {
-    private class Snapshot
+    public class Snapshot
     {
         public GridMapLayer mapLayer;
         public RectTransform uiTransform;
+		public List<DataLayerPanel> activeLayerPanels;
         public string name;
 		public string id;
     }
@@ -33,6 +34,7 @@ public class ContoursTool : Tool
     public RectTransform snapshotPrefab;
     public RectTransform emptySnapshotPrefab;
 	public ContoursInfoPanel infoPanelPrefab;
+	public EditColourPanel editColourPanelPrefab;
 
 	[Header("UI References")]
 	public Toggle showContoursToggle;
@@ -42,21 +44,23 @@ public class ContoursTool : Tool
 	public Scrollbar analysisProgress;
 	public Toggle excludeNoDataToggle;
 	public Button addButton;
+    public Toggle editToggle;
     public Toggle deleteToggle;
-    public Transform SnapshotList;
+	public Transform SnapshotList;
 
 	// Prefab Instances
-    private ContoursInfoPanel infoPanel;
+    public ContoursInfoPanel InfoPanel { private set; get; }
 	private ContoursMapLayer contoursLayer;
     public ContoursMapLayer ContoursLayer { get { return contoursLayer; } }
+	private EditColourPanel editColourPanel;
 
-    // Component References
-    private DataLayers dataLayers;
+	// Component References
+	private DataLayers dataLayers;
     private InputHandler inputHandler;
+	public LegendPanel LegendPanl { private set; get; }
 
     // UI References
     private Snapshot[] snapshots = null;
-    private RectTransform[] emptySnapshots = null;
 	private int usedSnapshots = 0;
 
 	// Misc
@@ -65,8 +69,10 @@ public class ContoursTool : Tool
     private ContoursAnalyzer analyzer;
 	private int runningSnapshotCounter;
 	private bool allowInfoUpdate = true;
+	private Transform centerTopContainerT;
 
-    public bool IsToggled { get; private set; }
+	public bool IsToggled { get; private set; }
+	public Snapshot[] Snapshots { get { return snapshots; } }
 
 	//
 	// Inheritance Methods
@@ -79,7 +85,14 @@ public class ContoursTool : Tool
         // Get Components
         dataLayers = ComponentManager.Instance.Get<DataLayers>();
         inputHandler = ComponentManager.Instance.Get<InputHandler>();
-    }
+
+		centerTopContainerT = GameObject.Find("CenterTopContainer").transform;
+		LegendPanl = centerTopContainerT.Find("Footer").Find("LegendPanel").GetComponent<LegendPanel>();
+
+		// Initialize edit colour panel
+		editColourPanel = Instantiate(editColourPanelPrefab, centerTopContainerT, false);
+		editColourPanel.gameObject.SetActive(false);
+	}
 
     public override bool HasBookmarkData()
     {
@@ -191,7 +204,7 @@ public class ContoursTool : Tool
 		if (isOn)
         {
 			contoursLayer.FetchGridValues();
-			lockedContours = toolLayers.CreateMapLayer(snapshotLayerPrefab, "LockedContours", contoursLayer.Grid);
+			lockedContours = toolLayers.CreateGridMapLayer(snapshotLayerPrefab, "LockedContours", contoursLayer.Grid);
             lockedContours.Show(showContoursToggle.isOn);
         }
         else
@@ -215,7 +228,7 @@ public class ContoursTool : Tool
 			runningSnapshotCounter = 1;
 
 			// Create contours layer
-			contoursLayer = toolLayers.CreateMapLayer(contoursLayerPrefab, "Contours");
+			contoursLayer = toolLayers.CreateGridMapLayer(contoursLayerPrefab, "Contours");
 			contoursLayer.ExcludeCellsWithNoData(excludeNoDataToggle.isOn);
 
 			// Listen to any data layers being added/removed
@@ -252,33 +265,23 @@ public class ContoursTool : Tool
             lockToggle.onValueChanged.AddListener(OnLockChanged);
             analysisToggle.onValueChanged.AddListener(OnAnalysisChanged);
 			excludeNoDataToggle.onValueChanged.AddListener(OnExcludeNoDataChanged);
-            
-            // Show contours layer
-            ShowContoursLayer(true);
+			editToggle.onValueChanged.AddListener(OnEditColourToggleChanged);
+
+			// Show contours layer
+			ShowContoursLayer(true);
 
 			// Create the info panel
-			infoPanel = Instantiate(infoPanelPrefab);
-			infoPanel.name = infoPanelPrefab.name;
-			infoPanel.Init();
+			InfoPanel = Instantiate(infoPanelPrefab);
+			InfoPanel.name = infoPanelPrefab.name;
 			var outputPanel = ComponentManager.Instance.Get<OutputPanel>();
-			outputPanel.SetPanel(infoPanel.transform);
+			outputPanel.SetPanel(InfoPanel.transform);
 
 			var translator = LocalizationManager.Instance;
-			infoPanel.AddEntry("CC", translator.Get("Current Contours"));
-			infoPanel.AddEntry("SC", translator.Get("Selected Contours"));
+			InfoPanel.AddEntry("CC", translator.Get("Current Contours"));
+			InfoPanel.AddEntry("SC", translator.Get("Selected Contours"));
 
 			snapshots = new Snapshot[snapshotCount];
-			emptySnapshots = new RectTransform[snapshotCount];
 			usedSnapshots = 0;
-
-			// Create empty snapshots
-			for (int i = 0; i < snapshotCount; ++i)
-			{
-				var emptySnapshot = Instantiate(emptySnapshotPrefab, SnapshotList, false);
-				emptySnapshot.name = emptySnapshotPrefab.name + (i + 1);
-				emptySnapshots[i] = emptySnapshot;
-				infoPanel.AddEntry("S" + i, translator.Get("Snapshot") + " " + (i+1));
-			}
 
 			UpdateContoursInfo();
 
@@ -288,6 +291,9 @@ public class ContoursTool : Tool
         }
         else
         {
+			editToggle.isOn = false;
+			editToggle.gameObject.SetActive(false);
+
 			// Remove listeners
 			addButton.onClick.RemoveAllListeners();
 			showContoursToggle.onValueChanged.RemoveAllListeners();
@@ -298,6 +304,7 @@ public class ContoursTool : Tool
 			dataLayers.OnLayerVisibilityChange -= OnLayerVisibilityChange;
 			dataLayers.OnLayerAvailabilityChange -= OnLayerAvailabilityChange;
 			inputHandler.OnLeftMouseUp -= OnLeftMouseUp;
+			editToggle.onValueChanged.RemoveListener(OnEditColourToggleChanged);
 
 			if (map)
             {
@@ -309,7 +316,7 @@ public class ContoursTool : Tool
             }
 
 			// Remove the info panel
-			ComponentManager.Instance.Get<OutputPanel>().DestroyPanel(infoPanel.gameObject);
+			ComponentManager.Instance.Get<OutputPanel>().DestroyPanel(InfoPanel.gameObject);
 
 			// Remove map layers
 			DeleteAllLayers();
@@ -318,15 +325,13 @@ public class ContoursTool : Tool
 			foreach (var snapshot in snapshots)
 			{
 				if (snapshot != null)
+				{
 					Destroy(snapshot.uiTransform.gameObject);
+					LegendPanl.RemoveSnapshotItem(snapshot.id);
+				}
 			}
 			snapshots = null;
-			foreach (var emptySnapshot in emptySnapshots)
-            {
-                Destroy(emptySnapshot.gameObject);
-            }
-			emptySnapshots = null;
-			usedSnapshots = 0;
+            usedSnapshots = 0;
 
 			grids.Clear();
 
@@ -346,12 +351,14 @@ public class ContoursTool : Tool
 
 	protected override void OnActiveTool(bool isActive)
     {
-        if (infoPanel != null)
+        if (InfoPanel != null)
         {
-			ComponentManager.Instance.Get<OutputPanel>().SetPanel(isActive ? infoPanel.transform : null);
+			ComponentManager.Instance.Get<OutputPanel>().SetPanel(isActive ? InfoPanel.transform : null);
 
 			if (isActive)
 				UpdateContoursInfo();
+			else
+				editToggle.isOn = false;
 		}
 
 		if (analysisToggle.isOn)
@@ -434,7 +441,8 @@ public class ContoursTool : Tool
 
 		var newSnapshotName = Regex.Replace(input.text, @"\n|\r", "");
 		snapshot.name = newSnapshotName;
-		infoPanel.RenameEntry(snapshot.id, newSnapshotName);
+		InfoPanel.RenameEntry(snapshot.id, newSnapshotName);
+		editColourPanel.RenameEntry(snapshot.uiTransform.GetSiblingIndex(), newSnapshotName);
     }
 
     private void OnSnapshotToggleChanged(Snapshot snapshot, bool isOn)
@@ -474,12 +482,26 @@ public class ContoursTool : Tool
 	private void OnLanguageChanged()
 	{
 		var translator = LocalizationManager.Instance;
-		infoPanel.RenameEntry("CC", translator.Get("Current Contours"));
-		infoPanel.RenameEntry("SC", translator.Get("Selected Contours"));
-		for (int i = 0; i < snapshotCount; ++i)
-		{
-			infoPanel.RenameEntry("S" + i, translator.Get("Snapshot") + " " + (i + 1));
-		}
+		InfoPanel.RenameEntry("CC", translator.Get("Current Contours"));
+		InfoPanel.RenameEntry("SC", translator.Get("Selected Contours"));
+
+		//for (int i = 0; i < snapshotCount; ++i)
+		//{
+		//	if (snapshots[i] == null)
+		//		continue;
+
+		//	string newSnapshotName = translator.Get(snapshots[i].name, false);
+		//	InputField snapshotLabel = snapshots[i].uiTransform.GetComponentInChildren<InputField>();
+
+		//	snapshotLabel.text = newSnapshotName;
+		//	InfoPanel.RenameEntry("S" + i, newSnapshotName);
+		//	editColourPanel.RenameEntry(snapshots[i].uiTransform.GetSiblingIndex(), newSnapshotName);
+		//}
+	}
+
+	private void OnEditColourToggleChanged(bool isOn)
+	{
+		editColourPanel.gameObject.SetActive(isOn);
 	}
 
 
@@ -596,7 +618,6 @@ public class ContoursTool : Tool
         }
     }
 
-
 	//
 	// Private Methods
 	//
@@ -651,9 +672,6 @@ public class ContoursTool : Tool
 		var snapshotLabel = Translator.Get("Snapshot") + "\n" + id;
 		var snapshotName = Regex.Replace(snapshotLabel, @"\n|\r", "");
 
-		emptySnapshots[i].gameObject.SetActive(false);
-		emptySnapshots[i].SetAsLastSibling();
-
 		// Create Snapshot
 		var snapshot = new Snapshot
 		{
@@ -682,45 +700,67 @@ public class ContoursTool : Tool
 		input.onEndEdit.AddListener((value) => OnEndEdit(value, input, snapshot));
 
 		// Create snapshot's map layer
-		snapshot.mapLayer = toolLayers.CreateMapLayer(snapshotLayerPrefab, "ContoursSnapshot", gridData);
+		snapshot.mapLayer = toolLayers.CreateGridMapLayer(snapshotLayerPrefab, $"ContoursSnapshot_{snapshot.id}", gridData);
 
 		// Set Snapshot color
 		SetColorsToSnapshot(snapshot.mapLayer, toggleButton, deleteButton);
 
-		// Update output
+		// Update output and legend panel
+		string titleLabel = $"{LocalizationManager.Instance.Get("Snapshot")} {i + 1}";
+		Color snapshotColor = toggleButton.image.color;
+		string snapshotID = snapshot.id;
+		InfoPanel.AddEntry(snapshotID, titleLabel, true);
+		LegendPanl.AddSnapshotItem(snapshotID, snapshotColor, titleLabel);
+
 		if (gridData != null)
 		{
 			var sqm = ContourUtils.GetContoursSquareMeters(gridData);
-			infoPanel.UpdateEntry(snapshot.id, sqm);
+			InfoPanel.UpdateEntry(snapshotID, sqm);
 		}
+		InfoPanel.SetSnapshotProperties(snapshotID, i + 1, toggleButton.image.color);
 
 		snapshots[i] = snapshot;
+		editColourPanel.AddSnapshotColour(i, toggleButton.image.color);
 		usedSnapshots++;
+		editToggle.gameObject.SetActive(usedSnapshots >= 1);
 
 		runningSnapshotCounter++;
+
+		InfoPanel.UpdateRelativeToSnapshotDropdown();
+
+		GuiUtils.RebuildLayout(SnapshotList);
 	}
 
     private void RemoveSnapshot(Snapshot snapshot)
     {
+		// Delete snaphot item from legend panel
+		LegendPanl.RemoveSnapshotItem(snapshot.id);
+
 		// Delete the UI element
+		editColourPanel.RemoveSnapshotColour(snapshot.uiTransform.GetSiblingIndex());
 		Destroy(snapshot.uiTransform.gameObject);
+		GuiUtils.RebuildLayout(SnapshotList);
 
-        // Delete the map layer
-        DeleteMapLayer(ref snapshot.mapLayer);
+		// Delete the map layer
+		DeleteMapLayer(ref snapshot.mapLayer);
 
-		infoPanel.ClearEntry(snapshot.id);
+		//infoPanel.ClearEntry(snapshot.id);
+		InfoPanel.RemoveEntry(snapshot.id);
 
 		for (int i = 0; i < snapshotCount; i++)
 		{
 			if (snapshots[i] == snapshot)
 			{
 				snapshots[i] = null;
-				emptySnapshots[i].gameObject.SetActive(true);
-				emptySnapshots[i].SetSiblingIndex(i);
 				usedSnapshots--;
+				if (usedSnapshots < 1)
+					editToggle.isOn = false;
+				editToggle.gameObject.SetActive(usedSnapshots >= 1);
 				break;
 			}
 		}
+
+		InfoPanel.UpdateRelativeToSnapshotDropdown();
 	}
 
     private void DeleteAllLayers()
@@ -803,7 +843,7 @@ public class ContoursTool : Tool
 				if (isActive && updateInfo)
 				{
 					var sqm = ContourUtils.GetContoursSquareMeters(grid, true, index);
-					infoPanel.UpdateEntry("SC", sqm);
+					InfoPanel.UpdateEntry("SC", sqm);
 
                     contoursLayer.CalculateSelectedContourValues();
                     var inspectorTool = ComponentManager.Instance.Get<InspectorTool>();
@@ -824,14 +864,15 @@ public class ContoursTool : Tool
 			contoursLayer.DeselectContour();
 			if (isActive)
 			{
-				infoPanel.ClearEntry("SC");
+				InfoPanel.ClearEntry("SC");
 			}
 		}
 	}
 
 	private void SetColorsToSnapshot(GridMapLayer mapLayer, Toggle toggle, Button deleteButton)
 	{
-		float snapshotHue = (runningSnapshotCounter * 0.2f) % 1f;
+		float scale = 1.0f / (snapshotCount + 1);
+		float snapshotHue = (runningSnapshotCounter * scale) % 1f;
 
 		Color color = Color.HSVToRGB(snapshotHue, 0.3f, 1f);
 		toggle.image.color = color;
@@ -902,8 +943,8 @@ public class ContoursTool : Tool
 				var sqm = ContourUtils.GetContoursSquareMeters(contoursLayer.Grid);
 
 				// Show the stats FIRST to ensure proper UI colors
-				infoPanel.ShowStats(true);
-				infoPanel.UpdateEntry("CC", sqm);
+				InfoPanel.ShowStats(true);
+				InfoPanel.UpdateEntry("CC", sqm);
 
 				// Avoid doing multiple updates per frame (in case it's called outside of coroutine)
 				nextUpdateFrame = Time.frameCount + 10;
@@ -911,14 +952,14 @@ public class ContoursTool : Tool
 			else if (grids.Count > 0)
 			{
 				// Show the stats FIRST to ensure proper UI colors
-				infoPanel.ShowStats(true);
-				infoPanel.ClearEntry("CC");
+				InfoPanel.ShowStats(true);
+				InfoPanel.ClearEntry("CC");
 			}
 			else
 			{
 				// Show the stats LAST to ensure proper UI colors
-				infoPanel.ClearEntry("CC");
-				infoPanel.ShowStats(false);
+				InfoPanel.ClearEntry("CC");
+				InfoPanel.ShowStats(false);
 			}
 		}
 	}

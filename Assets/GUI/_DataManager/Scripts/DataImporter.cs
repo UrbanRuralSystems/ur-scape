@@ -100,6 +100,7 @@ public class DataImporter : MonoBehaviour
 			resY = resY,
 			units = info.units,
 			metadata = info.metadata,
+			categories = info.categories,	//?
 			resampler = resampler,
 			running = true
 		};
@@ -183,6 +184,7 @@ public class DataImporter : MonoBehaviour
 
 					grid.UpdateMinMaxValues();
 					grid.UpdateDistribution();
+					grid.categories = info.categories;	//?
 
 					info.progress.value = 0.95f;
 

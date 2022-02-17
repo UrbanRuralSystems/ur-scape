@@ -21,6 +21,7 @@ public class CategoryPanel : LayerOptionsPanel
     private float doubleClickTime = 0;
 	private readonly CategoryFilter newFilter = new CategoryFilter();
 
+	public List<Toggle> Toggles { get { return toggles; } }
 
 	//
 	// Inheritance Methods
@@ -65,32 +66,40 @@ public class CategoryPanel : LayerOptionsPanel
                 }
                 else
                 {
-					if (patch is GridPatch)
+					if (patch is GridPatch gridPatch)
 					{
-						(patch as GridPatch).SetCategoryFilter(newFilter);
+						gridPatch.SetCategoryFilter(newFilter);
 					}
-					else if (patch is MultiGridPatch)
+					else if (patch is MultiGridPatch multiGridPatch)
 					{
-						(patch as MultiGridPatch).SetCategoryFilter(newFilter);
+						multiGridPatch.SetCategoryFilter(newFilter);
 					}
-                }
-            }
+					else if (patch is PointPatch pointPatch)
+					{
+						pointPatch.SetCategoryFilter(newFilter);
+					}
+				}
+			}
             else
             {
                 ClearList();
                 rebuildLayout = true;
             }
 
-			if (patch.Data is GridData)
+			if (patch.Data is GridData gridData)
 			{
-				(patch.Data as GridData).OnGridChange += OnGridChange;
+				gridData.OnGridChange += OnGridChange;
 			}
-			else if (patch.Data is MultiGridData)
+			else if (patch.Data is MultiGridData multiGridData)
 			{
-				(patch.Data as MultiGridData).OnGridChange += OnMultiGridChange;
+				multiGridData.OnGridChange += OnMultiGridChange;
 			}
-        }
-        else
+			else if (patch.Data is PointData pointData)
+			{
+				pointData.OnPointDataChange += OnPointDataChange;
+			}
+		}
+		else
         {
             if (dataLayer.HasLoadedPatchesInView() && AllPatchesHaveSameCategories())
             {
@@ -106,17 +115,21 @@ public class CategoryPanel : LayerOptionsPanel
                 rebuildLayout = true;
             }
 
-			if (patch.Data is GridData)
+			if (patch.Data is GridData gridData)
 			{
-				(patch.Data as GridData).OnGridChange -= OnGridChange;
+				gridData.OnGridChange -= OnGridChange;
 			}
-			else if (patch.Data is MultiGridData)
+			else if (patch.Data is MultiGridData multiGridData)
 			{
-				(patch.Data as MultiGridData).OnGridChange -= OnMultiGridChange;
+				multiGridData.OnGridChange -= OnMultiGridChange;
+			}
+			else if (patch.Data is PointData pointData)
+			{
+				pointData.OnPointDataChange -= OnPointDataChange;
 			}
 		}
 
-        if (rebuildLayout)
+		if (rebuildLayout)
         {
             GuiUtils.RebuildLayout(transform);
         }
@@ -134,6 +147,11 @@ public class CategoryPanel : LayerOptionsPanel
 	private void OnMultiGridChange(MultiGridData grid)
 	{
 		OnCategoriesChange(grid.categories);
+	}
+
+	private void OnPointDataChange(PointData pointData)
+	{
+		OnCategoriesChange(pointData.categories);
 	}
 
 	private void OnCategoriesChange<T>(T[] categories) where T : Category
@@ -205,15 +223,17 @@ public class CategoryPanel : LayerOptionsPanel
 	{
 		Patch patch = dataLayer.loadedPatchesInView[0];
 		var patchData = patch.Data;
-		if (patchData is GridData)
+		if (patchData is GridData gridData)
 		{
-			var gridData = patch.Data as GridData;
 			UpdateCategories(gridData.categories, gridData.categoryFilter);
 		}
-		else if (patchData is MultiGridData)
+		else if (patchData is MultiGridData multiGridData)
 		{
-			var multigrid = patchData as MultiGridData;
-			UpdateCategories(multigrid.categories, multigrid.gridFilter);
+			UpdateCategories(multiGridData.categories, multiGridData.gridFilter);
+		}
+		else if (patchData is PointData pointData)
+		{
+			UpdateCategories(pointData.categories, pointData.categoryFilter);
 		}
 	}
 
@@ -275,6 +295,11 @@ public class CategoryPanel : LayerOptionsPanel
 			{
 				(patch as MultiGridPatch).HighlightCategory(index);
 			}
+			else if (patch is PointPatch)
+			{
+				var mapLayer = patch.GetMapLayer() as PointMapLayer;
+				mapLayer.HighlightCategory(index);
+			}
 		}
 	}
 	
@@ -283,13 +308,17 @@ public class CategoryPanel : LayerOptionsPanel
         for (int i = 0; i < dataLayer.loadedPatchesInView.Count; i++)
         {
 			var patch = dataLayer.loadedPatchesInView[i];
-            if (patch is GridPatch)
+            if (patch is GridPatch gridPatch)
             {
-				(patch as GridPatch).SetCategoryFilter(newFilter);
+				gridPatch.SetCategoryFilter(newFilter);
             }
-			else if (patch is MultiGridPatch)
+			else if (patch is MultiGridPatch multiGridPatch)
 			{
-				(patch as MultiGridPatch).SetCategoryFilter(newFilter);
+				multiGridPatch.SetCategoryFilter(newFilter);
+			}
+			else if (patch is PointPatch pointPatch)
+			{
+				pointPatch.SetCategoryFilter(newFilter);
 			}
 		}
 
@@ -304,7 +333,18 @@ public class CategoryPanel : LayerOptionsPanel
 
 				foreach (var patch in record.Value.patches)
 				{
-					(patch as GridPatch).SetCategoryFilter(newFilter);
+					if (patch is GridPatch gridPatch)
+					{
+						gridPatch.SetCategoryFilter(newFilter);
+					}
+					else if (patch is MultiGridPatch multiGridPatch)
+					{
+						multiGridPatch.SetCategoryFilter(newFilter);
+					}
+					else if (patch is PointPatch pointPatch)
+					{
+						pointPatch.SetCategoryFilter(newFilter);
+					}
 				}
 			}
 		}
@@ -320,10 +360,8 @@ public class CategoryPanel : LayerOptionsPanel
 		if (patchData == null)
 			return false;
 
-		if (patchData is GridData)
+		if (patchData is GridData gridData)
 		{
-			var gridData = patchData as GridData;
-
 			var categories = gridData.categories;
 			if (categories == null)
 				return false;
@@ -341,21 +379,38 @@ public class CategoryPanel : LayerOptionsPanel
 				}
 			}
 		}
-		else if (patchData is MultiGridData)
+		else if (patchData is MultiGridData multiGridData)
 		{
-			var multigrid = patchData as MultiGridData;
-
-			var categories = multigrid.categories;
+			var categories = multiGridData.categories;
 			if (categories == null)
 				return false;
 
 			for (int i = 1; i < count; i++)
 			{
-				multigrid = dataLayer.loadedPatchesInView[i].Data as MultiGridData;
-				if (multigrid == null)
+				multiGridData = dataLayer.loadedPatchesInView[i].Data as MultiGridData;
+				if (multiGridData == null)
 					return false;
 
-				var otherCategories = multigrid.categories;
+				var otherCategories = multiGridData.categories;
+				if (otherCategories == null || categories.Length != otherCategories.Length || !categories[0].name.Equals(otherCategories[0].name))
+				{
+					return false;
+				}
+			}
+		}
+		else if (patchData is PointData pointData)
+		{
+			var categories = pointData.categories;
+			if (categories == null)
+				return false;
+
+			for (int i = 1; i < count; i++)
+			{
+				pointData = dataLayer.loadedPatchesInView[i].Data as PointData;
+				if (pointData == null)
+					return false;
+
+				var otherCategories = pointData.categories;
 				if (otherCategories == null || categories.Length != otherCategories.Length || !categories[0].name.Equals(otherCategories[0].name))
 				{
 					return false;

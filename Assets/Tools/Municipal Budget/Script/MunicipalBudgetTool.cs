@@ -87,8 +87,8 @@ public class MunicipalBudgetTool : Tool
         if (isOn)
         {
             // Create budget layer
-			budgetLayer = toolLayers.CreateMapLayer(budgetLayerPrefab, "WeightedLayer");
-			highlightLayer = toolLayers.CreateMapLayer(highlightLayerPrefab, "HighlightLayer");
+			budgetLayer = toolLayers.CreateGridMapLayer(budgetLayerPrefab, "WeightedLayer");
+			highlightLayer = toolLayers.CreateGridMapLayer(highlightLayerPrefab, "HighlightLayer");
 			highlightLayer.Show(false);
 
             // Store number of childs on start

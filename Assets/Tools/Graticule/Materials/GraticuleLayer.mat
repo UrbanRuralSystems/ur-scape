@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: GraticuleLayer
+  m_Shader: {fileID: 4800000, guid: ddf7deb130e6cf445b258c1b4da6810f, type: 3}
+  m_ShaderKeywords: SHAPE_CIRCLE
+  m_LightmapFlags: 1
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Floats:
+    - CellFeather: 0.1
+    - Fill: 0.12
+    - IntervalX: 0.085
+    - IntervalY: 0.0001
+    - LineFeather: 0.1
+    - OffsetX: 0
+    - OffsetY: 0
+    - Smoothness: 0.9
+    - Thickness: 0.002
+    m_Colors:
+    - Interval: {r: 0.1, g: 0.1, b: 0, a: 0}
+    - Offsett: {r: 0, g: 0, b: 0, a: 0}
+    - Tint: {r: 0.39607844, g: 0.39607844, b: 0.39607844, a: 1}
+  m_BuildTextureStacks: []
