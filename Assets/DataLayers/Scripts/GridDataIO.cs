@@ -617,7 +617,7 @@ public static class GridDataIO
 		byte[] bytes = null;
 
 		// Read values
-		ReadArray(br, ref bytes, grid.values, 4);
+		PatchDataIO.ReadArray(br, ref bytes, grid.values, 4);
 
 		// Read if it has values mask
 		var withMask = br.ReadBoolean();
@@ -626,7 +626,7 @@ public static class GridDataIO
 			grid.CreateMaskBuffer();
 
 			// Read values mask
-			ReadArray(br, ref bytes, grid.valuesMask);
+			PatchDataIO.ReadArray(br, ref bytes, grid.valuesMask);
 		}
 
 		// Read distribution values
@@ -634,7 +634,7 @@ public static class GridDataIO
 		if (count > 0)
 		{
 			int[] distributionValues = new int[count];
-			ReadArray(br, ref bytes, distributionValues, 4);
+			PatchDataIO.ReadArray(br, ref bytes, distributionValues, 4);
 
 			// Read max distribution value
 			int maxDistributionValue = br.ReadInt32();
@@ -673,26 +673,6 @@ public static class GridDataIO
 				WriteBinProperties(bw, updateGrid);
 				bw.Write(bytes);
 			}
-		}
-	}
-
-	private static void ReadArray(BinaryReader br, ref byte[] bytes, Array arr, int elementBytes = 1)
-	{
-		int readSize = arr.Length * elementBytes;
-		if (readSize > 0)
-		{
-			if (bytes == null || bytes.Length < readSize)
-			{
-				bytes = new byte[readSize];
-			}
-
-			int read = 0;
-			if ((read = br.Read(bytes, 0, readSize)) != readSize)
-			{
-				Debug.LogError("Couldn't read all values. Expected (" + arr.Length + "), Read(" + (read / elementBytes) + ")");
-				readSize = read;
-			}
-			Buffer.BlockCopy(bytes, 0, arr, 0, readSize);
 		}
 	}
 

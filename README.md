@@ -30,7 +30,7 @@ Software:
  * Create a new file called *MapboxToken.txt* inside the *Data* folder
  * Paste your Mapbox token into *MapboxToken.txt*
 
-*(See documentation for more info)*
+*(Visit ur-scape's [Wiki](https://ur-scape.sec.sg/en/Installation/Mapbox_Setup) for more info)*
 
 
 ### Team
@@ -44,9 +44,7 @@ Software:
 
 ### Documentation
 
-The user guides can be found [here](./Docs/User%20Guides) or downloaded from http://urs.fcl.sg/documentation/
-
-Other documents can be found inside the [Docs](./Docs) folder
+For more information please head to ur-scape's [Wiki](https://ur-scape.sec.sg).
 
 
 ### License
@@ -76,5 +74,10 @@ Copyright (c) 2012-2017 Markus Göbel (Bunny83)
 https://simplejson.readthedocs.io/en/latest/
 MIT License
 
+[Catfood.Shapefile](Assets/3rdParty/Catfood.Shapefile/LICENSE.txt)
+> 
+Copyright (c) 2009-2019 Robert Ellison and contributors
+https://github.com/abfo/shapefile
+Microsoft Public License (Ms-PL)
 
 The terms of the licenses of all third-party libraries can also be found in [LICENSE-3RD-PARTY](./LICENSE-3RD-PARTY)

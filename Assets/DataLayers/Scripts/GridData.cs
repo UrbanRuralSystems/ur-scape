@@ -53,13 +53,16 @@ public class GridData : PatchData
 	public event GridChangeDelegate OnValuesChange;
     public event GridChangeDelegate OnFilterChange;
 
+	//+
 	public enum Coloring
 	{
-		Single,
-		ReverseSingle,
-		Multi,
-		ReverseMulti,
+		Single,				// For categorised layer
+		ReverseSingle,      // For categorised layer
+		Multi,              // For categorised layer
+		ReverseMulti,       // For categorised layer
 		Custom,
+		Reverse,			// Only applies to gradients
+		Forward = Single,	// Default value for both categorised and gradients
 	}
 
 	public Coloring coloring = Coloring.Single;
@@ -187,15 +190,6 @@ public class GridData : PatchData
         int x = (int)Mathf.Floor((float)(countX * (longitude - west) / (east - west)));
         int y = (int)Mathf.Floor((float)(countY * (latitude - north) / (south - north)));
         values[y * countX + x] = value;
-    }
-
-    public void SnapToCenter(ref Coordinate coords)
-    {
-        int x = (int)(countX * (coords.Longitude - west) / (east - west));
-        int y = (int)(countY * (coords.Latitude - north) / (south - north));
-
-        coords.Longitude = (x + 0.5) * (east - west) / countX + west;
-        coords.Latitude = (y + 0.5f) * (south - north) / countY + north;
     }
 
     public double GetLongitude(int index)

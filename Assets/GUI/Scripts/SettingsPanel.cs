@@ -22,6 +22,7 @@ public class SettingsPanel : MonoBehaviour
 	public Button languageButton;
 	public Toggle visibilityToggle;
 	public Button resetButton;
+	public Toggle collapseLayersToggle;
 
 	public Toggle hideLayersToggle;
 	public Toggle hideEmptyGroupsToggle;
@@ -65,6 +66,7 @@ public class SettingsPanel : MonoBehaviour
 		languageButton.onClick.AddListener(OnLanguageClick);
 		visibilityToggle.onValueChanged.AddListener(OnVisibilityToggleChanged);
 		resetButton.onClick.AddListener(OnResetClick);
+		collapseLayersToggle.onValueChanged.AddListener(OnCollapseLayersToggleChanged);
 
 		hideLayersToggle.isOn = dataLayers.hideInactiveLayers;
 		hideEmptyGroupsToggle.isOn = dataLayers.hideEmptyGroups;
@@ -85,7 +87,7 @@ public class SettingsPanel : MonoBehaviour
         manualGammaToggle.onValueChanged.AddListener(OnManualGammaToggle);
 	}
 
-	private void Update()
+    private void Update()
 	{
 		if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.mouseScrollDelta.y != 0)
 		{
@@ -108,6 +110,16 @@ public class SettingsPanel : MonoBehaviour
 	private void OnVisibilityToggleChanged(bool isOn)
 	{
 		dataLayers.ShowLayers(isOn);
+		Close();
+	}
+
+	private void OnCollapseLayersToggleChanged(bool isOn)
+	{
+		var dataLayerGroupPanels = dataLayers.groupsContainer.GetComponentsInChildren<DataLayerGroupPanel>();
+        foreach (var dataLayerGroupPanel in dataLayerGroupPanels)
+        {
+			dataLayerGroupPanel.groupToggle.isOn = isOn;
+        }
 		Close();
 	}
 
@@ -198,17 +210,21 @@ public class SettingsPanel : MonoBehaviour
 		gammaPanel.SetActive(isOn);
 
 		GridMapLayer.ManualGammaCorrection = isOn;
+		VectorMapLayer.ManualGammaCorrection = isOn;
 
 		var map = ComponentManager.Instance.Get<MapController>();
 		var gridLayerController = map.GetLayerController<GridLayerController>();
+		var vectorLayerController = map.GetLayerController<VectorLayerController>();
 
 		if (isOn)
 		{
 			gridLayerController.SetGamma(gammaSlider.value);
+			vectorLayerController.SetGamma(gammaSlider.value);
 		}
 		else
 		{
 			gridLayerController.AutoGamma();
+			vectorLayerController.AutoGamma();
 		}
 
 		GuiUtils.RebuildLayout(gammaPanel.transform.parent as RectTransform);
@@ -218,7 +234,9 @@ public class SettingsPanel : MonoBehaviour
 	{
 		var map = ComponentManager.Instance.Get<MapController>();
 		var gridLayerController = map.GetLayerController<GridLayerController>();
+		var vectorLayerController = map.GetLayerController<VectorLayerController>();
 		gridLayerController.SetGamma(value);
+		vectorLayerController.SetGamma(value);
 	}
 
 

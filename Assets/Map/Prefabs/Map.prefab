@@ -58,6 +58,7 @@ MonoBehaviour:
   controllerPrefabs:
   - {fileID: 114579309151006876, guid: 12411dcc03be5b045b24f5aa52fa1879, type: 3}
   - {fileID: 114960915212873692, guid: eb3030472d9ddc24ebc38479c41c161d, type: 3}
+  - {fileID: 7115934911915581446, guid: 628bbdfbd548be04c9ada11f45c117b3, type: 3}
   - {fileID: 114262902884214942, guid: 0a9b8bd7b7e56444a8b6366a59f04c74, type: 3}
   - {fileID: 114222397789254422, guid: 677e8987572368548a5401cf8af6dacc, type: 3}
   tileRequestHandler: {fileID: 114445624847416208}

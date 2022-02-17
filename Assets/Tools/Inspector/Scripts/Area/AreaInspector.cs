@@ -190,8 +190,7 @@ public class AreaInspector {
 
     public void CreateAreaMapLayer(AreaInspectorInfo areaInfo, AreaInspectionMapLayer areaInspectionMapLayerPrefab)
 	{
-		areaInfo.mapLayer = toolLayers.CreateMapLayer(areaInspectionMapLayerPrefab, "AreaInspectionLayer" + createdAreaInspectionCount.ToString());
+		areaInfo.mapLayer = toolLayers.CreateGridMapLayer(areaInspectionMapLayerPrefab, "AreaInspectionLayer" + createdAreaInspectionCount.ToString());
 		areaInfo.mapLayer.Init(areaInfo.coords);
-		areaInfo.mapLayer.ShowTransect(false);
 	}
 }

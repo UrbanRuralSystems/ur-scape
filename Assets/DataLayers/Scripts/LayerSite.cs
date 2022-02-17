@@ -128,6 +128,20 @@ public class LayerSite
 						maxValue = Mathf.Max(maxValue, grid.maxValue);
 					}
 				}
+				else if (patch.Data is PointData pointData && pointData.IsLoaded())
+				{
+					if (first)
+					{
+						first = false;
+						minValue = pointData.minValue;
+						maxValue = pointData.maxValue;
+					}
+					else
+					{
+						minValue = Mathf.Min(minValue, pointData.minValue);
+						maxValue = Mathf.Max(maxValue, pointData.maxValue);
+					}
+				}
 			}
 		}
 	}
@@ -142,6 +156,12 @@ public class LayerSite
 				if (patch.Data is GridData grid && grid.IsLoaded())
 				{
 					var gridMean = (float)grid.GetMean(minValue, recalculateGridsMean);
+					var meanPercent = Mathf.InverseLerp(minValue, maxValue, gridMean);
+					mean = Mathf.Max(mean, meanPercent);
+				}
+				else if (patch.Data is PointData pointData && pointData.IsLoaded())
+				{
+					var gridMean = (float)pointData.GetMean(recalculateGridsMean);
 					var meanPercent = Mathf.InverseLerp(minValue, maxValue, gridMean);
 					mean = Mathf.Max(mean, meanPercent);
 				}
@@ -161,6 +181,10 @@ public class LayerSite
 				if (patch is GridPatch gridPatch)
 				{
 					gridPatch.SetMinMaxFilter(siteMin, siteMax);
+				}
+				else if (patch is PointPatch pointPatch)
+				{
+					pointPatch.SetMinMaxFilter(siteMin, siteMax);
 				}
 			}
 		}

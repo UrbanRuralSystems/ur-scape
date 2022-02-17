@@ -42,7 +42,7 @@ public class EditSpeedPanel : MonoBehaviour
         InitUI();
     }
 
-    private void OnDisable()
+    private void OnEnable()
     {
         reachabilityTool?.LoadSiteMobilityModes();
     }
@@ -56,6 +56,8 @@ public class EditSpeedPanel : MonoBehaviour
         if (reachabilityTool)
             reachabilityTool.editSpeedToggle.isOn = false;
         gameObject.SetActive(false);
+
+        reachabilityTool?.LoadSiteMobilityModes();
     }
 
     private void OnSaveClick()

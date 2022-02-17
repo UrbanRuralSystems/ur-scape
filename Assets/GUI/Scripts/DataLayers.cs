@@ -35,6 +35,7 @@ public class DataLayers : UrsComponent
 	public RectTransform shadowBottom;
     public Button settingsButton;
 	public SettingsPanel settingsPanel;
+	[SerializeField] private Toggle legendToggle = default;
 
 	[Header("Prefabs")]
     public DataLayerGroupPanel guiGroupPrefab;
@@ -280,6 +281,14 @@ public class DataLayers : UrsComponent
         {
             StartCoroutine(ShowFilterPanel(panel, isOn));
         }
+
+		if (activeLayerPanels.Count > 0)
+			legendToggle.interactable = true;
+		else
+        {
+			legendToggle.isOn = false;
+			legendToggle.interactable = false;
+		}
     }
 
 	private void OnShowGrid(GridMapLayer mapLayer, bool show)

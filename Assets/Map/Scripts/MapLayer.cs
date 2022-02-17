@@ -12,7 +12,7 @@ public abstract class MapLayer : MonoBehaviour
 {
     protected MapController map;
 
-    public void Init(MapController map)
+    public virtual void Init(MapController map)
     {
         this.map = map;
     }

@@ -9,10 +9,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PatchBoundaryLayerController : MapLayerControllerT<PatchMapLayer>
+public class PatchBoundaryLayerController : MapLayerControllerT<BoundaryMapLayer>
 {
 	[Header("Prefabs")]
-    public PatchMapLayer layerPrefab;
+    public BoundaryMapLayer layerPrefab;
 
 	[Header("Settings")]
 	public bool allowMultiple = false;
@@ -73,8 +73,7 @@ public class PatchBoundaryLayerController : MapLayerControllerT<PatchMapLayer>
 	{
 		if (visible)
 		{
-			int count;
-			if (layerPatchCount.TryGetValue(dataLayer, out count))
+			if (layerPatchCount.TryGetValue(dataLayer, out int count))
 				layerPatchCount[dataLayer] = ++count;
 			else
 				layerPatchCount.Add(dataLayer, ++count);
@@ -160,9 +159,9 @@ public class PatchBoundaryLayerController : MapLayerControllerT<PatchMapLayer>
 	// Private Methods
 	//
 
-	private PatchMapLayer Add(PatchData patch, Color color)
+	private BoundaryMapLayer Add(PatchData patch, Color color)
     {
-		PatchMapLayer layer = Instantiate(layerPrefab);
+		var layer = Instantiate(layerPrefab);
 		layer.Init(map, patch);
 		layer.SetColor(color);
 		layer.transform.SetParent(transform, false);

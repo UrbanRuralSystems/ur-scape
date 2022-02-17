@@ -14,7 +14,7 @@ using UnityEngine.UI;
 public class ZoomPanel : MonoBehaviour
 {
 	[Header("UI References")]
-	public RectTransform compas;
+	public Button compassButton;
 	public PressingEvents plusButton;
 	public PressingEvents minusButton;
 
@@ -42,8 +42,8 @@ public class ZoomPanel : MonoBehaviour
 
 		map.OnBoundsChange += OnBoundsChange;
 
-        compas.GetComponent<Button>().onClick.AddListener(OnCompasClick);
-		compas.gameObject.SetActive(false);
+		compassButton.onClick.AddListener(OnCompasClick);
+		compassButton.interactable = false;
 
 		plusButton.OnPressed += OnZoomInClick;
 		plusButton.OnPressing += OnZooming;
@@ -83,8 +83,8 @@ public class ZoomPanel : MonoBehaviour
 	{
 		float cameraAngleY = WrapAngle(mapCamera.pivot.transform.rotation.eulerAngles.y);
 		Quaternion quat = Quaternion.Euler(0, 0, cameraAngleY);
-		compas.transform.rotation = quat;
-		compas.gameObject.SetActive(cameraAngleY != 0.0f);
+		compassButton.transform.rotation = quat;
+		compassButton.interactable = cameraAngleY != 0.0f;
 	}
 
 	private void OnCompasClick()

@@ -52,6 +52,18 @@ public class CategoryFilter
 		return ((bits[arrIndex] >> shift) & 1) == 1;
 	}
 
+	public int GetSetCount(int categoriesCount = MaxCategories)
+	{
+		int count = 0;
+		for (int i = 0; i < categoriesCount; ++i)
+		{
+			int arrIndex = i >> 5;
+			int shift = i - arrIndex * 32;
+			count += (bits[arrIndex] >> shift) & 1;
+		}
+		return count;
+	}
+
 	public bool IsOnlySet(int index)
 	{
 		if (index >= MaxCategories)

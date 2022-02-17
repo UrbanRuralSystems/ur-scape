@@ -16,6 +16,7 @@ public class ScreenshotHelper
 	public readonly Canvas canvas;
 	private RenderTexture rt;
 	private Texture2D screenShot;
+	private RectTransform footer;
 
 	private readonly WindowController wndController;
 	private readonly UnityAction<string, byte[]> writeFile;
@@ -27,6 +28,8 @@ public class ScreenshotHelper
 
 		camera = Camera.main;
 		canvas = GameObject.FindWithTag("Canvas").GetComponent<Canvas>();
+		var centerTopContainerT = GameObject.Find("CenterTopContainer").transform;
+		footer = centerTopContainerT.Find("Footer").GetComponent<RectTransform>();
 	}
 
 	public void Destroy()
@@ -99,12 +102,14 @@ public class ScreenshotHelper
 			float mapCameraWidth = mapRect.width / canvasWidthRatio;
 			float mapCameraHeight = mapRect.height / canvasHeightRatio;
 
+			int trimmedExportHeight = (int)(exportHeight - footer.rect.height / canvasHeightRatio);
+
 			// Scale render texture for cropped portion of screen will be exported to export resolution
 			float exportMapWidthRatio = exportWidth / mapCameraWidth;
 			float exportMapHeightRatio = exportHeight / mapCameraHeight;
 
 			int scaledExportWidth = (int)(exportWidth * exportMapWidthRatio);
-			int scaledExportHeight = (int)(exportHeight * exportMapHeightRatio);
+			int scaledExportHeight = (int)(trimmedExportHeight * exportMapHeightRatio);
 
 			CreateRenderTexture(scaledExportWidth, scaledExportHeight);
 

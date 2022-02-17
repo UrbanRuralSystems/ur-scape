@@ -12,7 +12,6 @@ Shader "URS/GridLayer_Weighted"
 	{
 		CellHalfSize("Cell Half Size", Range(0.001, 0.9)) = 0.4
 		Tint("Tint", Color) = (1,1,1)
-		TransectTint("Transect Tint", Color) = (1,1,1)
 		Thickness("Line Thickness", Range(0.0, 0.5)) = 0.01
 		[KeywordEnum(None, Circle, Square)] Shape("Shape", Float) = 0
 	}
@@ -49,16 +48,6 @@ Shader "URS/GridLayer_Weighted"
 				#pragma multi_compile HIDE_NODATA SHOW_NODATA
 				#pragma multi_compile NO_MASK USE_MASK
 				#include "GridLayer.cginc"
-			ENDCG
-		}
-		Pass
-		{
-			CGPROGRAM
-				#pragma fragment frag
-				#pragma vertex vert
-
-				#pragma multi_compile _ TRANSECT
-				#include "GridLayerTransect.cginc"
 			ENDCG
 		}
 	}

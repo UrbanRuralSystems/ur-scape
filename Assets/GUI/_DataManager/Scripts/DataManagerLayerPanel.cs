@@ -160,7 +160,13 @@ public class DataManagerLayerPanel : PropertiesPanel
 			updateBackend = true;
 		}
 
-		if (updateBackend)
+        //+
+        if (properties.coloring.HasChanged)
+        {
+            activeLayer.UpdateColoring((int)properties.coloring.Value);
+        }
+
+        if (updateBackend)
 		{
 			dataManagerPanel.UpdateActiveLayer();
 
@@ -371,13 +377,16 @@ public class DataManagerLayerPanel : PropertiesPanel
 
 	private void OnStyleDropdownChanged(int value)
 	{
-		var newColoring = (GridData.Coloring)value;
-		if (newColoring == properties.coloring.Value)
+		//+
+		var option = styleDropdown.options[value].text.Replace(" ", "");
+		bool isEnumParsed = Enum.TryParse(option, out GridData.Coloring newColoring);
+
+		if (!isEnumParsed || newColoring == properties.coloring.Value)
 			return;
 
 		properties.coloring.Value = newColoring;
 		styleButton.interactable = properties.coloring == GridData.Coloring.Custom;
-	}
+    }
 
 	private void OnEditCustomStyleClick()
 	{
@@ -668,6 +677,9 @@ public class DataManagerLayerPanel : PropertiesPanel
 
 				properties.categories.Init(categories?.ToArray());
 				categoriesButton.interactable = !differentCategories && categories != null && categories.Count > 0;
+
+                //+
+                UpdateStyleDropdown(types[0] == DataType.Categorised);
 			}
 
 			// Update Style
@@ -687,7 +699,11 @@ public class DataManagerLayerPanel : PropertiesPanel
 				styleButton.interactable = properties.coloring == GridData.Coloring.Custom;
 
 				styleDropdown.onValueChanged.RemoveListener(OnStyleDropdownChanged);
-				styleDropdown.value = (int)properties.coloring.Value;
+				//+
+				// Check if properties.coloring.Value exists in styleDropdown options
+				// Assign default value if not found
+				int index = styleDropdown.options.FindIndex((i) => i.text.Equals(properties.coloring.Value.ToString().Replace(" ", "")));
+				styleDropdown.value = index == -1 ? 0 : (int)properties.coloring.Value;
 				styleDropdown.onValueChanged.AddListener(OnStyleDropdownChanged);
 			}
 
@@ -741,7 +757,34 @@ public class DataManagerLayerPanel : PropertiesPanel
 		styleDropdown.onValueChanged.AddListener(OnStyleDropdownChanged);
 	}
 
-	private void UpdateGroupsDropdown(LayerGroup group)
+    //+
+    private void UpdateStyleDropdown(bool isCategorised)
+    {
+        styleDropdown.ClearOptions();
+        List<string> options = new List<string>();
+        var values = Array.ConvertAll((GridData.Coloring[])Enum.GetValues(typeof(GridData.Coloring)), delegate (GridData.Coloring value) { return (int)value; });
+        values = values.Distinct().ToArray();
+        int length = values.Length;
+
+        for (int i = 0; i < length; ++i)
+        {
+            if (isCategorised)
+            {
+                if (i < (int)GridData.Coloring.Reverse)
+                    options.Add(((GridData.Coloring)i).ToString().SplitCamelCase());
+            }
+            else
+            {
+                if (i == (int)GridData.Coloring.Forward || i >= (int)GridData.Coloring.Custom)
+                    options.Add(((GridData.Coloring)i).ToString().SplitCamelCase());
+            }
+        }
+
+        styleDropdown.AddOptions(options);
+        styleDropdown.onValueChanged.AddListener(OnStyleDropdownChanged);
+    }
+
+    private void UpdateGroupsDropdown(LayerGroup group)
 	{
 		// Clear Sites Dropdown
 		groupDropdown.onValueChanged.RemoveListener(OnGroupDropdownChanged);

@@ -109,20 +109,24 @@ public class DataLayerPanel : MonoBehaviour
     {
         if (visible && filterPanel != null)
         {
-			if (patch.Data is GridData)
-			{
-				bool categorizedPatch = (patch.Data as GridData).IsCategorized;
-				if (categorizedPatch ^ categorizedPanel)
-				{
-					Destroy(filterPanel.gameObject);
-					filterPanel = null;
+			bool categorizedPatch;
+			if (patch.Data is GridData gridData)
+				categorizedPatch = gridData.IsCategorized;
+			else if (patch.Data is PointData pointData)
+				categorizedPatch = pointData.IsCategorized;
+			else
+				return;
 
-					if (IsFilterToggleOn)
-						CreateFilterPanel(categorizedPatch);
-				}
+			if (categorizedPatch ^ categorizedPanel)
+			{
+				Destroy(filterPanel.gameObject);
+				filterPanel = null;
+
+				if (IsFilterToggleOn)
+					CreateFilterPanel(categorizedPatch);
 			}
 		}
-    }
+	}
 	
 	private void OnInfoButtonClick()
 	{
@@ -225,17 +229,21 @@ public class DataLayerPanel : MonoBehaviour
             if (dataLayer.loadedPatchesInView.Count > 0)
             {
 				var data = dataLayer.loadedPatchesInView[0].Data;
-				if (data is GridData)
+				if (data is GridData gridData)
 				{
-					categorized = (data as GridData).IsCategorized;
+					categorized = gridData.IsCategorized;
 				}
 				else if (data is MultiGridData)
 				{
 					categorized = true;
 				}
+				else if (data is PointData pointData)
+				{
+					categorized = pointData.IsCategorized;
+				}
 			}
 
-            if (filterPanel == null || categorized ^ categorizedPanel)
+			if (filterPanel == null || categorized ^ categorizedPanel)
             {
                 if (filterPanel != null)
                     Destroy(filterPanel.gameObject);

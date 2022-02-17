@@ -70,14 +70,14 @@ public static class GeoCalculator
         }
     }
 
-    public static double PixelsToMetes(int pixels, float zoom)
+    public static double PixelsToMetes(int pixels, float canvasScaleFactor, float zoom)
     {
-        return pixels * InitialResolution / Math.Pow(2, zoom);
+        return pixels * canvasScaleFactor * InitialResolution / Math.Pow(2, zoom);
     }
 
-    public static double MetersToPixels(float meters, float zoom)
+    public static double MetersToPixels(float meters, float canvasScaleFactor, float zoom)
     {
-        return meters * Math.Pow(2, zoom) / InitialResolution;
+        return meters * Math.Pow(2, zoom) / (canvasScaleFactor * InitialResolution);
     }
 
     // Converts given lat/lon (WGS84) to X/Y in Spherical Mercator (EPSG:3785)

@@ -8,7 +8,6 @@
 
 using UnityEngine;
 
-[RequireComponent(typeof(MeshRenderer))]
 public class AreaMapLayer : MapLayer
 {
     protected Distance areaCenterInMeters;
@@ -29,23 +28,12 @@ public class AreaMapLayer : MapLayer
     public override void UpdateContent()
     {
         // Update the position
-        var offset = areaCenterInMeters - map.MapCenterInMeters;
-        var units = GeoCalculator.RelativeMetersToPixels(offset, map.ZoomLevel) * map.PixelsToUnits;
+        var units = (areaCenterInMeters - map.MapCenterInMeters) * map.MetersToUnits;
         transform.localPosition = new Vector3((float)units.x, (float)units.y, -0.001f);
 
         // Update the size
-        units = GeoCalculator.RelativeMetersToPixels(areaSizeInMeters, map.ZoomLevel) * map.PixelsToUnits;
+        units = areaSizeInMeters * map.MetersToUnits;
         transform.localScale = new Vector3((float)units.x, (float)units.y, 1);
-    }
-
-
-    //
-    // Public Methods
-    //
-
-    public void SetColor(Color color)
-    {
-        GetComponent<MeshRenderer>().material.SetColor("Tint", color);
     }
 
 

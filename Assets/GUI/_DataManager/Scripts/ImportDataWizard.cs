@@ -19,6 +19,8 @@ public class ImportInfo
 	public string inputFilename;
 	public string outputFilename;
 
+	public int fieldIndex;
+
 	public Site site;
 	public string newSiteName;
 
@@ -28,6 +30,8 @@ public class ImportInfo
 	public DataLayer layer;
 	public string newLayerName;
 	public Color newLayerColor;
+
+	public IntCategory[] categories;
 
 	public int level;
 
@@ -51,6 +55,7 @@ public class ImportThreadInfo
 	public string outputFilename;
 	public string units;
 	public List<MetadataPair> metadata;
+	public IntCategory[] categories;	//?
 
 	public Thread thread;
 	public bool running;
@@ -137,12 +142,30 @@ public class ImportDataWizard : MonoBehaviour, IWizardController
 		return null;
 	}
 
+	private void InitInfoCategories(ImportInfo info)
+    {
+		var categoryNames = importDataPanel.GetCategories();
+		if (categoryNames == null)
+			return;
+
+		int categoryCount = categoryNames.Length;
+		info.categories = new IntCategory[categoryCount];
+		for (int i = 0; i < categoryCount; ++i)
+		{
+			info.categories[i] = new IntCategory()
+			{
+				name = categoryNames[i]
+			};
+        }
+	}
+
 	private void ImportData()
 	{
 		var info = new ImportInfo
 		{
 			inputFilename = importDataPanel.FullFilename,
 			outputFilename = importDataPanel.GetOutputFilename(),
+			fieldIndex = importDataPanel.fieldDropdown.value,
 			site = importDataPanel.Site,
 			newSiteName = importDataPanel.SiteName,
 			group = importDataPanel.Group,
@@ -159,8 +182,9 @@ public class ImportDataWizard : MonoBehaviour, IWizardController
 			metadata = importDataPanel.GetMetadata(),
 			OnFinishImport = OnFinishImport
 		};
+		InitInfoCategories(info);
 
-		var dataImporter = new GameObject("DataImporter").AddComponent<DataImporter>();
+        var dataImporter = new GameObject("DataImporter").AddComponent<DataImporter>();
 		dataImporter.Import(info);
 
 		wizardDlg.CloseDialog(DialogAction.Ok);

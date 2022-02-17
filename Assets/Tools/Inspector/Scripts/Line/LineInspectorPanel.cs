@@ -21,7 +21,6 @@ public class LineInspectorPanel : MonoBehaviour
     public LineInspectorDrawTool lineInspectorDrawToolPrefab;
     // Elements of a line
     public ToggleButton endPtPrefab;
-    public ToggleButton midPtPrefab;
     public ToggleButton inspectionDelPrefab;
 
     [Header("UI References")]
@@ -290,7 +289,7 @@ public class LineInspectorPanel : MonoBehaviour
 		this.canvas = canvas;
         this.maxInspectionCount = maxInspectionCount;
 
-        lineInspector.Init(toolLayers, endPtPrefab, midPtPrefab, inspectionDelPrefab, canvas);
+        lineInspector.Init(toolLayers, endPtPrefab, inspectionDelPrefab, canvas);
         InitLineInspectorInfo();
     }
 
@@ -500,10 +499,7 @@ public class LineInspectorPanel : MonoBehaviour
 
         lineInspector.CreateAndAddControlPt(lineInfos[0], 0, startPos);
         lineInspector.CreateAndAddControlPt(lineInfos[0], 0, endPos);
-
-        lineInspector.CreateLineInspectionMidPoint(lineInfos[0], midPtOffset);
         lineInspector.CreateInspectorDeleteButton(lineInfos[0]);
-
         lineInspector.CreateLineMapLayer(lineInfos[0], lineInspectionMapLayerPrefab);
 
         removeLineInspectionToggle.interactable = true;
@@ -555,12 +551,6 @@ public class LineInspectorPanel : MonoBehaviour
         lineInspector.CurrLineInspection = index;
         UpdateLinesElements(lineInspector.CurrLineInspection);
         inspectorOutput.SetInspection(InspectorTool.InspectorType.Line, lineInspector.CurrLineInspection);
-    }
-
-    public void UpdateLineEndPtAndMidPtFromWorldPos(LineInfo lineInfo, int controlPtIndex, Vector3 worldPos)
-    {
-        lineInspector.UpdateLineEndPtFromWorldPos(lineInfo, controlPtIndex, worldPos);
-        lineInspector.UpdateLineMidPt(lineInfo, midPtOffset);
     }
 
     //
@@ -657,7 +647,9 @@ public class LineInspectorPanel : MonoBehaviour
 
         var lineInfo = lineInfos[lineInspector.CurrLineInspection];
 
-        lineInspector.CreateLineInspectionMidPoint(lineInfo, midPtOffset);
+        lineInfo.controlPts[StartPtIndex].GetComponent<Image>().raycastTarget = true;
+        lineInfo.controlPts[EndPtIndex].GetComponent<Image>().raycastTarget = true;
+
         lineInspector.CreateInspectorDeleteButton(lineInfo);
 
         // Update inspection index of all of current inspection line's control pts

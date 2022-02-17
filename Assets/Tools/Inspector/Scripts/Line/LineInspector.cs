@@ -29,7 +29,6 @@ public class LineInspector {
 	// Constants
 	private const int StartPtIndex = 0;
 	private const int EndPtIndex = 1;
-	private const int MidPtIndex = 2;
 
 	// Component references
 	private InputHandler inputHandler;
@@ -40,7 +39,6 @@ public class LineInspector {
 
 	// Prefab references
 	private ToggleButton endPtPrefab;
-	private ToggleButton midPtPrefab;
 	private ToggleButton inspectionDelPrefab;
 
     // Inspections count
@@ -76,7 +74,7 @@ public class LineInspector {
 	// Public Methods
 	//
 
-	public void Init(ToolLayerController toolLayers, ToggleButton endPtPrefab, ToggleButton midPtPrefab, ToggleButton inspectionDelPrefab, Canvas canvas)
+	public void Init(ToolLayerController toolLayers, ToggleButton endPtPrefab, ToggleButton inspectionDelPrefab, Canvas canvas)
 	{
 		inputHandler = ComponentManager.Instance.Get<InputHandler>();
         inspectorTool = ComponentManager.Instance.Get<InspectorTool>();
@@ -86,7 +84,6 @@ public class LineInspector {
 		this.canvas = canvas;
 
 		this.endPtPrefab = endPtPrefab;
-		this.midPtPrefab = midPtPrefab;
 		this.inspectionDelPrefab = inspectionDelPrefab;
     }
 
@@ -164,7 +161,7 @@ public class LineInspector {
 		currLineInspection = -1;
 	}
 
-	public void ShowLinesAndControlPts(bool show, LineInspectorInfo[] lineInfos)//, Toggle adjustmentControlsToggle)
+	public void ShowLinesAndControlPts(bool show, LineInspectorInfo[] lineInfos)
 	{
         if (lineInfos == null)
             return;
@@ -175,7 +172,7 @@ public class LineInspector {
 				lineInfo.line.gameObject.SetActive(show);
 
 			foreach (var controlPtTB in lineInfo.controlPtsTB)
-				controlPtTB.gameObject.SetActive(show);// && adjustmentControlsToggle.isOn);
+				controlPtTB.gameObject.SetActive(show);
 
             if (lineInfo.lineInspectionDelete != null)
                 lineInfo.lineInspectionDelete.gameObject.SetActive(show && inspectorTool.lineInspectorPanel.removeLineInspectionToggle.isOn);
@@ -198,26 +195,6 @@ public class LineInspector {
 		lineInfo.controlPts[controlPtIndex].SetCoord(endPtCoord);
 	}
 
-	public void UpdateLineMidPt(LineInspectorInfo lineInfo, float midPtOffset)
-	{
-		// Update midPt position (screen pos)
-		Vector3 startPt = lineInfo.controlPtsTB[StartPtIndex].transform.localPosition;
-		Vector3 endPt = lineInfo.controlPtsTB[EndPtIndex].transform.localPosition;
-		Vector3 midPt = (startPt + endPt) * 0.5f;
-
-		Quaternion rot = Quaternion.FromToRotation(Vector2.right, (endPt - startPt).normalized);
-		Vector3 offset = rot * (Vector3.down * midPtOffset);
-
-		Vector3 newMidPtPos = midPt + offset;
-		lineInfo.controlPtsTB[MidPtIndex].transform.localPosition = newMidPtPos;
-
-		inputHandler.GetWorldPoint(newMidPtPos, out Vector3 newMidPtWorldPos);
-
-		Coordinate midPtCoord = map.GetCoordinatesFromUnits(newMidPtWorldPos.x, newMidPtWorldPos.z);
-		lineInfo.coords[MidPtIndex] = midPtCoord;
-		lineInfo.controlPts[MidPtIndex].SetCoord(midPtCoord);
-	}
-
     public void UpdateInspectionDelete(LineInspectorInfo lineInfo)
     {
         // Compute midpt
@@ -226,18 +203,6 @@ public class LineInspector {
         Vector3 midPt = (startPt + endPt) * 0.5f;
         lineInfo.lineInspectionDelete.UpdatePosition(midPt);
     }
-
-    public void UpdateMidPtPos(LineInspectorInfo lineInfo)
-    {
-		Vector3 screenPos = Input.mousePosition;
-		// Update position of control pts of line taking into account of screen size
-		lineInfo.controlPtsTB[MidPtIndex].transform.localPosition = lineInfo.mapViewAreaChanged ?
-																	(
-																		lineInfo.scaleFactor.Equals(1.0f) ? screenPos / canvas.scaleFactor :
-																	                                        screenPos * lineInfo.scaleFactor
-																	)
-																	: screenPos;
-	}
 
     public void CreateLineInspection(LineInspectorInfo lineInfo, int count, RectTransform lineInspectionPrefab, RectTransform inspectorContainer)
 	{
@@ -288,6 +253,8 @@ public class LineInspector {
 		controlPtsTB[cpIndex].transform.SetParent(lineInfo.lineInspection);
 		controlPtsTB[cpIndex].name = ((cpIndex == 0) ? "StartPt" : "EndPt") + createdLineInspectionCount.ToString();
 
+		controlPtsTB[cpIndex].GetComponent<Image>().raycastTarget = true;
+
 		Coordinate coord = map.GetCoordinatesFromUnits(pos.x, pos.z);
 		lineInfo.coords.Add(coord);
 		var cp = controlPtsTB[cpIndex].GetComponent<ControlPt>();
@@ -296,36 +263,6 @@ public class LineInspector {
 		cp.ControlPointIndex = cpIndex;
 		cp.LineInfo = lineInfo;
 		cp.SetCoord(coord);
-	}
-
-	public void CreateLineInspectionMidPoint(LineInspectorInfo lineInfo, float midPtOffset)
-	{
-		Vector3 startPt = lineInfo.controlPtsTB[StartPtIndex].transform.localPosition;
-		Vector3 endPt = lineInfo.controlPtsTB[EndPtIndex].transform.localPosition;
-		Vector3 midPt = (startPt + endPt) * 0.5f;
-
-		Quaternion rot = Quaternion.FromToRotation(Vector2.right, (endPt - startPt).normalized);
-		Vector3 offset = rot * (Vector3.down * midPtOffset);
-
-		lineInfo.controlPtsTB.Add(GameObject.Instantiate(midPtPrefab, midPt, Quaternion.identity));
-		lineInfo.controlPtsTB[MidPtIndex].transform.SetParent(lineInfo.lineInspection);
-		lineInfo.controlPtsTB[MidPtIndex].name = "MidPt" + createdLineInspectionCount.ToString();
-
-		var cp2 = lineInfo.controlPtsTB[MidPtIndex].GetComponent<ControlPt>();
-		lineInfo.controlPts.Add(cp2);
-		cp2.ControlPointIndex = lineInfo.controlPtsTB.Count - 1;
-		cp2.LineInfo = lineInfo;
-
-		Vector3 newMidPtPos = midPt + offset;
-		lineInfo.controlPtsTB[MidPtIndex].transform.localPosition = newMidPtPos;
-		Coordinate coordMid = map.GetCoordinatesFromUnits(newMidPtPos.x, newMidPtPos.y);
-		lineInfo.coords.Add(coordMid);
-		cp2.SetCoord(coordMid);
-
-		foreach (var controlPtTB in lineInfo.controlPtsTB)
-		{
-			controlPtTB.GetComponent<Image>().raycastTarget = true;
-		}
 	}
 
     public void CreateInspectorDeleteButton(LineInspectorInfo lineInfo)
@@ -345,9 +282,8 @@ public class LineInspector {
 
 	public void CreateLineMapLayer(LineInspectorInfo lineInfo, LineInspectionMapLayer lineInspectionMapLayerPrefab)
 	{
-		lineInfo.mapLayer = toolLayers.CreateMapLayer(lineInspectionMapLayerPrefab, "LineInspectionLayer" + createdLineInspectionCount.ToString());
+		lineInfo.mapLayer = toolLayers.CreateGridMapLayer(lineInspectionMapLayerPrefab, "LineInspectionLayer" + createdLineInspectionCount.ToString());
 		lineInfo.mapLayer.Init(lineInfo.coords);
-		lineInfo.mapLayer.ShowTransect(false);
 	}
 
 }

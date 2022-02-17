@@ -15,23 +15,23 @@ public class EndPt : ControlPt
 {
 	[Header("UI References")]
 	public Sprite knobSmall;
-    public Sprite knobLarge;
-    public Sprite knobSolid;
+	public Sprite knobLarge;
+	public Sprite knobSolid;
 
-    // Component References
-    private Image image;
-    private RectTransform rectTransform;
+	// Component References
+	private Image image;
+	private RectTransform rectTransform;
 	private HoverHandler hoverHandler;
 	private MapController mapController;
 
 	protected override void Start()
-    {
-        base.Start();
+	{
+		base.Start();
 
-        image = GetComponent<Image>();
-        rectTransform = GetComponent<RectTransform>();
+		image = GetComponent<Image>();
+		rectTransform = GetComponent<RectTransform>();
 
-        rectTransform.sizeDelta = new Vector2(knobSmall.texture.width * 0.5f, knobSmall.texture.height * 0.5f);
+		rectTransform.sizeDelta = new Vector2(knobSmall.texture.width * 0.5f, knobSmall.texture.height * 0.5f);
 
 		// Add hover event
 		hoverHandler = GetComponent<HoverHandler>();
@@ -66,14 +66,14 @@ public class EndPt : ControlPt
 		transform.localPosition = lineInfo.mapViewAreaChanged ?
 								  (
 									lineInfo.scaleFactor.Equals(1.0f) ? screenPos / canvas.scaleFactor :
-																	    screenPos * lineInfo.scaleFactor
+																		screenPos * lineInfo.scaleFactor
 								  )
 								  : screenPos;
 		inputHandler.GetWorldPoint(screenPos, out Vector3 worldPos);
 
-		lineInspectorPanel.UpdateLineEndPtAndMidPtFromWorldPos(LineInfo, ControlPointIndex, worldPos);
-        lineInspector.UpdateInspectionDelete(LineInfo);
-        lineInspectorPanel.ComputeAndUpdateLineProperties();
+		lineInspector.UpdateLineEndPtFromWorldPos(lineInfo, controlPtIndex, worldPos);
+		lineInspector.UpdateInspectionDelete(LineInfo);
+		lineInspectorPanel.ComputeAndUpdateLineProperties();
 	}
 
 	//
@@ -82,42 +82,58 @@ public class EndPt : ControlPt
 
 	public override void UpdatePositionAndLinePtsFromCoord()
 	{
-        if (mapController == null)
-            return;
-        
+		if (mapController == null)
+			return;
+		
 		var coordToWorldPos = mapController.GetUnitsFromCoordinates(coords);
 		Vector3 worldPos = new Vector3(coordToWorldPos.x, coordToWorldPos.z, coordToWorldPos.y);
 		Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
-        
+		
 		lineInfo.line.SetPosition(controlPtIndex, worldPos);
 		// Update position of control pts of line taking into account of screen size
 		transform.localPosition = lineInfo.mapViewAreaChanged ?
 								  (
 									lineInfo.scaleFactor.Equals(1.0f) ? screenPos / canvas.scaleFactor :
-																	    screenPos * lineInfo.scaleFactor
+																		screenPos * lineInfo.scaleFactor
 								  )
 								  : screenPos;
 	}
 
+	public void UpdatePosition(Vector3 screenPos)
+	{
+		// Update position of control pts of line taking into account of screen size
+		transform.localPosition = lineInfo.mapViewAreaChanged ?
+								  (
+									lineInfo.scaleFactor.Equals(1.0f) ? screenPos / canvas.scaleFactor :
+																		screenPos * lineInfo.scaleFactor
+								  )
+								  : screenPos;
+		inputHandler.GetWorldPoint(screenPos, out Vector3 worldPos);
+
+		lineInspector.UpdateLineEndPtFromWorldPos(lineInfo, controlPtIndex, worldPos);
+		lineInspector.UpdateInspectionDelete(LineInfo);
+		lineInspectorPanel.ComputeAndUpdateLineProperties();
+	}
+
 	public void KnobSmall()
-    {
-        image.sprite = knobSmall;
-        rectTransform.sizeDelta = new Vector2(knobSmall.texture.width * 0.5f, knobSmall.texture.height * 0.5f);
-    }
+	{
+		image.sprite = knobSmall;
+		rectTransform.sizeDelta = new Vector2(knobSmall.texture.width * 0.5f, knobSmall.texture.height * 0.5f);
+	}
 
-    public void KnobLarge()
-    {
-        if (lineInspector.CurrLineInspection != InspectionIndex)
-            return;
-        image.sprite = knobLarge;
-        rectTransform.sizeDelta = new Vector2(knobLarge.texture.width * 0.5f, knobLarge.texture.height * 0.5f);
-    }
+	public void KnobLarge()
+	{
+		if (lineInspector.CurrLineInspection != InspectionIndex)
+			return;
+		image.sprite = knobLarge;
+		rectTransform.sizeDelta = new Vector2(knobLarge.texture.width * 0.5f, knobLarge.texture.height * 0.5f);
+	}
 
-    public void KnobSolid()
-    {
-        image.sprite = knobSolid;
-        rectTransform.sizeDelta = new Vector2(knobSolid.texture.width * 0.5f, knobSolid.texture.height * 0.5f);
-    }
+	public void KnobSolid()
+	{
+		image.sprite = knobSolid;
+		rectTransform.sizeDelta = new Vector2(knobSolid.texture.width * 0.5f, knobSolid.texture.height * 0.5f);
+	}
 
 	//
 	// Private Methods

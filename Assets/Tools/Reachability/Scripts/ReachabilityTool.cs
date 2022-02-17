@@ -75,6 +75,7 @@ public class ReachabilityTool : Tool
     public Button clearButton;
     public Toggle showRoadsToggle;
     public Toggle showIsochronToggle;
+    public Toggle showStartPtToggle;
     public ToggleGroup mobilityGroup;
     public Toggle editSpeedToggle;
     public Slider traveTimeSlider;
@@ -137,8 +138,6 @@ public class ReachabilityTool : Tool
     public Notification NDAAnalysisCompletedNotification { private set; get; }
     public Notification NDASetupCompletedNotification { private set; get; }
 
-    private bool missingPackages;
-
     //
     // Unity Methods
     //
@@ -168,9 +167,6 @@ public class ReachabilityTool : Tool
 
 #if UNITY_WEBGL
         networkDisruptionAnalysisToggle.interactable = false;
-#else
-        if (Directory.Exists(NetworkDisruptionAnalysis.NDA_VirtualEnvPath))
-            missingPackages = NetworkDisruptionAnalysis.HasMissingPackages();
 #endif
     }
 
@@ -230,6 +226,7 @@ public class ReachabilityTool : Tool
         clearButton.onClick.AddListener(OnClearClicked);
         showRoadsToggle.onValueChanged.AddListener(OnToggleShowRoads);
         showIsochronToggle.onValueChanged.AddListener(OnToggleShowIsochrons);
+        showStartPtToggle.onValueChanged.AddListener(OnToggleShowStartPts);
         editSpeedToggle.onValueChanged.AddListener(OnEditSpeedToggleChanged);
         newRoadButton.onClick.AddListener(OnNewRoadClick);
 #if !UNITY_WEBGL
@@ -246,9 +243,11 @@ public class ReachabilityTool : Tool
         createRoadToggle.onValueChanged.AddListener(OnCreateRoadChanged);
         removeRoadToggle.onValueChanged.AddListener(OnRemoveRoadChanged);
 
+#if !UNITY_WEBGL
         // Initialize notification title and message
         NDAAnalysisCompletedNotification.Init("Network Data Analysis", "Analysis Completed!");
         NDASetupCompletedNotification.Init("Network Data Analysis", "Setup Completed!");
+#endif
     }
 
     protected override void OnToggleTool(bool isOn)
@@ -523,6 +522,19 @@ public class ReachabilityTool : Tool
         }
     }
 
+    private void OnToggleShowStartPts(bool isOn)
+    {
+        if (placeStart != null && placeStart.MarkrContainer != null)
+        {
+            int startCount = placeStart.MarkrContainer.transform.childCount;
+
+            for (int sCount = 0; sCount < startCount; ++sCount)
+            {
+                placeStart.MarkrContainer.transform.GetChild(sCount).gameObject.SetActive(isOn);
+            }
+        }
+    }
+
     private void OnEditSpeedToggleChanged(bool isOn)
     {
         editSpeedPanel.gameObject.SetActive(isOn);
@@ -589,7 +601,7 @@ public class ReachabilityTool : Tool
     {
         if (isOn)
         {
-            if (Directory.Exists(NetworkDisruptionAnalysis.NDA_VirtualEnvPath) && !missingPackages)
+            if (Directory.Exists(NetworkDisruptionAnalysis.NDA_VirtualEnvPath) && !NetworkDisruptionAnalysis.HasMissingPackages())
             {
                 NDAParamPanel.gameObject.SetActive(isOn);
                 editSpeedToggle.interactable = !isOn;
@@ -607,7 +619,7 @@ public class ReachabilityTool : Tool
     }
 #endif
 
-    private void OnFinishNewRoadClick()
+        private void OnFinishNewRoadClick()
     {
         SetAction(Action.None);
 
@@ -642,6 +654,12 @@ public class ReachabilityTool : Tool
             if (placeStart.HasStartPoints)
                 placeStart.UpdateGrid();
         }
+    }
+
+    protected override void OnActiveTool(bool isActive)
+    {
+        if (!isActive)
+            editSpeedToggle.isOn = false;
     }
 
     //
@@ -763,6 +781,8 @@ public class ReachabilityTool : Tool
 
     private void ResetTool(bool turnOff)
     {
+        editSpeedToggle.isOn = false;
+
         // Disable layers visibility event
         dataLayers.OnLayerVisibilityChange -= OnLayerVisibilityChange;
 

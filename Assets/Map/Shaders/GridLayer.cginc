@@ -22,31 +22,14 @@ sampler2D Mask;
 StructuredBuffer<float> Values;
 StructuredBuffer<uint> Mask;
 #endif
-float4 Tint;
-float UserOpacity;
-float ToolOpacity;
 int CountX;
 int CountY;
 float Thickness;
-float MinValue;
-float InvValueRange;
-float Gamma;
 float CellHalfSize;
 float OffsetX;
 float OffsetY;
 
 sampler1D Projection;
-
-#if CATEGORIZED
-	// Categorized Grid Only Properties
-	fixed4 CategoryColors[256];
-#else
-	// Default Grid Only Properties
-	float FilterMinValue;
-	float FilterMaxValue;
-	float4 StripeMarkers;
-	float StripesCount;
-#endif
 
 
 struct appdata
@@ -64,6 +47,7 @@ struct v2f
 };
 
 #include "GridLayer_Utils.cginc"
+#include "MapLayerUtils.cginc"
 
 v2f vert(appdata v)
 {
@@ -154,58 +138,7 @@ fixed4 frag(v2f i) : SV_Target
 	#endif
 #endif
 
-	float4 color = Tint;
-
-#if CATEGORIZED
-
-	int category = floor(value);
-	color = CategoryColors[category];
-	value = color.a;
-
-#else
-
-	#if FILTER_DATA
-		float filter = step(FilterMinValue, value) * step(value, FilterMaxValue);
-	#else
-		float filter = 1;
-	#endif
-
-	#if STRIPES_1 | STRIPES_2 | STRIPES_3 | STRIPES_4 | STRIPES_5
-		float stripes = StripesCount;
-
-		#if STRIPES_2 | STRIPES_3 | STRIPES_4 | STRIPES_5
-			stripes -= step(StripeMarkers[0], value);
-		#if STRIPES_3 | STRIPES_4 | STRIPES_5
-			stripes -= step(StripeMarkers[1], value);
-		#if STRIPES_4 | STRIPES_5
-			stripes -= step(StripeMarkers[2], value);
-		#if STRIPES_5
-			stripes -= step(StripeMarkers[3], value);
-		#endif
-		#endif
-		#endif
-		#endif
-
-		value = stripes / StripesCount;
-	#else
-		// Normalize the value
-		value = (value - MinValue) * InvValueRange;
-
-		#if STRIPES_UNIFORM
-			value = ceil(value * StripesCount) / StripesCount;
-		#elif STRIPES_UNIFORM_REVERSE
-			value = ceil(StripesCount - value * StripesCount) / StripesCount;
-		#elif GRADIENT_REVERSE
-			value = 1 - value;
-		#endif
-
-		// Apply gamma (need to saturate value to avoid negative numbers)
-		value = pow(saturate(value), Gamma);
-	#endif
-	
-	value = saturate(value * filter);
-
-#endif
+	float4 color = GetColor(value);
 
 	// Get the pixel opacity for the current cell
 	float distCamToPixel = distance(i.worldPos, _WorldSpaceCameraPos);
@@ -215,26 +148,25 @@ fixed4 frag(v2f i) : SV_Target
 #if USE_MASK
 	uint maskIndex = index / 4;
 	uint byteIndex = index - maskIndex * 4;
-#ifdef SHADER_USE_TEXTURE
-	uint maskCountX = (CountX + 1) / 2;
-	uint maskCountY = (CountY + 1) / 2;
-	uint my = maskIndex / maskCountX;
-	uint mx = maskIndex - my * maskCountX;
-	float4 mask4 = tex2D(Mask, float2((mx + 0.5) / maskCountX, (my + 0.5) / maskCountY));
-	float mask = mask4[byteIndex] * 255;
-#else
-	float mask = (Mask[maskIndex] >> (byteIndex * 8)) & 1;
-#endif
 
-#else
-	float mask = 1;
-#endif
+	#ifdef SHADER_USE_TEXTURE
+		uint maskCountX = (CountX + 1) / 2;
+		uint maskCountY = (CountY + 1) / 2;
+		uint my = maskIndex / maskCountX;
+		uint mx = maskIndex - my * maskCountX;
+		float4 mask4 = tex2D(Mask, float2((mx + 0.5) / maskCountX, (my + 0.5) / maskCountY));
+		float mask = mask4[byteIndex] * 255;
+	#else
+		float mask = (Mask[maskIndex] >> (byteIndex * 8)) & 1;
+	#endif
 
-#if SHOW_NODATA
-	float noDataOpacity = GetCellOpacityNoData(i.uv, i.constants.x, distCamToPixel);
-	color.a = lerp(noDataOpacity, value, mask);
-#else
-	color.a = value * mask;
+	#if SHOW_NODATA
+		float noDataOpacity = GetCellOpacityNoData(i.uv, i.constants.x, distCamToPixel);
+		color.a = lerp(noDataOpacity, color.a, mask);
+	#else
+		color.a *= mask;
+	#endif
+
 #endif
 
 	color.a *= UserOpacity * ToolOpacity * cellOpacity;

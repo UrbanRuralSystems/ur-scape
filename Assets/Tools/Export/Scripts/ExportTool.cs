@@ -7,9 +7,11 @@
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 //          Muhammad Salihin Bin Zaol-kefli
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 #if UNITY_WEBGL
 using System.IO.Compression;
 #endif
@@ -42,6 +44,17 @@ public class ExportTool : Tool
 	public Text sizeLabel;
 	public Text formatLabel;
 
+	// UI elements
+	private ZoomPanel zoomPanel;
+	private BackgroundsComponent backgrounds;
+	private CellInspector cellInspector;
+	private Toggle collapseToggleLeft;
+	private Toggle collapseToggleRight;
+	private Toggle collapseToggleDown;
+	private Transform footer;
+	private LegendPanel legendPanel;
+	private Toolbox toolbox;
+
 	private enum ImgSize
     {
         Small = 0,
@@ -53,16 +66,35 @@ public class ExportTool : Tool
 	private int exportWidth = 1920;
 	private int exportHeight = 1080;
 
+	private int siblingIndex;
 
 #if UNITY_WEBGL
 	private MemoryStream zipMemStream;
 	private ZipArchive zip;
 #endif
 
-
 	//
 	// Inheritance Methods
 	//
+
+	protected override void OnComponentRegistrationFinished()
+	{
+		base.OnComponentRegistrationFinished();
+
+		// Init UI elements
+		zoomPanel = FindObjectOfType<ZoomPanel>();
+		backgrounds = FindObjectOfType<BackgroundsComponent>();
+		cellInspector = FindObjectOfType<CellInspector>();
+		var centerTopContainerT = GameObject.Find("CenterTopContainer").transform;
+		collapseToggleLeft = centerTopContainerT.Find("ColapseToggleLeft").GetComponent<Toggle>();
+		collapseToggleRight = centerTopContainerT.Find("ColapseToggleRight").GetComponent<Toggle>();
+		collapseToggleDown = centerTopContainerT.Find("ColapseToggleDown").GetComponent<Toggle>();
+		footer = centerTopContainerT.Find("Footer");
+		legendPanel = footer.Find("LegendPanel").GetComponent<LegendPanel>();
+		toolbox = FindObjectOfType<Toolbox>();
+
+		siblingIndex = transform.GetSiblingIndex();
+	}
 
 	protected override void OnToggleTool(bool isOn)
     {
@@ -234,7 +266,7 @@ public class ExportTool : Tool
 		var background = map.GetLayerController<MapboxLayerController>();
 		List<MapboxLayer> backgroundLayers = GetLayers(background);
 		List<GridMapLayer> gridLayers = GetLayers<GridMapLayer>(map);
-		List<GridMapLayer> toolLayers = GetLayers(map.GetLayerController<ToolLayerController>());
+		List<MapLayer> toolLayers = GetLayers(map.GetLayerController<ToolLayerController>());
 
 		int count = 0;
 		if (fullInterfaceToggle.isOn)
@@ -254,6 +286,11 @@ public class ExportTool : Tool
 		// Export a screenshot of the full interface
 		if (fullInterfaceToggle.isOn)
 		{
+			legendPanel.gameObject.SetActive(true);
+			yield return new WaitForFrames(2);
+			ExpandLegendItems(true);
+			yield return new WaitForFrames(2);
+
 			if (!progress.Update("Exporting full interface ..."))
 				yield break;
 
@@ -261,46 +298,40 @@ public class ExportTool : Tool
 
 			var filename = exportPath + fullInterfaceFilename + "_" + imgSize.ToString() + ".png";
 			yield return screenshot.TakeScreenshot(filename, exportWidth, exportHeight, true);
+
+			ExpandLegendItems(false);
+			legendPanel.gameObject.SetActive(false);
 		}
 		
 		// Export a screenshot with all layers
 		if (bgLayersCombToggle.isOn)
 		{
+			ToggleUI(false);
+			yield return new WaitForFrames(2);
+			ExpandLegendItems(true);
+			yield return new WaitForFrames(2);
+
 			if (!progress.Update("Exporting all layers combined ..."))
 				yield break;
 			yield return null;
 
 			var filename = exportPath + bgLayersCombFilename + "_" + imgSize.ToString() + ".png";
-			yield return screenshot.TakeScreenshot(filename, exportWidth, exportHeight, false);
+			yield return screenshot.TakeScreenshot(filename, exportWidth, exportHeight, true);
+
+			ExpandLegendItems(false);
+			ToggleUI(true);
 		}
 
         if (bgLayersSepToggle.isOn)
         {
 			// Hide UI
-			screenshot.canvas.enabled = false;
+			ToggleUI(false, false);
+			yield return new WaitForFrames(2);
+			ToggleLegendItems(false);
+			yield return new WaitForFrames(2);
 
-            // Hide transects
-            List<GridMapLayer> gridLayersTransects = new List<GridMapLayer>();
-            List<GridMapLayer> toolLayersTransects = new List<GridMapLayer>();
-            foreach (var layer in gridLayers)
-            {
-                if (!layer.IsTransectEnabled())
-                    continue;
-
-                gridLayersTransects.Add(layer);
-                layer.ShowTransect(false);
-            }
-            foreach (var layer in toolLayers)
-            {
-                if (!layer.IsTransectEnabled())
-                    continue;
-
-                toolLayersTransects.Add(layer);
-                layer.ShowTransect(false);
-            }
-
-            // Hide all grid layers
-            foreach (var layer in gridLayers)
+			// Hide all grid layers
+			foreach (var layer in gridLayers)
             {
                 layer.SetShape(GridMapLayer.Shape.Circle);
                 layer.SetInterpolation(false);
@@ -316,7 +347,9 @@ public class ExportTool : Tool
                 if (layer is ContoursMapLayer)
                     contourOn = true;
 
-                layer.SetShape(GridMapLayer.Shape.Circle);
+				var gridLayer = layer as GridMapLayer;
+				if (gridLayer != null)
+					gridLayer.SetShape(GridMapLayer.Shape.Circle);
                 layer.Show(false);
             }
 
@@ -336,13 +369,18 @@ public class ExportTool : Tool
 					yield return null;
 
 					var filename = exportPath + backgroundFilename + "_" + imgSize.ToString() + ".png";
-					yield return screenshot.TakeScreenshot(filename, exportWidth, exportHeight, false);
+					yield return screenshot.TakeScreenshot(filename, exportWidth, exportHeight, true);
 				}
 			}
 
             // Hide background
             if (background)
                 background.gameObject.SetActive(false);
+
+			ToggleUI(false);
+			yield return new WaitForFrames(2);
+			ToggleLegendItems(false);
+			yield return new WaitForFrames(2);
 
 			// Iterate thru each individual layer and export them
 			if (!cancelled && gridLayers.Count > 0)
@@ -365,7 +403,9 @@ public class ExportTool : Tool
             // Show all tool layers again
             foreach (var layer in toolLayers)
             {
-                layer.SetShape(GridMapLayer.Shape.Circle);
+				var gridLayer = layer as GridMapLayer;
+				if (gridLayer != null)
+					gridLayer.SetShape(GridMapLayer.Shape.Circle);
                 layer.Show(true);
             }
 
@@ -381,15 +421,10 @@ public class ExportTool : Tool
             if (contourOn)
                 ComponentManager.Instance.Get<DataLayers>().AutoReduceToolOpacity();
 
-            // Show transects again if necessary
-            foreach (var toolLayerTransect in toolLayersTransects)
-                toolLayerTransect.ShowTransect(true);
-            foreach (var gridLayerTransect in gridLayersTransects)
-                gridLayerTransect.ShowTransect(true);
-
 			// Show UI again
-			screenshot.canvas.enabled = true;
-        }
+			ToggleLegendItems(true);
+			ToggleUI(true);
+		}
 
 		progress.Stop();
 	}
@@ -604,25 +639,47 @@ public class ExportTool : Tool
 	}
 #endif
 
-	private IEnumerator ExportLayers<T>(List<T> layers, ScreenshotHelper screenshot, Progress progress, string exportPath) where T : PatchMapLayer
+	private IEnumerator ExportLayers<T>(List<T> layers, ScreenshotHelper screenshot, Progress progress, string exportPath) where T : MapLayer
 	{
 		// Export each individual layer
 		int size = layers.Count;
         for (int i = 0; i < size; ++i)
         {
 			string name = layers[i].name;
-			if (layers[i].PatchData.patch != null)
-				name = layers[i].PatchData.patch.DataLayer.Name;
+			var patchLayer = layers[i] as PatchMapLayer;
+			if (patchLayer != null && patchLayer.PatchData.patch != null)
+				name = patchLayer.PatchData.patch.DataLayer.Name;
 
 			if (!progress.Update("Exporting layer (" + (i + 1) + "/" + size + "): " + name + " ..."))
                 yield break;
 
             layers[i].Show(true);
+			if (layers[i] is SnapshotMapLayer)
+			{
+				ShowSnapshotLegendItem(i, true);
+				yield return new WaitForFrames(2);
+			}
+			else if (!(layers[i] is ContoursMapLayer))
+			{
+				ShowDataLayerLegendItem(i, true);
+				yield return new WaitForFrames(2);
+			}
 
-			var filename = exportPath + name + "_" + imgSize.ToString() + ".png";
-            yield return screenshot.TakeScreenshot(filename, exportWidth, exportHeight, false);
-            layers[i].Show(false);
-        }
+            var filename = exportPath + name + "_" + imgSize.ToString() + ".png";
+            yield return screenshot.TakeScreenshot(filename, exportWidth, exportHeight, !(layers[i] is ContoursMapLayer));
+
+			layers[i].Show(false);
+			if (layers[i] is SnapshotMapLayer)
+			{
+				ShowSnapshotLegendItem(i, false);
+				yield return new WaitForFrames(2);
+			}
+			else if (!(layers[i] is ContoursMapLayer))
+			{
+				ShowDataLayerLegendItem(i, false);
+				yield return new WaitForFrames(2);
+			}
+		}
     }
 
     private List<T> GetLayers<T>(MapController map) where T : PatchMapLayer
@@ -646,7 +703,101 @@ public class ExportTool : Tool
 
     private void NoOp() { }
 
+	private void ToggleUI(bool show, bool withLegend = true)
+	{
+		// Zoom panel
+		zoomPanel.gameObject.SetActive(show);
+		// Backgrounds
+		backgrounds.gameObject.SetActive(show);
+		// CellInspector
+		cellInspector.gameObject.SetActive(show);
+		// ColapseToggleLeft
+		collapseToggleLeft.isOn = show;
+		collapseToggleLeft.gameObject.SetActive(show);
+		// ColapseToggleRight
+		collapseToggleRight.isOn = show;
+		collapseToggleRight.gameObject.SetActive(show);
+		// CenterBottomContainer
+		if (show)
+        {
+			transform.SetParent(toolbox.toolsPanel, false);
+			transform.SetSiblingIndex(siblingIndex);
+        }
+		else
+        {
+			transform.SetParent(null, false);
+        }
+		toolbox.transform.parent.gameObject.SetActive(show);
+		int exportToolChildCount = transform.childCount;
+		for (int i = 0; i < exportToolChildCount; ++i)
+        {
+			transform.GetChild(i).gameObject.SetActive(show);
+        }
+		collapseToggleDown.gameObject.SetActive(show);
+		// Footer
+		footer.GetComponent<Image>().enabled = show;
+		int footerChildCount = footer.childCount;
+		for (int i = 0; i < footerChildCount; ++i)
+		{
+			var child = footer.GetChild(i);
+			if (child.name.Contains("Panel"))
+				continue;
+			child.gameObject.SetActive(show);
+		}
+		legendPanel.gameObject.SetActive(withLegend);
+	}
+
+	private void ToggleLegendItems(bool show)
+    {
+		var legendItems = legendPanel.LegendItems.Values;
+
+		foreach (var legendItem in legendItems)
+		{
+			legendItem.gameObject.SetActive(show);
+		}
+	}
+
+	private void ShowDataLayerLegendItem(int i, bool show)
+    {
+		var legendItems = legendPanel.LegendItems.Values.ToArray();
+		var dataLayerLegendItems = Array.FindAll(legendItems, ele => !(ele is SnapshotLegendItem));
+
+		if (show)
+		{
+			dataLayerLegendItems[i].gameObject.SetActive(true);
+			dataLayerLegendItems[i].GroupToggle.isOn = true;
+		}
+		else
+		{
+			dataLayerLegendItems[i].GroupToggle.isOn = false;
+			dataLayerLegendItems[i].gameObject.SetActive(false);
+		}
+	}
+
+	private void ShowSnapshotLegendItem(int i, bool show)
+	{
+		var legendItems = legendPanel.LegendItems.Values.ToArray();
+		var snapshotLegendItems = Array.FindAll(legendItems, ele => ele is SnapshotLegendItem);
+
+		if (show)
+		{
+			snapshotLegendItems[i - 1].gameObject.SetActive(true);
+			snapshotLegendItems[i - 1].GroupToggle.isOn = true;
+		}
+		else
+		{
+			snapshotLegendItems[i - 1].GroupToggle.isOn = false;
+			snapshotLegendItems[i - 1].gameObject.SetActive(false);
+		}
+	}
+
+	private void ExpandLegendItems(bool show)
+    {
+		var legendItems = legendPanel.LegendItems.Values;
+
+		foreach (var legendItem in legendItems)
+		{
+			legendItem.GroupToggle.isOn = show;
+		}
+	}
 }
-
-
-
