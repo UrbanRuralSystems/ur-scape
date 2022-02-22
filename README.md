@@ -38,7 +38,7 @@ Software:
 * Stephen Cairns (Principal Investigator)
 * David Neudecker (Design Leader)
 * Serene Chen (UX Designer)
-* Michael Joos (Senior Software Engineer): joos@arch.ethz.ch
+* Michael Joos (Senior Software Engineer)<!--: joos@arch.ethz.ch-->
 * Muhammad Salihin Bin Zaol-kefli (Software Engineer): mzaolkefli@ethz.ch
 
 
