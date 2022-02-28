@@ -1100,7 +1100,7 @@ class CheckLayer:
         # Transalte when dataset is not Geotiff because it can be scaled (e.g. NetCDF format)
         if  file_extension != ".tif":
             translatedPath = tempFolder + '/Translated_' + today + name
-            inRaster = gdal.Translate(translatedPath,rawRaster,**{'unscale': True})
+            inRaster = gdal.Translate(translatedPath,inRaster,**{'unscale': True})
         
         countX = inRaster.RasterXSize
         countY = inRaster.RasterYSize
