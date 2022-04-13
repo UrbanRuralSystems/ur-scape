@@ -34,6 +34,10 @@ ur-scape is a support tool, developed using the Unity game engine, for planning 
 
 # Figures
 
+![Figure 1}](1.png)
+
+![Figure 2](2.png)
+
 # Acknowledgements
 
 # References
