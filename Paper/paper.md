@@ -68,5 +68,4 @@ https://www.livingcities.se/uploads/1/5/3/3/15335706/cirebon_urban_resilience_as
 Livable Settlements Investment Project (2021b). Slum Assessment for Makassar City (Report). ADB
 https://www.livingcities.se/uploads/1/5/3/3/15335706/lsip_makassar_report_eng.pdf
 
-Maliene, V., Grigonis, V., Palevičius, V. et al. Geographic information system: Old principles with new capabilities. Urban Design International 16, 1–6 (2011). DOI:https://doi.org/10.1057/udi.2010.25
-
+Maliene, V., Grigonis, V., Palevičius, V., Griffiths, S. (2011). Geographic information system: Old principles with new capabilities. Urban Design International 16, 1–6.. DOI:https://doi.org/10.1057/udi.2010.25
