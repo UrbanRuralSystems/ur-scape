@@ -1,0 +1,45 @@
+{
+    "@context": "https://raw.githubusercontent.com/codemeta/codemeta/master/codemeta.jsonld",
+    "@type": "Code",
+    "authors": [
+      {
+        "email": "davidneudecker@gmail.com",
+        "name": "David Neudecker",
+        "affiliation": "Future Cities Laboratory Global, Singapore-ETH Centre, Singapore"
+      },
+      {
+        "email": "michael.r.joos@gmail.com",
+        "name": "Michael Joos",
+        "affiliation": "Future Cities Laboratory Global, Singapore-ETH Centre, Singapore"
+      },
+      {
+        "email": "salsatsat@gmail.com",
+        "name": "Muhammad Salihin Bin Zaol-kefli",
+        "affiliation": "Future Cities Laboratory Global, Singapore-ETH Centre, Singapore"
+      },
+      {
+        "email": "yuhao.lu@sec.ethz.ch",
+        "name": "Yuhao Lu",
+        "affiliation": "Future Cities Laboratory Global, Singapore-ETH Centre, Singapore"
+      },
+      {
+        "email": "niraly.mangal@sec.ethz.ch",
+        "name": "Niraly Mangal",
+        "affiliation": "Future Cities Laboratory Global, Singapore-ETH Centre, Singapore"
+      },
+      {
+        "email": "cairns@arch.ethz.ch",
+        "name": "Stephen Cairns",
+        "affiliation": "Future Cities Laboratory Global, Singapore-ETH Centre, Singapore"
+      }
+    ],
+    "codeRepository": "https://github.com/UrbanRuralSystems/ur-scape",
+    "datePublished": "2022-04-20",
+    "dateModified": "2022-04-20",
+    "dateCreated": "2022-04-20",
+    "description": "Support tool for planning and design of rapidly developing towns, cities and regions",
+    "keywords": "participatory planning, GIS, spatial analytics, software, data integration",
+    "license": "MIT",
+    "title": "ur-scape",
+    "version": "v0.9.95"
+  }
