@@ -308,9 +308,8 @@ public class InspectorTool : Tool
 			Destroy(inspectorContainer.gameObject);
 
 		// Remove Output panel
-		outputPanel.SetPanel(null);
-		if(inspectorOutput != null)
-			Destroy(inspectorOutput.gameObject);
+		outputPanel.DestroyPanel("Inspector");
+		inspectorOutput = null;
 
 		// Reset values
 		SetAction(Action.None);
@@ -341,7 +340,7 @@ public class InspectorTool : Tool
 		{
 			inspectorOutput = Instantiate(outputPrefab);
 			inspectorOutput.name = "Inspector_OutputPanel";
-			outputPanel.SetPanel(null);
+			outputPanel.AddPanel("Inspector", inspectorOutput.transform);
 		}
 
         lineInspectorPanel.InitComponentsAndListeners();

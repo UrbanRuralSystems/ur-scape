@@ -118,7 +118,8 @@ public class Planner : MonoBehaviour
 
     public void SetOutput(bool showOutputPanel = true)
     {
-        outputPanel.SetPanel((showOutputPanel) ? planningOutputPanel.transform : null);
+        outputPanel.AddPanel(showOutputPanel ? "Planning" : "Default",
+                                showOutputPanel ? planningOutputPanel.transform : null);
     }
 
 	private void Update()
@@ -191,7 +192,7 @@ public class Planner : MonoBehaviour
 
         if (planningOutputPanel != null)
         {
-            outputPanel.DestroyPanel(planningOutputPanel.gameObject);
+            outputPanel.DestroyPanel("Planning");
             planningOutputPanel = null;
         }
 

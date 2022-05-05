@@ -6,8 +6,12 @@
 //
 // Author:  David Neudecker  (neudecker@arch.ethz.ch)
 //          Michael Joos(joos @arch.ethz.ch)
+//          Muhammad Salihin Bin Zaol-kefli  (mzaolkefli@ethz.ch)
 
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class OutputPanel : UrsComponent
 {
@@ -15,8 +19,12 @@ public class OutputPanel : UrsComponent
     public Transform defaultPanelPrefab;
     public Transform outputContainer;
 
+	[Header("UI References")]
+	[SerializeField] private Dropdown outputDropdown = default;
+
     private Transform defaultPanel;
     private Transform currentPanel;
+	private readonly Dictionary<string, Transform> outputPanels = new Dictionary<string, Transform>();
 
     //
     // Unity Methods
@@ -24,15 +32,73 @@ public class OutputPanel : UrsComponent
 
     private void Start()
     {
-        defaultPanel = Instantiate(defaultPanelPrefab, outputContainer, false);
+		LocalizationManager.WaitAndRun(() => LocalizationManager.Instance.OnLanguageChanged += OnLanguageChanged);
+
+		defaultPanel = Instantiate(defaultPanelPrefab, outputContainer, false);
+		defaultPanel.name = defaultPanelPrefab.name;
 		currentPanel = defaultPanel;
+
+		outputDropdown.ClearOptions();
+		AddPanel("Default", defaultPanel);
+		outputDropdown.onValueChanged.AddListener(OnOutputDropdownChanged);
+	}
+
+	//
+	// Event Methods
+	//
+
+	private void OnLanguageChanged()
+    {
+		int count = outputDropdown.options.Count;
+		var outputPanelNames = outputPanels.Keys.ToArray();
+
+		for (int i = 0; i < count; ++i)
+		{
+			outputDropdown.options[i].text = Translator.Get(outputPanelNames[i]);
+		}
+		outputDropdown.captionText.text = outputDropdown.options[outputDropdown.value].text;
+		outputDropdown.RefreshShownValue();
+	}
+
+	private void OnOutputDropdownChanged(int option)
+	{
+		SetPanel(option);
+	}
+
+	//
+	// Private Methods
+	//
+
+	private void SetPanel(int option)
+	{
+		// deactive previus panel
+		if (currentPanel != null)
+			currentPanel.gameObject.SetActive(false);
+
+		SetPanel(outputContainer.GetChild(option));
 	}
 
 	//
 	// Public Methods
 	//
 
-	public void SetPanel(Transform panel)
+	public void AddPanel(string name, Transform panel)
+    {
+		if (!outputPanels.ContainsKey(name))
+        {
+			outputPanels.Add(name, panel);
+
+			// Update dropdown
+			outputDropdown.options.Add(new Dropdown.OptionData(name));
+			outputDropdown.RefreshShownValue();
+			outputDropdown.gameObject.SetActive(outputDropdown.options.Count > 1);
+
+			SetPanel(panel);
+			outputDropdown.SetValueWithoutNotify(panel.GetSiblingIndex());
+		}
+	}
+
+    public void SetPanel(Transform panel)
 	{
 		// deactive previus panel
 		if (currentPanel != null)
@@ -40,23 +106,30 @@ public class OutputPanel : UrsComponent
 
 		currentPanel = panel;
 
-		if (currentPanel == null)
+        if (currentPanel == null)
 		{
 			currentPanel = defaultPanel;
+			outputDropdown.SetValueWithoutNotify(0);
 		}
 		currentPanel.SetParent(outputContainer, false);
+		outputDropdown.SetValueWithoutNotify(currentPanel.GetSiblingIndex());
 		currentPanel.gameObject.SetActive(true);
 	}
 
-	public void RemovePanel(Transform panel)
-	{
+	public void DestroyPanel(string name)
+    {
+		outputPanels.TryGetValue(name, out Transform panel);
+
 		if (panel == currentPanel)
 			SetPanel(null);
-	}
 
-	public void DestroyPanel(GameObject panel)
-	{
-		RemovePanel(panel.transform);
-		Destroy(panel);
+		outputPanels.Remove(name);
+
+		// Update dropdown
+		outputDropdown.options.RemoveAt(outputDropdown.options.FindIndex(option => string.Equals(option.text, name)));
+		outputDropdown.RefreshShownValue();
+		outputDropdown.gameObject.SetActive(outputDropdown.options.Count > 1);
+
+		Destroy(panel.gameObject);
 	}
 }

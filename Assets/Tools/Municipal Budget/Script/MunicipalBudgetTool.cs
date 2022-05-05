@@ -103,8 +103,8 @@ public class MunicipalBudgetTool : Tool
 			// Create output panel for tool
 			municipalBudgetOutput = Instantiate(outputPrefab);
 			municipalBudgetOutput.name = "MunicipalBudget_OutputPanel";
-			outputPanel.SetPanel(municipalBudgetOutput.transform);
-            municipalBudgetOutput.OnItemHovering += OnItemHover;
+			outputPanel.AddPanel("Municipal Budget", municipalBudgetOutput.transform);
+			municipalBudgetOutput.OnItemHovering += OnItemHover;
 
             // Add event listeners
             siteBrowser.OnBeforeActiveSiteChange += OnBeforeActiveSiteChange;
@@ -151,7 +151,7 @@ public class MunicipalBudgetTool : Tool
             }
 
             // Remove Output panel
-            outputPanel.DestroyPanel(municipalBudgetOutput.gameObject);
+            outputPanel.DestroyPanel("MunicipalBudget");
 			municipalBudgetOutput = null;
 
 			// Remove map layer
@@ -281,7 +281,7 @@ public class MunicipalBudgetTool : Tool
         {
 			outputPanel.SetPanel(isActive ? municipalBudgetOutput.transform : null);
 
-			if (!isActive)
+            if (!isActive)
 				municipalBudgetOutput.ClearAreas();
         }
     }

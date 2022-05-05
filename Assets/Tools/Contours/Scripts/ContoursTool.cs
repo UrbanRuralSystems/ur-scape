@@ -274,7 +274,7 @@ public class ContoursTool : Tool
 			InfoPanel = Instantiate(infoPanelPrefab);
 			InfoPanel.name = infoPanelPrefab.name;
 			var outputPanel = ComponentManager.Instance.Get<OutputPanel>();
-			outputPanel.SetPanel(InfoPanel.transform);
+			outputPanel.AddPanel("Contours", InfoPanel.transform);
 
 			var translator = LocalizationManager.Instance;
 			InfoPanel.AddEntry("CC", translator.Get("Current Contours"));
@@ -316,7 +316,7 @@ public class ContoursTool : Tool
             }
 
 			// Remove the info panel
-			ComponentManager.Instance.Get<OutputPanel>().DestroyPanel(InfoPanel.gameObject);
+			ComponentManager.Instance.Get<OutputPanel>().DestroyPanel("Contours");
 
 			// Remove map layers
 			DeleteAllLayers();
@@ -355,7 +355,7 @@ public class ContoursTool : Tool
         {
 			ComponentManager.Instance.Get<OutputPanel>().SetPanel(isActive ? InfoPanel.transform : null);
 
-			if (isActive)
+            if (isActive)
 				UpdateContoursInfo();
 			else
 				editToggle.isOn = false;

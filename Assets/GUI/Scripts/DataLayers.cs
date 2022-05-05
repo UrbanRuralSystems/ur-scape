@@ -490,6 +490,8 @@ public class DataLayers : UrsComponent
 			Debug.LogWarning(layer.Name + " appears more than once in the layers list");
 		}
 		else
+#else
+		if (!nameToLayer.ContainsKey(layer.Name))
 #endif
 		{
 			layerPanels.Add(layerPanel);
