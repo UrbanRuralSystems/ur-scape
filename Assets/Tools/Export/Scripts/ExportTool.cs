@@ -45,6 +45,8 @@ public class ExportTool : Tool
 	public Text formatLabel;
 
 	// UI elements
+	private WindowController wndController;
+	private RectTransform topBar;
 	private ZoomPanel zoomPanel;
 	private BackgroundsComponent backgrounds;
 	private CellInspector cellInspector;
@@ -67,6 +69,7 @@ public class ExportTool : Tool
 	private int exportHeight = 1080;
 
 	private int siblingIndex;
+	private bool topBarActive;
 
 #if UNITY_WEBGL
 	private MemoryStream zipMemStream;
@@ -82,6 +85,9 @@ public class ExportTool : Tool
 		base.OnComponentRegistrationFinished();
 
 		// Init UI elements
+		wndController = FindObjectOfType<WindowController>();
+		topBar = wndController.topBar as RectTransform;
+		topBarActive = topBar.gameObject.activeSelf;
 		zoomPanel = FindObjectOfType<ZoomPanel>();
 		backgrounds = FindObjectOfType<BackgroundsComponent>();
 		cellInspector = FindObjectOfType<CellInspector>();
@@ -244,7 +250,7 @@ public class ExportTool : Tool
 			input.OnRightMouseDown += NoOp;
 		}
 
-		var screenshot = new ScreenshotHelper(FindObjectOfType<WindowController>(), WriteFile);
+		var screenshot = new ScreenshotHelper(wndController, WriteFile);
 
 		yield return ExportImages(exportPath, screenshot);
 
@@ -705,6 +711,8 @@ public class ExportTool : Tool
 
 	private void ToggleUI(bool show, bool withLegend = true)
 	{
+		// Top bar
+		topBar.gameObject.SetActive(show && topBarActive);
 		// Zoom panel
 		zoomPanel.gameObject.SetActive(show);
 		// Backgrounds

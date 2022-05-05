@@ -315,6 +315,19 @@ public class DataManager : UrsComponent
 		map.patchRequestHandler.cache.Clear();
 	}
 
+	public void Refresh()
+    {
+		requestedPatches.Clear();
+		nameToSite.Clear();
+		sites.Clear();
+		groups.Clear();
+
+		progressDialog = dialogManager.NewProgressDialog();
+		progressDialog.SetMessage(Translator.Get("Loading") + " ...");
+		progressDialog.SetProgress(0);
+
+		StartCoroutine(Init());
+	}
 
 	//
 	// Private Methods
@@ -372,7 +385,7 @@ public class DataManager : UrsComponent
 #endif
 
 		// Show progress message
-        progressDialog.SetMessage(Translator.Get("Loading") + " ...");
+		progressDialog.SetMessage(Translator.Get("Loading") + " ...");
         progressDialog.SetProgress(0);
 
         yield return null;

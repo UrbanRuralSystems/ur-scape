@@ -23,6 +23,7 @@ public class SettingsPanel : MonoBehaviour
 	public Toggle visibilityToggle;
 	public Button resetButton;
 	public Toggle collapseLayersToggle;
+	[SerializeField] private Button refresh = default;
 
 	public Toggle hideLayersToggle;
 	public Toggle hideEmptyGroupsToggle;
@@ -41,7 +42,8 @@ public class SettingsPanel : MonoBehaviour
 	public GameObject languageSelectionPrefab;
 
 	private RectTransform thisRT;
-
+	private DataManager dataManager;
+	private SiteBrowser siteBrowser;
 
 	//
 	// Unity Methods
@@ -52,6 +54,8 @@ public class SettingsPanel : MonoBehaviour
 		yield return WaitFor.Frames(WaitFor.InitialFrames);
 
 		var map = ComponentManager.Instance.Get<MapController>();
+		dataManager = ComponentManager.Instance.Get<DataManager>();
+		siteBrowser = ComponentManager.Instance.Get<SiteBrowser>();
 		var siteBoundaryController = map.GetLayerController<SiteBoundaryLayerController>();
 		var patchBoundaryController = map.GetLayerController<PatchBoundaryLayerController>();
 
@@ -67,6 +71,7 @@ public class SettingsPanel : MonoBehaviour
 		visibilityToggle.onValueChanged.AddListener(OnVisibilityToggleChanged);
 		resetButton.onClick.AddListener(OnResetClick);
 		collapseLayersToggle.onValueChanged.AddListener(OnCollapseLayersToggleChanged);
+		refresh.onClick.AddListener(OnRefreshClicked);
 
 		hideLayersToggle.isOn = dataLayers.hideInactiveLayers;
 		hideEmptyGroupsToggle.isOn = dataLayers.hideEmptyGroups;
@@ -120,6 +125,23 @@ public class SettingsPanel : MonoBehaviour
         {
 			dataLayerGroupPanel.groupToggle.isOn = isOn;
         }
+		Close();
+	}
+
+	private void OnDataLoaded()
+	{
+		dataManager.OnDataLoaded -= OnDataLoaded;
+
+		dataLayers.ResetLayers();
+		dataLayers.RebuildList(dataManager.groups);
+		siteBrowser.RebuildList();
+	}
+
+	private void OnRefreshClicked()
+	{
+        dataManager.Refresh();
+		dataManager.OnDataLoaded += OnDataLoaded;
+
 		Close();
 	}
 
