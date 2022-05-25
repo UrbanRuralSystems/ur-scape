@@ -131,9 +131,11 @@ Pettit, Christopher J, William Cartwright, Michael Berry (2006). ‘Geographical
 Richthofen, Aurel von, Pieter Herthogs, Markus Kraft, and Stephen Cairns. “Semantic City Planning Systems (SCPS): A Literature Review.” Journal of Planning Literature 0, no. 0 (2022): 08854122211068526. https://doi.org/10.1177/08854122211068526.
 
 Steinitz, Carl (2012). A framework for geodesign: Changing geography by design. Redlands, California: ESRI.
+
 Tatem, Andrew J. “WorldPop, Open Data for Spatial Demography.” Scientific Data 4, no. 1 (January 31, 2017): 170004. https://doi.org/10.1038/sdata.2017.4.
 
 Turner, Tom (1998). Landscape planning and environmental impact design. London: UCL Press.
+
 UN Department of Economic and Social Affairs (2018). World Urbanization Prospects. World Population Prospects. New York: United Nations.
 
 Zwick, Paul (2010). ‘The world beyond GIS’, Planning: The Magazine of the American Planning Association 76 (6): 20-23.
