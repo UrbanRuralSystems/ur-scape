@@ -1,5 +1,5 @@
 ---
-title: 'ur-scape: an interactive game-engine based mapping platform for urban planning'
+title: 'ur-scape: a planning support mapping platform'
 tags:
   - Unity
   - C#
