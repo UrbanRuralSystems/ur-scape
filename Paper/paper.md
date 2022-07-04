@@ -81,8 +81,6 @@ The development of ur-scape is based on the integrated socio-technical goals out
 
 Asian Development Bank (ADB), 2019, Promoting Gender Equality and Women's Empowerment (Phase 2): Future Cities, Future Women Initiative Bandung Consultant’s Report. Prepared by  Singapore ETH Center (SEC) Future Cities Laboratory (FCL). https://www.adb.org/projects/documents/reg-48206-001-tacr-3
 
-Batty, M; Dodge, M; Jiang, B; Hudson-Smith, A; (1998) GIS and urban design. (CASA Working Paper 3). UCL (University College London), Centre for Advanced Spatial Analysis (UCL): London. https://discovery.ucl.ac.uk/id/eprint/224
-
 Future Cities Laboratory Global (2021). Manual on Leveraging Spatial Data for Pandemic-Resilient Cities (Report). ADB
 https://events.development.asia/system/files/materials/2021/06/202106-manual-leveraging-spatial-data-pandemic-resilient-cities.pdf
 
@@ -93,8 +91,6 @@ Livable Settlements Investment Project (2021b). Slum Assessment for Makassar Cit
 https://www.livingcities.se/uploads/1/5/3/3/15335706/lsip_makassar_report_eng.pdf
 
 Maliene, V., Grigonis, V., Palevičius, V., Griffiths, S. (2011). Geographic information system: Old principles with new capabilities. Urban Design International 16, 1–6.. DOI:https://doi.org/10.1057/udi.2010.25
-
-Batty, Michael (2008). ‘Planning support systems: Progress, predictions, and speculations on the shape of things to come’, in Planning support systems for cities and regions, ed. Richard K. Brail. Cambridge, MA: Lincoln Institute of Land Policy.
 
 Batty, Michael (2013). The New Science of Cities. Cambridge, Massachusetts: MIT Press.
 
