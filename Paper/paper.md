@@ -28,9 +28,9 @@ bibliography: paper.bib
 
 # Summary
 
-The growing technical sophistication of city planning software [@Bettencourt:2010][@Batty:2013] has produced increasingly specialised work flows that tend to alientate, rather than engage, stakeholders [@Batty:2021; @Barns:2019; @Yap:2022]. This contradicts the basic purpose of such software – or Planning Support Systems (PSS) – to improve the sustainability and long-term resilience of cities by harnessing increasing volumes of digital data to encourage greater stakeholder participation in city-making processes [@Maliene:2011] [@Flacke:2020; @Geertman:2009; @Danbi:2014; @Zwick:2010; @Steinitz:2012; @Richthofen:2022]. 
+The growing technical sophistication of city planning software [@Bettencourt:2010],[@Batty:2013] has produced increasingly specialised work flows that tend to alientate, rather than engage, stakeholders [@Batty:2021], [@Barns:2019], [@Yap:2022]. This contradicts the basic purpose of such software – or Planning Support Systems (PSS) – to improve the sustainability and long-term resilience of cities by harnessing increasing volumes of digital data to encourage greater stakeholder participation in city-making processes [@Maliene:2011], [@Flacke:2020], [@Geertman:2009], [@Danbi:2014], [@Zwick:2010], [@Haddad:2012], [@Richthofen:2022]. 
 
-The disconnection of data from stakeholder is especially debilitating for rapidly urbanising regions in Asia and Africa. Cities in these regions are growing at unprecedented rates (UN 2018) and typically mix both formal and informal, urban and rural land-uses. The uneven, dynamic and ambiguous settlement patterns that result are not always readily described with definitive, boundary-oriented and line-based graphical conventions. The policy makers, developers, investors, civil society actors, academics and the general public here urgently need access to reliable data in appropriate formats to support the planning of their cities and regions. 
+The disconnection of data from stakeholder is especially debilitating for rapidly urbanising regions in Asia and Africa. Cities in these regions are growing at unprecedented rates [UN:2018] and typically mix both formal and informal, urban and rural land-uses. The uneven, dynamic and ambiguous settlement patterns that result are not always readily described with definitive, boundary-oriented and line-based graphical conventions. The policy makers, developers, investors, civil society actors, academics and the general public here urgently need access to reliable data in appropriate formats to support the planning of their cities and regions. 
 
 # Statement of need
 
@@ -47,7 +47,7 @@ This approach is combined with an intuitive UI/UX concept based on simple and we
 This gives ur-scape a number of advantages over conventional planning support software:
 1) Integrates data management. Metadata input is mandatory and built-in in to ur-scape's import procedure which ensures that users develop the habit of initiating and maintaining accurate metadata. This is particularly needed in the rapidly urbanising regions in Asia and Africa.
 
-3) Supports problem-setting and problem-solving. The inclusion of data of varying quality is often more effective is shaping agendas than high object- and boundary-precision data (Pelzer et al. 2014, 4). This approach supports users to shape and prioritise problem statements based on the dynamic geographical, institutional and data contexts in which they are working.
+3) Supports problem-setting and problem-solving. The inclusion of data of varying quality is often more effective is shaping agendas than high object- and boundary-precision data [@Pelzer:2013]. This approach supports users to shape and prioritise problem statements based on the dynamic geographical, institutional and data contexts in which they are working.
 
 5) Offers quick access for non-expert. The intuitive UI/UX does not require users to undergo intensive training, so facilitates almost immediate interaction between expert and non-expert around real-time spatial data (Figure 2).
 
@@ -59,7 +59,7 @@ This gives ur-scape a number of advantages over conventional planning support so
 
 # Use cases
 
-ur-scape was developed in collaboration with a number of government agencies and multilateral institutions in East, South and Southeast Asia which were addressing a range of practical challenges concerning rapid urbanisation. For example, ur-scape was deployed in a number of projects such as gender equality and female empowerment in Bundung, Indonesia (ADB 2019), spatial planning during COVID-19 pandemic (Future Cities Laboratory Global, 2021), urban resilience (Livable Settlements Investment Project, 2021a), and slum assessment (Livable Settlements Investment Project, 2021b).
+ur-scape was developed in collaboration with a number of government agencies and multilateral institutions in East, South and Southeast Asia which were addressing a range of practical challenges concerning rapid urbanisation. For example, ur-scape was deployed in a number of projects such as gender equality and female empowerment in Bundung, Indonesia [@ADB:2019], spatial planning during COVID-19 pandemic [@FCL:2021], urban resilience [@Urban:2021], and slum assessment [@Slum:2021].
 
 # urscape architecture
 
