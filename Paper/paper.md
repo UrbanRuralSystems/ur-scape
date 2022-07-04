@@ -28,7 +28,7 @@ bibliography: paper.bib
 
 # Summary
 
-The growing technical sophistication of city planning software [@Bettencourt:2010],[@Batty:2013] has produced increasingly specialised work flows that tend to alientate, rather than engage, stakeholders [@Batty:2021], [@Barns:2019], [@Yap:2022]. This contradicts the basic purpose of such software – or Planning Support Systems (PSS) – to improve the sustainability and long-term resilience of cities by harnessing increasing volumes of digital data to encourage greater stakeholder participation in city-making processes [@Maliene:2011], [@Flacke:2020], [@Geertman:2009], [@Danbi:2014], [@Zwick:2010], [@Haddad:2012], [@Richthofen:2022]. 
+The growing technical sophistication of city planning software [@Bettencourt:2010],[@Batty:2013] has produced increasingly specialised work flows that tend to alientate, rather than engage, stakeholders [@Batty:2021], [@Barns:2019], [@Yap:2022]. This contradicts the basic purpose of such software – or Planning Support Systems (PSS) – to improve the sustainability and long-term resilience of cities by harnessing increasing volumes of digital data to encourage greater stakeholder participation in city-making processes [@Maliene:2011], [@Flacke:2020], [@Geertman:2009], [@Lee:2014], [@Zwick:2010], [@Haddad:2012], [@vonRichthofen:2022]. 
 
 The disconnection of data from stakeholder is especially debilitating for rapidly urbanising regions in Asia and Africa. Cities in these regions are growing at unprecedented rates [@UN:2018] and typically mix both formal and informal, urban and rural land-uses. The uneven, dynamic and ambiguous settlement patterns that result are not always readily described with definitive, boundary-oriented and line-based graphical conventions. The policy makers, developers, investors, civil society actors, academics and the general public here urgently need access to reliable data in appropriate formats to support the planning of their cities and regions. 
 
@@ -38,9 +38,7 @@ ur-scape is an open-source planning support software designed to respond to the 
 
 The data rendering format prioritises (raster-based) continuous grid-based data fields and their intersections over (vector-based) high-precision of object placement and boundaries. We call this techniques ‘gridded Venn diagrams’ (Figure 1). ur-scape displays gridded data with an additive colour-mixed Venn diagrammatic representation at each centroid. Each coloured circle in the Venn diagram carries data from a given data set, be it population density, poverty, night-light, or CO2 emissions. As each centroid can accommodate a theoretically infinite number of colour-mixed circles arrayed around it, this rendering format facilitates layering and viewing multiple datasets at once. By avoiding the cumbersome data layering techniques typical of current PSS (through manipulations of opacity and transparency levels), this format encourages rapid and simple analyses of diverse kinds of data.
 
-![Figure 1](Figure_1.png)
-<figcaption>Figure 1. Illustrations of gridded Venn diagram concept at various scales.
-</figcaption><br>
+![Figure 1. Illustrations of gridded Venn diagram concept at various scales.](Figure_1.png)
 
 This approach is combined with an intuitive UI/UX concept based on simple and well-known gesture-based interaction formats – touch, pinch, zoom. The interaction concept is supported by a range of intuitive analytical tools – such as contouring of multiple geospatial dataset intersections, transects and dissects – that make the most of the gridded Venn diagram approach in combination with multiple base maps (satellite, cadastral, traffic, and OSM). Ultising Unity’s processing and rendering capability, ur-scape is able to dynamically adjust image resolution based on the zoom level (i.e. extent of the dataset) to provide a fluent and seemless user experience even with large global datasets. Detailed descriptions and how-to instructions can be found in our website: https://ur-scape.sec.sg/en/Tutorials 
 
@@ -61,7 +59,7 @@ This gives ur-scape a number of advantages over conventional planning support so
 
 ur-scape was developed in collaboration with a number of government agencies and multilateral institutions in East, South and Southeast Asia which were addressing a range of practical challenges concerning rapid urbanisation. For example, ur-scape was deployed in a number of projects such as gender equality and female empowerment in Bundung, Indonesia [@ADB:2019], spatial planning during COVID-19 pandemic [@FCL:2021], urban resilience [@Urban:2021], and slum assessment [@Slum:2021].
 
-# urscape architecture
+# ur-scape architecture
 
 ur-scape was developed in both game engine (Unity) and web-based environments. The desktop game-engine-enabled version supports real-time rendering. The desktop-based version compatible with a variety of platforms including Windows, MacOS, and Web is currently under development.
 
