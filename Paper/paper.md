@@ -41,6 +41,7 @@ The data rendering format prioritises (raster-based) continuous grid-based data 
 ![Figure 1](Figure_1.png)
 <figcaption>Figure 1. Illustrations of gridded Venn diagram concept at various scales.</figcaption><br>
 
+
 This approach is combined with an intuitive UI/UX concept based on simple and well-known gesture-based interaction formats – touch, pinch, zoom. The interaction concept is supported by a range of intuitive analytical tools – such as contouring of multiple geospatial dataset intersections, transects and dissects – that make the most of the gridded Venn diagram approach in combination with multiple base maps (satellite, cadastral, traffic, and OSM). Ultising Unity’s processing and rendering capability, ur-scape is able to dynamically adjust image resolution based on the zoom level (i.e. extent of the dataset) to provide a fluent and seemless user experience even with large global datasets. Detailed descriptions and how-to instructions can be found in our website: https://ur-scape.sec.sg/en/Tutorials 
 
 This gives ur-scape a number of advantages over conventional planning support software:
@@ -54,6 +55,7 @@ This gives ur-scape a number of advantages over conventional planning support so
 
 ![Figure 2](Figure_2.png)
 <figcaption>Figure 2. A conceptual comparison between conventional work and ur-scape workflow involving data and disciplinary-specific experts.</figcaption><br>
+
 
 # Use cases
 
@@ -69,7 +71,7 @@ Users can make use of the in-built tools to interact with and analyse the GIS da
 
 
 ![Figure 3](Figure_3.png)
-<figcaption>Figure 2. Core components and folder structure of ur-scape software.</figcaption><br>
+<figcaption>Figure 3. Core components and folder structure of ur-scape software.</figcaption><br>
 
 # Future developments
 
