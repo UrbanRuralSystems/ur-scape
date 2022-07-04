@@ -54,7 +54,8 @@ This gives ur-scape a number of advantages over conventional planning support so
 7) Enhances iterative experimentation with best available data. ur-scape encourages users to make best use of uneven data quality by enabling rapid and repeated trialling of diverse data sets, including the use of data proxies where bespoke data is not available.
 
 ![Figure 2](Figure_2.png)
-<figcaption>Figure 2. A conceptual comparison between conventional work and ur-scape workflow involving data and disciplinary-specific experts.</figcaption><br>
+<figcaption>Figure 2. A conceptual comparison between conventional work and ur-scape workflow involving data and disciplinary-specific experts.
+</figcaption><br>
 
 
 # Use cases
