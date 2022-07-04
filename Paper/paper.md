@@ -57,7 +57,6 @@ This gives ur-scape a number of advantages over conventional planning support so
 <figcaption>Figure 2. A conceptual comparison between conventional work and ur-scape workflow involving data and disciplinary-specific experts.
 </figcaption><br>
 
-
 # Use cases
 
 ur-scape was developed in collaboration with a number of government agencies and multilateral institutions in East, South and Southeast Asia which were addressing a range of practical challenges concerning rapid urbanisation. For example, ur-scape was deployed in a number of projects such as gender equality and female empowerment in Bundung, Indonesia (ADB 2019), spatial planning during COVID-19 pandemic (Future Cities Laboratory Global, 2021), urban resilience (Livable Settlements Investment Project, 2021a), and slum assessment (Livable Settlements Investment Project, 2021b).
@@ -70,9 +69,9 @@ Generally, ur-scape is structured under four key components: preparation, data, 
 
 Users can make use of the in-built tools to interact with and analyse the GIS data. Currently, ur-scape supports a total number of 11 tools with various complexity and data requirements (https://ur-scape.sec.sg/en/User_Guide/ur-scape/Tools_Panel). The folder structure of existing and new tools, as well as the application’s platform configuration files are illustrated in Figure 3.
 
-
 ![Figure 3](Figure_3.png)
-<figcaption>Figure 3. Core components and folder structure of ur-scape software.</figcaption><br>
+<figcaption>Figure 3. Core components and folder structure of ur-scape software.
+</figcaption><br>
 
 # Future developments
 
