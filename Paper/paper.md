@@ -72,4 +72,7 @@ Users can make use of the in-built tools to interact with and analyse the GIS da
 
 The development of ur-scape is based on the integrated socio-technical goals outlined above and is guided by three principles: streamlined workflow (i.e. bypassing QGIS importer), web-friendly (i.e. browser-based), open-ended (i.e. be able to export results as GIS datasets such as geotiff or geojson). 
 
+# Acknowledgement
+We thank National Research Fondation (NRF) of Singapore, Asian Development Bank (ADB) for funding this project. We also thank our collegues at Singapore-ETH Centre for your valuable feedbacks and suggestions. To our local partners in Indonesia and Vietman, we are also grateful to have this chance to work with you in the development of ur-scape. 
+
 # References
