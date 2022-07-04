@@ -66,7 +66,7 @@ Generally, ur-scape is structured under four key components: preparation, data, 
 
 Users can make use of the in-built tools to interact with and analyse the GIS data. Currently, ur-scape supports a total number of 11 tools with various complexity and data requirements (https://ur-scape.sec.sg/en/User_Guide/ur-scape/Tools_Panel). The folder structure of existing and new tools, as well as the application’s platform configuration files are illustrated in \label{fig: 3}.
 
-![Core components and folder structure of ur-scape software./label{fig:3}](Figure_3.png)
+![Core components and folder structure of ur-scape software.\label{fig:3}](Figure_3.png)
 
 # Future developments
 
