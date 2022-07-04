@@ -28,7 +28,7 @@ bibliography: paper.bib
 
 # Summary
 
-The growing technical sophistication of city planning software (Bettencourt and West 2010; Batty 2013) has produced increasingly specialised work flows that tend to alientate, rather than engage, stakeholders (Batt 2021; Barns 2019; Yap et al. 2022). This contradicts the basic purpose of such software – or Planning Support Systems (PSS) – to improve the sustainability and long-term resilience of cities by harnessing increasing volumes of digital data to encourage greater stakeholder participation in city-making processes (Maliene et al. 2011; Flacke 2020; Geertman and Stillman 2009; Lee, Dias and Sholten 2014; Zwick 2010; Steinitz 2012; Flacke 2020; Richthofen et al. 2022). 
+The growing technical sophistication of city planning software (@Bettencourt:2010; @Batty:2013) has produced increasingly specialised work flows that tend to alientate, rather than engage, stakeholders (@Batt:2021; @Barns:2019; @Yap:2022). This contradicts the basic purpose of such software – or Planning Support Systems (PSS) – to improve the sustainability and long-term resilience of cities by harnessing increasing volumes of digital data to encourage greater stakeholder participation in city-making processes (Maliene et al. 2011; Flacke 2020; Geertman and Stillman 2009; Lee, Dias and Sholten 2014; Zwick 2010; Steinitz 2012; Flacke 2020; Richthofen et al. 2022). 
 
 The disconnection of data from stakeholder is especially debilitating for rapidly urbanising regions in Asia and Africa. Cities in these regions are growing at unprecedented rates (UN 2018) and typically mix both formal and informal, urban and rural land-uses. The uneven, dynamic and ambiguous settlement patterns that result are not always readily described with definitive, boundary-oriented and line-based graphical conventions. The policy makers, developers, investors, civil society actors, academics and the general public here urgently need access to reliable data in appropriate formats to support the planning of their cities and regions. 
 
@@ -78,62 +78,3 @@ Users can make use of the in-built tools to interact with and analyse the GIS da
 The development of ur-scape is based on the integrated socio-technical goals outlined above and is guided by three principles: streamlined workflow (i.e. bypassing QGIS importer), web-friendly (i.e. browser-based), open-ended (i.e. be able to export results as GIS datasets such as geotiff or geojson). 
 
 # References
-
-Asian Development Bank (ADB), 2019, Promoting Gender Equality and Women's Empowerment (Phase 2): Future Cities, Future Women Initiative Bandung Consultant’s Report. Prepared by  Singapore ETH Center (SEC) Future Cities Laboratory (FCL). https://www.adb.org/projects/documents/reg-48206-001-tacr-3
-
-Future Cities Laboratory Global (2021). Manual on Leveraging Spatial Data for Pandemic-Resilient Cities (Report). ADB
-https://events.development.asia/system/files/materials/2021/06/202106-manual-leveraging-spatial-data-pandemic-resilient-cities.pdf
-
-Livable Settlements Investment Project (2021a). Urban Resilience Assessment of Cirebon City (Report). ADB
-https://www.livingcities.se/uploads/1/5/3/3/15335706/cirebon_urban_resilience_assessment_-_adb_lsip.pdf
-
-Livable Settlements Investment Project (2021b). Slum Assessment for Makassar City (Report). ADB
-https://www.livingcities.se/uploads/1/5/3/3/15335706/lsip_makassar_report_eng.pdf
-
-Maliene, V., Grigonis, V., Palevičius, V., Griffiths, S. (2011). Geographic information system: Old principles with new capabilities. Urban Design International 16, 1–6.. DOI:https://doi.org/10.1057/udi.2010.25
-
-Batty, Michael (2013). The New Science of Cities. Cambridge, Massachusetts: MIT Press.
-
-Bettencourt, Luis and Geoffrey West (2010). ‘A unified theory of urban living’, Nature 467 912–913.
-
-Brail, Richard K (ed.) (2008). Planning support systems for cities and regions. Lincoln Institute of Land Policy.
-
-Danbi Lee, Eduardo Dias and Henk J. Scholten (eds) (2014). Geodesign by integrating design and geospatial sciences. New York: Springer.
-
-Dangermond, Jack (2010). ‘Geodesign and GIS: Designing our futures’, Digital landscape architecture, ed. In E. Buhmann, M. Pietsch, & E. Kretzler, 502-14. Offenbach/Berlin: Wichmann/VDE.
-
-Flacke, Johannes, Rehana Shrestha, and Rosa Aguilar. “Strengthening Participation Using Interactive Planning Support Systems: A Systematic Review.” ISPRS International Journal of Geo-Information 9, no. 1 (2020). https://doi.org/10.3390/ijgi9010049.
-
-Flaxman, Michael (2010). ‘Geodesign: Fundamentals and routes forward’. Presentation to the Geodesign Summit, January 6, 2010, Redlands, CA. Accessed 9 November 2015: http://www.geodesignsummit.com/videos/day-one.html.
-
-Geertman, Stan, Fred Toppen and John Stillwell (2013). Planning Support Systems for Sustainable Urban Development. New York: Springer.
-
-Geertman, Stan, Joseph Ferreira Jr, Robert Goodspeed, and John Stillwell (2015). Planning support systems and smart cities. New York: Springer.
-
-Greetman, Stan and John Stillwell (eds) (2009). Planning support systems best practice and new methods. Springer.
-Harris, Britton (1989). ‘Beyond geographic information systems: Computers and the planning professional’.Journal of the American Planning Association 55: 85-90.
-
-Kelly, Philip F (2002). ‘Spaces of labour control: Comparative perspectives from Southeast Asia’, Transactions of the Institute of British Geographers 27 (4): 395–411.
-
-Laporte, Gilbert, Stefan Nickel, Francisco Saldanha da Gama (eds) (2015). Location science. New York: Springer.
-Lloyd, Christopher T., Alessandro Sorichetta, and Andrew J. Tatem. “High Resolution Global Gridded Data for Use in Population Studies.” Scientific Data 4, no. 1 (January 31, 2017): 170001. https://doi.org/10.1038/sdata.2017.1.
-
-Longley, Paul A, Michael F Goodchild, David J Maguire and David W Rhind (2005). Geographical information systems and science. Chichester: John Wiley.
-
-McHarg, Ian L (1969). Design with nature. Garden City, NY: Doubleday/Natural History Press.
-
-Pelzer, Peter, Marco te Brömmelstroet and Stan Geertman (2013). ‘Geodesign in Practice: What about the urban designers’, Geodesign by integrating design and geospatial sciences, ed. Danbi Lee, Eduardo Dias and Henk J. Scholten. New York: Springer.
-
-Pettit, Christopher J, William Cartwright, Michael Berry (2006). ‘Geographical visualization: A participatory planning support tool for imagining landscape futures’, Applied GIS 2 (3).
-
-Richthofen, Aurel von, Pieter Herthogs, Markus Kraft, and Stephen Cairns. “Semantic City Planning Systems (SCPS): A Literature Review.” Journal of Planning Literature 0, no. 0 (2022): 08854122211068526. https://doi.org/10.1177/08854122211068526.
-
-Steinitz, Carl (2012). A framework for geodesign: Changing geography by design. Redlands, California: ESRI.
-
-Tatem, Andrew J. “WorldPop, Open Data for Spatial Demography.” Scientific Data 4, no. 1 (January 31, 2017): 170004. https://doi.org/10.1038/sdata.2017.4.
-
-Turner, Tom (1998). Landscape planning and environmental impact design. London: UCL Press.
-
-UN Department of Economic and Social Affairs (2018). World Urbanization Prospects. World Population Prospects. New York: United Nations.
-
-Zwick, Paul (2010). ‘The world beyond GIS’, Planning: The Magazine of the American Planning Association 76 (6): 20-23.
