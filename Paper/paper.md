@@ -39,8 +39,8 @@ ur-scape is an open-source planning support software designed to respond to the 
 The data rendering format prioritises (raster-based) continuous grid-based data fields and their intersections over (vector-based) high-precision of object placement and boundaries. We call this techniques ‘gridded Venn diagrams’ (Figure 1). ur-scape displays gridded data with an additive colour-mixed Venn diagrammatic representation at each centroid. Each coloured circle in the Venn diagram carries data from a given data set, be it population density, poverty, night-light, or CO2 emissions. As each centroid can accommodate a theoretically infinite number of colour-mixed circles arrayed around it, this rendering format facilitates layering and viewing multiple datasets at once. By avoiding the cumbersome data layering techniques typical of current PSS (through manipulations of opacity and transparency levels), this format encourages rapid and simple analyses of diverse kinds of data.
 
 ![Figure 1](Figure_1.png)
-<figcaption>Figure 1. Illustrations of gridded Venn diagram concept at various scales.</figcaption><br>
-
+<figcaption>Figure 1. Illustrations of gridded Venn diagram concept at various scales.
+</figcaption><br>
 
 This approach is combined with an intuitive UI/UX concept based on simple and well-known gesture-based interaction formats – touch, pinch, zoom. The interaction concept is supported by a range of intuitive analytical tools – such as contouring of multiple geospatial dataset intersections, transects and dissects – that make the most of the gridded Venn diagram approach in combination with multiple base maps (satellite, cadastral, traffic, and OSM). Ultising Unity’s processing and rendering capability, ur-scape is able to dynamically adjust image resolution based on the zoom level (i.e. extent of the dataset) to provide a fluent and seemless user experience even with large global datasets. Detailed descriptions and how-to instructions can be found in our website: https://ur-scape.sec.sg/en/Tutorials 
 
