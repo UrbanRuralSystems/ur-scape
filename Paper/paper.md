@@ -22,13 +22,13 @@ authors:
 affiliations:
   - name: Future Cities Laboratory Global, Singapore-ETH Centre, Singapore
     index: 1
-date: 25 May 2022
-bibliography: paper.bib
+date: 4 July 2022
+bibliography: paper.bib 
 ---
 
 # Summary
 
-As volumes data on cities and city processes began to increase exponentially following the digital revolution in the late twentieth-century, professional planners looked for ways harness that data to improve the planning and design of cities (Geertman and Stillman 2009; Lee, Dias and Sholten 2014; Zwick 2010; Steinitz 2012; Flacke 2020). One approach to this task was to develop data-driven planning support software or Planning Support Systems (PSS). Such systems typically combined aspects of specialised Geographic Information Systems (GIS), operational software such as Spatial Decision Support Systems (SDSS) (Batty et al., 1998; Batty 2007), and design-oriented GeoDesign software.
+The growing technical sophistication of city planning software (Bettencourt and West 2010; Batty 2013) has produced increasingly specialised work flows that tend to alientate, rather than engage, stakeholders (Batt 2021; Barns 2019; Yap, Janssen and Biljecki 2022). This contradicts the basic purpose of such software – or Planning Support Systems (PSS) – to improve the sustainability and long-term resilience of cities by harnessing increasing volumes of digital data to encourage greater stakeholder participation in city-making processes (Maliene et al. 2011; Flacke 2020; Geertman and Stillman 2009; Lee, Dias and Sholten 2014; Zwick 2010; Steinitz 2012; Flacke 2020; Richthofen et al. 2022). 
  
 As planning support systems developed, they began to improve decision making in a number of ways. They diversified the range of stakeholders who could participate in urban planning – policy makers, developers, investors, civil society actors, academics and the general public (Maliene et al. 2011; Flacke 2020). They gave stakeholders better access to that growing volume of data and enhanced their ability to analyse it in more complex ways. They also improved their capacities to share data and encourage collaboration across sectors and disciplines (Richthofen et al. 2022; https://apps.worldpop.org/woprVision/).
  
