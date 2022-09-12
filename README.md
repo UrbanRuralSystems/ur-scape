@@ -36,10 +36,11 @@ Software:
 ### Team
 
 * Stephen Cairns (Principal Investigator)
+* Yuhao Lu (Research Coordinator): yuhao.lu@sec.ethz.ch
 * David Neudecker (Design Leader)
 * Serene Chen (UX Designer)
 * Michael Joos (Senior Software Engineer)<!--: joos@arch.ethz.ch-->
-* Muhammad Salihin Bin Zaol-kefli (Software Engineer): mzaolkefli@ethz.ch
+* Muhammad Salihin Bin Zaol-kefli (Software Engineer)
 
 
 ### Documentation
