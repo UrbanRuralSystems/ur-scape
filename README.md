@@ -23,8 +23,8 @@ Hardware:
 
 Software:
 
-* [Unity](www.unity3d.com) 2020.1.2f1
-* [Mapbox](www.mapbox.com) account
+* [Unity](https://unity.com/) 2020.1.2f1
+* [Mapbox](https://www.mapbox.com/) account
 
 
 ### Setup
@@ -48,7 +48,7 @@ Software:
 
 ### Documentation
 
-For more information please head to ur-scape's [Wiki](https://ur-scape.sec.sg).
+For more information please head to ur-scape's [Wiki](https://ur-scape.sec.sg/en/home).
 
 ### Contributing
 
