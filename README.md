@@ -1,9 +1,12 @@
 # ur-scape
 
-Support tool for planning and design of rapidly developing towns, cities and regions.
+Support tool for planning and design of rapidly developing towns, cities and regions. Supported by Unity game-engine, ur-scape aims to improve stakeholder access to data and high-level analysis functions through an innovative data rendering format and an intuitive UI/UX concept. 
 
 Development by [Urban-Rural Systems (URS)](urs.sec.sg) at [Future Cities Laboratory (FCL)](fcl.ethz.ch) with the support of the [Asian Development Bank (ADB)](www.adb.org) and the [Swiss Secretariat for Economic Affairs (SECO)](http://www.seco.admin.ch). FCL was established by ETH Zürich and the National Research Foundation (NRF) in Singapore.
 
+Please contact the project lead Dr. Stephen Cairns (cairns@arch.ethz.ch) for any potential collabration and development opportunties. 
+
+If you would like report a bug or have trouble installing/using the software, please contact Dr. Yuhao Lu (yuhao.lu@sec.ethz.ch)
 
 ### Screenshots
 <a  href="Screenshots/1.jpg">
