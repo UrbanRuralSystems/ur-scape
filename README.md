@@ -40,6 +40,7 @@ Software:
 
 * Stephen Cairns (Principal Investigator)
 * Yuhao Lu (Research Coordinator): yuhao.lu@sec.ethz.ch
+* Niraly Mangal (Research Associate)
 * David Neudecker (Design Leader)
 * Serene Chen (UX Designer)
 * Michael Joos (Senior Software Engineer)<!--: joos@arch.ethz.ch-->
