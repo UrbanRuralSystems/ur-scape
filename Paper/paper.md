@@ -76,4 +76,4 @@ The development of ur-scape is based on the integrated socio-technical goals out
 # Acknowledgement
 ur-scape was developed at Future Cities Laboratory (FCL). FCL was established by ETH-Zürich and Singapore’s National Research Foundation (NRF), and operates under the auspices of the Singapore-ETH Centre (SEC) at the CREATE campus in Singapore. We thank the NRF, Asian Development Bank (ADB) and State Secretariat for Economic Affairs (SECO) for funding the research. We thank our partners in Indonesia and Vietnam and colleagues at FCL for their feedback, suggestions and support in the development of ur-scape.
 
-# References
+# References 
