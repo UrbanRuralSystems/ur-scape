@@ -6,7 +6,13 @@ Development by Urban-Rural Systems (URS) (now known as [Agropolitan Territories]
 
 Please contact the project lead Dr. Stephen Cairns (cairns@arch.ethz.ch) for any potential collabration and development opportunties. 
 
-If you would like report a bug or have trouble installing/using the software, please contact Dr. Yuhao Lu (yuhao.lu@sec.ethz.ch)
+If you would like report a bug or have trouble installing/using the software, please contact the ur-scape team (ur-scape@sec.ethz.ch).
+
+### Download
+
+🌐 Visit the ur-scape website at [ur-scape.com](https://ur-scape.com).
+
+👩‍💻 Download binaries for Windows and macOS at [the Getting Started page](https://ur-scape.com/download/).
 
 ### Screenshots
 <a  href="Screenshots/1.jpg">
@@ -18,11 +24,9 @@ If you would like report a bug or have trouble installing/using the software, pl
 ### Requisites
 
 Hardware:
-
 * DirectX11 capable GPU
 
 Software:
-
 * [Unity](https://unity.com/) 2020.1.2f1
 * [Mapbox](https://www.mapbox.com/) account
 
@@ -39,17 +43,24 @@ Software:
 ### Team
 
 * Stephen Cairns (Principal Investigator)
-* Yuhao Lu (Research Coordinator): yuhao.lu@sec.ethz.ch
-* Niraly Mangal (Research Associate)
 * David Neudecker (Design Leader)
-* Serene Chen (UX Designer)
+* Niraly Mangal (Doctoral Researcher)
+* Joshua Vargas (Research Assistant)
+* Denise Lee (Researcher)
+* Pari Sen Biswas (Student Research Assistant)
+* Darshan Lineswala (Student Research Assistant)
 * Michael Joos (Senior Software Engineer)<!--: joos@arch.ethz.ch-->
+* Serene Chen (UX Designer)
 * Muhammad Salihin Bin Zaol-kefli (Software Engineer)
-
+* Yuhao Lu (Former Project Coordinator)
 
 ### Documentation
 
-For more information please head to ur-scape's [Wiki](https://ur-scape.sec.sg/en/home).
+For more information please head to ur-scape's [Wiki](https://wiki.ur-scape.com).
+
+### ur-scape studio
+
+Learn how to use ur-scape at [ur-scape studio](https://studio.ur-scape.com), the online learning platform for ur-scape.
 
 ### Contributing
 
