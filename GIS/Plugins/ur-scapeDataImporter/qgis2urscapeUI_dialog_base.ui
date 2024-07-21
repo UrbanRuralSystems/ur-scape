@@ -56,7 +56,7 @@
    <item row="7" column="0" colspan="2">
     <widget class="QLabel" name="lblCredit">
      <property name="text">
-      <string>This plugin was developed by the Future Cities Laboratory</string>
+      <string>Developed at Future Cities Laboratory | ur-scape.com</string>
      </property>
      <property name="textFormat">
       <enum>Qt::AutoText</enum>
@@ -1248,7 +1248,7 @@
            <item row="24" column="5">
             <widget class="QLineEdit" name="txtSource">
              <property name="placeholderText">
-              <string>e.g. Nasa</string>
+              <string>e.g. NASA</string>
              </property>
             </widget>
            </item>

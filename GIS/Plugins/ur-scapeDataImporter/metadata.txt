@@ -6,12 +6,12 @@
 [general]
 name=ur-scape Data Importer
 qgisMinimumVersion=3.10
-description=This plugin provides a GUI for qgis2urscape.py
-about=This plugin provides a GUI for qgis2urscape.py
-version=0.1
+description=Import data to ur-scape, the open-source planning support tool developed at Future Cities Laboratory.
+about=This plugin allows you to import data to ur-scape, the open-source planning support tool for rapidly urbanising regions developed at Future Cities Laboratory, Singapore-ETH Centre.
+version=0.2
+tracker=https://github.com/UrbanRuralSystems/ur-scape/issues
 author=Future Cities Laboratory
-email=muhammad.zaolkefli@sec.ethz.ch
-#tracker=http://bugs
+email=ur-scape@sec.ethz.ch
 repository=https://github.com/UrbanRuralSystems/ur-scape
 
 
@@ -19,10 +19,10 @@ repository=https://github.com/UrbanRuralSystems/ur-scape
 
 hasProcessingProvider=no
 #changelog=
-homepage=https://urs.sec.sg/#filter=.platform
+homepage=https://www.ur-scape.com
 #category=Plugins
 icon=icon.png
-experimental=True
+experimental=False
 
 # Tags are comma separated with spaces allowed
 tags=ur-scape

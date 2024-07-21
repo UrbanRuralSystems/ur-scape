@@ -1,4 +1,4 @@
-# ur-scape - GIS tools
+# ur-scape Data Importer
 
 Scripts and plugins for QGIS, allowing automatic export of Geospatial data to formats readable by ur-scape. 
 
@@ -21,14 +21,17 @@ Software:
 
 ### Setup
 
-Plugin can be copied to QGIS plugins folder
+Plugin can be installed through:
+- Downloading from the QGIS Plugin Repository
+- Using the 'Install from ZIP' option in the QGIS Plugins Manager (there is a ZIP file in the "Plugins" folder)
+- Copying to your QGIS installation's Plugins folder
 
-Script can be directly ran from QGIS Python console editor
+Please find our updated user documentation at wiki.ur-scape.com.
+
 
 ### Contacts
 
-* David Neudecker: iam@davidneudecker.com
-* Muhammad Salihin Bin Zaol-Kefli: muhammad.zaolkefli@sec.ethz.ch
+Reach out to the ur-scape team at ur-scape@sec.ethz.ch for technical enquiries.
 
 ## License
 

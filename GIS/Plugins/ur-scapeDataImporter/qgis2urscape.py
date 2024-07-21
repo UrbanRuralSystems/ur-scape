@@ -103,7 +103,7 @@ class Exporter:
                 self.handleError (error)
             
     def handleError(self, error):
-        print ("Oops, please following report error to developer:")
+        print ("Oops! Please following report error to developer:")
         tbl = traceback.format_exc().splitlines() 
         exception = tbl[-1] + " in line:" +tbl[-2].split("line")[-1]
         print(exception)
@@ -216,7 +216,7 @@ class Setup:
                 
             # If true, it will force the same resolution as input raster
             if keepSameResolution:
-                print("Keep Same Resolution is checked, we will keep same resolution as input raster ")
+                print("Keep Same Resolution is checked, so we will keep the resolution of the input raster layer.")
                 self.res = unitsPerPixelX ;
                 
             # If meet conditions, it will force same  resolution as input raster
@@ -229,11 +229,11 @@ class Setup:
                     inputSizeInMetres =  str("{:5.5f}".format(unitsPerPixelX  )) + " degress"
                     outputSizeInMetres =  str(resolutionLevels[int(resolution)]) + " deggres"
                     
-                print("You are trying to export higher resolution then resolution of the input raster")
+                print("Your chosen resolution is higher than the resolution of the input raster.")
                 print("Input raster has cell size ~ " + inputSizeInMetres)
                 print ("You are trying to export in: " + outputSizeInMetres)
-                print("Because Prevent Higher Resolution is checked, we will export in reolution of input raster")
-                print ("If you want to export in Higher resolution anyway, please uncheck Prevent Higher Resolution and try again")
+                print("Because Prevent Higher Resolution is checked, we will export in the resolution of the input raster.")
+                print("If you want to export in a higher resolution anyway, please uncheck Prevent Higher Resolution and try again.")
                 self.res = unitsPerPixelX 
         else: 
             self.isInMetres = False 
@@ -285,14 +285,14 @@ class Setup:
         csvFilePath =  self.fullName+".csv"
         hasCsv = os.path.isfile(csvFilePath)
         if hasCsv:
-            print("Yeah we have found csv for the file")
+            print("CSV for the file found.")
             with open(csvFilePath, newline='') as csvfile:
                 reader = csv.DictReader(csvfile)
                 
                 setHeader = ""
                 for thisName in next(reader): 
                     if field in thisName:
-                        print("We even found your field name in csv. Such a lovely day.")
+                        print("Your field name is found in the CSV file.")
                         setHeader = thisName
                 if not setHeader == "":
                     for row in reader:
@@ -304,10 +304,10 @@ class Setup:
                             if str(feature[field])  != noDataValue:
                                 categories.append(row[setHeader])
                 else:
-                    print ("filed name not in CSV")   
+                    print ("Field name not in CSV")   
                     self.isCategorized = False     
         else:
-            print("no categories in the csv file")
+            print("No categories in the CSV file.")
             self.isCategorized = False
         self.categories = categories
        
@@ -419,9 +419,9 @@ class Setup:
         # pixels total, multiplied by float and with buffer 10%
         requiredSize =  cols * rows * 64/8
         if requiredSize > free:
-            print("You dont have enough space on your disk to continue with export." )
-            print ("You need at least " + str("{:5.2f}".format(requiredSize * 0.000001)) + " MB of free space")
-            print ("You have currectly available " + str("{:5.2f}".format(free * 0.000001)) + "MB" )
+            print("Oops! You do not have enough space on your disk to continue with export." )
+            print ("You need at least " + str("{:5.2f}".format(requiredSize * 0.000001)) + " MB of free space.")
+            print ("You currently have " + str("{:5.2f}".format(free * 0.000001)) + "MB available." )
             return True
         else:
             return problem
@@ -430,10 +430,10 @@ class Setup:
     def testScenarios(self, problem):
         if hasattr(self, "type"):
             if (forMunicipalBudget and not self.type == 2 ):
-                print("wrong data type for municipal budget")
+                print("Oops! Wrong data type for Municipal Budget.")
                 return True
             elif (forReachability and not self.type == 1 ):
-                print("wrong data type for reachability")
+                print("Oops! Wrong data type for Reachability.")
                 return True
         else:
            return problem    
@@ -443,7 +443,7 @@ class Setup:
                 test = resolutionLevels[int(resolution)]
                 return problem
             except IndexError:
-                print ("Oops, resolution is invalid !")
+                print ("Oops! Resolution is invalid.")
                 return True 
     
     def testFieldNameInput (self, problem):
@@ -452,7 +452,7 @@ class Setup:
                 test = iface.activeLayer().fields().field(field)
             return problem
         except KeyError:
-            print("Oops, field is not in the layer !")
+            print("Oops! Field is not in the layer.")
             return True
 
     def testFiles (self, problem):
@@ -463,21 +463,21 @@ class Setup:
                     pass
             return problem
         except:
-            print("Could not open " + filePath + ". Please close the file")
+            print("Oops! We could not open " + filePath + ". Please close the file.")
             return True          
     
     def testPath (self, problem):
         if os.path.exists(outputPath): 
             return problem
         else:
-            print("Oops, OutputPath does not exist !")
+            print("Oops! OutputPath does not exist.")
             return True 
             
     def testMunicipalBudget (self, problem):
         if iface.activeLayer().geometryType() == 2 or not forMunicipalBudget:
             return problem
         else:
-            print("Oops, Municipal Budget can be done only from polygons!")
+            print("Oops! Municipal Budget can be done only from polygons!")
             return True 
     
     def testRasterReference (self, problem):
@@ -485,7 +485,7 @@ class Setup:
         if not (raster.GetProjectionRef() == ""):
             return problem
         else:
-            print("Oops, no projection defined for raster layer!")
+            print("Oops! No projection defined for the raster layer.")
             return True   
             
     def cleanCategoryString (self, rawCategory):
@@ -517,7 +517,7 @@ class LayerWriter:
             spamList = [ x for x in spamreader]
         if not any(name in s for s in spamList):
             self.addLayerToList(path,name, group,spamList)  
-            print("Writting layer " + name + " to the file: Layers.csv")
+            print("Writing layer " + name + " to the file: Layers.csv")
         elif name:
             print ("It seems like we already have layer " + name +" in the file: Layers.csv.")
             self.checkColors(spamList)
@@ -549,7 +549,7 @@ class LayerWriter:
             return path
         else:
             return None
-            print("I can't find the layers.csv file, it is up to you to add it to ur-scape.")
+            print("We cannot find the layers.csv file. Please check if it is correctly configured in the Data layer.")
     
     def getColorRGB(self):
         # prepare full HSV color
@@ -580,7 +580,8 @@ class LayerWriter:
             if any(name == s for s in layer):
                 if (layer[2].isdigit()):
                     if not (int(layer[2]) == colorRGB[0] and int(layer[3]) == colorRGB[1] and int(layer[4]) == colorRGB[2]):
-                        print("We have same name but different color, will be ignored")
+                        print("A layer with the same name but different colours already exists in the file: Layers.csv. The colour you have chosen will be ignored.")
+                        print("You can change the colour for all data layers with this name in the ur-scape application using the Manage Data panel.")
 
 class FileWriter:
     "Create Csv File"
@@ -607,11 +608,11 @@ class FileWriter:
                     self.getBand(rasterExtent,setup)
                     self.writeGridToFile(i,setup,extents[i])
                 else:
-                    print("Skiping the patch, because is only no Data inside")    
+                    print("Skipping the patch, because there is no data inside.")    
             
             if not forMunicipalBudget:
                 LayerWriter(name, group)
-            print ("Done here, have a great day")
+            print ("Data import complete. Have a great day!")
     
     
     def getExtents(self,raster,setup):
@@ -636,13 +637,13 @@ class FileWriter:
             inMaxY = inMinY + inDegPerCellY * inCountY
         # Fix input raster cell size signs
         if inDegPerCellX < 0:
-            print("Changing negative cell width to positive")
+            print("Changing negative cell width to positive.")
             temp = inMinX
             inMinX = inMaxX
             inMaxX = temp
             inDegPerCellX = -inDegPerCellX
         if inDegPerCellY > 0:
-            print("Changing positive cell height to negative")
+            print("Changing positive cell height to negative.")
             temp = inMinY
             inMinY = inMaxY
             inMaxY = temp
@@ -856,7 +857,7 @@ class FileWriter:
                     output_file.write(value + "," + mask + "\n")
 
 
-        print ("File patch "+ str(index)+" generated for " + location)
+        print ("File patch "+ str(index)+" generated for " + location + ".")
   
         """ close all and delete working dir"""
         output_file.close()
@@ -1070,10 +1071,10 @@ class CheckLayer:
                 if setup.isCanceledAndUpdateProgress(100.0): return None
 
             else: # e.g WFS
-                print(" I dont recognize this layer")
+                print("This layer is not recognised.")
             
     def standartRasterLayer(self, setup):
-        print("Ok, Seems that we are dealing with geo-tif. Here we go!")
+        print("You are currently importing a raster layer in GeoTIFF format. This will take a while - please be patient!")
         rasterNoData = self.processNoData (setup, setup.fullName)
         if setup.isCanceledAndUpdateProgress(25.0): return None
         if (setup.aggregate or setup.summary):
@@ -1136,7 +1137,7 @@ class CheckLayer:
         return newRasterPath
     
     def graphLayer (self, setup):
-        print ("...working on Reachability Data")
+        print ("Processing Reachability Data.")
         """ Get Graph's links for each separated class in the networkMap.
         LastKey mark the last list from networkMap which ignore values inside
         and rest safe as other """
@@ -1159,7 +1160,7 @@ class CheckLayer:
     def municipalBudgetLayer (self, setup):
 
         if setup.type == 2:
-            print ("...and seems like you plan to create data for Municipal Budget") 
+            print ("Processing Municipal Budget data.") 
             rasterToProcess =self.vectorToRaster(setup.layer, setup, False, 1, "mb")
             if setup.isCanceledAndUpdateProgress(33.0): return None
             rasterNoData = self.processNoData (setup,rasterToProcess)
@@ -1168,8 +1169,8 @@ class CheckLayer:
             if setup.isCanceledAndUpdateProgress(100.0): return None
             print ("Congratulations, you created special data for Municipal Budget.")
         else: 
-            print ("You are trying to create Municipal Budget data from non-polygon type")
-            print ("I am sorry Bill I can not let you do that")  
+            print ("You are trying to import non-polygon data to the Municipal Budget tool.")
+            print ("The Municipal Budget tool currently does not support this type of data. Please import polygon data.")  
         
     def fixGeometry(self,layerIn):
     
@@ -1250,7 +1251,7 @@ class CheckLayer:
             processing.run("gdal:rasterize",parameterRasterize)  
         except:
             processing.run("gdal:rasterize",parameterRasterize)
-            print("Bug in QGIS after opening, but we've fixed it...")
+            print("A bug has been detected in QGIS. No action required for now.")
         
         if debuggingMode:
             layerTesting = QgsRasterLayer(reprojectedRaster,"Rasterized layer")
@@ -1278,7 +1279,7 @@ class CheckLayer:
         processing.run("gdal:warpreproject", parameterWarp)
         
         if not QgsRasterLayer(reprojectedRaster,"Reprojected Raster").isValid():
-            print("Not enaugh storage for this size and resolution")
+            print("Oops! There is not enough storage on your disk for this size and resolution.")
         
         if debuggingMode:
             layerTesting = QgsRasterLayer(reprojectedRaster,"Reprojected Raster")
@@ -1502,11 +1503,11 @@ class CheckLayer:
 
         # Fix input raster cell size signs
         if inDegPerCellX < 0:
-            print("Changing negative cell width to positive")
+            print("Changing negative cell width to positive.")
             inMinX = inMinX + inDegPerCellX * inCountX
             inDegPerCellX = -inDegPerCellX
         if inDegPerCellY > 0:
-            print("Changing positive cell height to negative")
+            print("Changing positive cell height to negative.")
             inMaxY = inMaxY + inDegPerCellY * inCountY
             inDegPerCellY = -inDegPerCellY
 
@@ -1543,7 +1544,7 @@ class CheckLayer:
         outHeight = outCountY * outDegPerCellY
         sizePercent = 100 * (1 - (outWidth * outHeight) / (inWidth * inHeight))
         if sizePercent >= 1: # this means that the new raster will be 1% (or more) smaller
-            print("\nWARNING: the output raster will be smaller (" + str(outWidth) + " by " + str(abs(outHeight)) + "). That's " + "{:.1f}".format(sizePercent).replace(".0", "") + "% smaller\n")
+            print("\nWARNING: The output raster will be smaller (" + str(outWidth) + " by " + str(abs(outHeight)) + "). That's " + "{:.1f}".format(sizePercent).replace(".0", "") + "% smaller\n")
 
         # Go thru all cells in the output grid to calculate the aggregated value
         for outY in range(0, outCountY):
