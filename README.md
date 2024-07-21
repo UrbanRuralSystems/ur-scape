@@ -24,7 +24,7 @@ If you would like report a bug or have trouble installing/using the software, pl
 ### Requisites
 
 Hardware:
-* DirectX11 capable GPU
+* GPU with support for DirectX 11 (Windows) or Metal (macOS)
 
 Software:
 * [Unity](https://unity.com/) 2020.1.2f1
@@ -47,9 +47,9 @@ Software:
 * Niraly Mangal (Doctoral Researcher)
 * Joshua Vargas (Research Assistant)
 * Denise Lee (Researcher)
-* Pari Sen Biswas (Student Research Assistant)
-* Darshan Lineswala (Student Research Assistant)
-* Michael Joos (Senior Software Engineer)<!--: joos@arch.ethz.ch-->
+* Pari Sen Biswas (Research Assistant)
+* Darshan Lineswala (Research Assistant)
+* Michael Joos (Senior Software Engineer)
 * Serene Chen (UX Designer)
 * Muhammad Salihin Bin Zaol-kefli (Software Engineer)
 * Yuhao Lu (Former Project Coordinator)
