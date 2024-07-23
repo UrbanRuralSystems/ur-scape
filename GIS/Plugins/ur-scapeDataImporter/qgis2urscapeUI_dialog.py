@@ -6,6 +6,8 @@
  This plugin provides a GUI for the ur-scape Data Importer plugin.
                              -------------------
         begin                : 2020-06-05
+        version              : 0.2
+        last updated         : 2024-07-23
         git sha              : $Format:%H$
         copyright            : (C) 2024 Singapore ETH Centre, Future Cities Laboratory
         author:              : Muhammad Salihin Bin Zaol-kefli
@@ -25,6 +27,7 @@
 
 from PyQt5 import QtCore, QtWidgets, uic
 from PyQt5.QtGui import QColor, QPalette
+from PyQt5.QtCore import QMetaObject, Qt, Q_ARG
 from PyQt5.QtWidgets import (QLabel
                             ,QLineEdit
                             ,QVBoxLayout
@@ -33,6 +36,8 @@ from PyQt5.QtWidgets import (QLabel
                             ,QCheckBox
                             ,QApplication
                             ,QFileDialog
+                            ,QDialog
+                            ,QPlainTextEdit
                             ,QWidget
                             )
 from qgis.core import (QgsProject
@@ -100,7 +105,9 @@ class Logger(object):
     def writeToLogTab(self, message):
         if self.log is not None:
             try:
-                self.log.insertPlainText(message)
+                QMetaObject.invokeMethod(
+                    self.log, "insertPlainText", Qt.QueuedConnection, Q_ARG(str, message)
+                )
             except:
                 exceptionMsg = "Exception while trying to add message to Log tab:\n"
                 exceptionMsg += traceback.format_exc() + "\n"
@@ -619,7 +626,7 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
 
     def onTaskProgressChanged(self, progress):
         # print("Task Progress: " + str(self.q2uExportTask.progress()))
-        self.progressBar.setValue(self.q2uExportTask.progress())
+        self.progressBar.setValue(int(self.q2uExportTask.progress()))
         
     def onPrevSettings(self):
         self.loadPrevSettings()
@@ -628,6 +635,8 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
     def onCancel(self):
         if self.q2uExportTask is not None:
             self.q2uExportTask.cancel()
+            self.resetTask()
+            self.logger.write("Task cancelled. \n \n")
             #print("Task was cancelled")
 
     def onRun(self):
@@ -679,9 +688,10 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
         self.setNetworkMap()
         self.saveCurrSettings()
         
-        self.onCancel()
-        if self.q2uExportTask is not None and self.q2uExportTask.isCanceled():
-            self.resetTask()
+        #self.onCancel()
+
+        #if self.q2uExportTask is not None and self.q2uExportTask.isCanceled():
+        #    self.resetTask()
         self.stopLogger()
 
     def saveCurrSettings(self):
@@ -1309,7 +1319,7 @@ class Qgis2UrscapeUIDialog(QtWidgets.QDialog):
             QWidget.setTabOrder(self.networkMapVals[-1], self.txtRasterBand)
 
     def resetTask(self):
-        self.progressBar.setValue(0.0)
+        self.progressBar.setValue(int(0))
         self.q2uExportTask.progressChanged.disconnect(self.onTaskProgressChanged)
         self.q2uExportTask = None
         self.btnCancel.setEnabled(False)
