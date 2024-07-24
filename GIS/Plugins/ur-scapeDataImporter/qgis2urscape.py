@@ -66,7 +66,7 @@ onlyYear = False
 """---------------------------------------------------------------------
 You can't touch this
 ---------------------------------------------------------------------"""
-from osgeo import gdal, osr
+from osgeo import ogr, gdal, osr
 import os, sys, processing, csv, math, colorsys,traceback,numpy,datetime,numbers,shutil 
 from tempfile import mkstemp
 from osgeo.gdalconst import *
@@ -84,6 +84,9 @@ from PyQt5.QtCore import QFileInfo
 from processing.core.Processing import Processing
 isPlugin = (__name__ != '__console__')
 
+# Disable exceptions
+ogr.DontUseExceptions()
+
 if isPlugin :
 	Processing.initialize()
 
@@ -91,7 +94,7 @@ gdal.AllRegister()
 CHECK_DISK_FREE_SPACE = False
 
 class Exporter:
-    "This class will export data to urscape"
+    "This class will export data to ur-scape"
     
     def __init__(self, task=None):
         self.task = task
@@ -190,7 +193,7 @@ class Setup:
     
     def updateResolution(self):
         """ For user genefit input resolution can be defined in metres for some 
-        of resolution levels, however units used in urscape are always in degrees.
+        of resolution levels, however units used in ur-scape are always in degrees.
         therefore units in metres need to be translated to degrees"""
 
         self.res =  resolutionLevels[int(resolution)]
@@ -269,7 +272,7 @@ class Setup:
 
     def updateCategory(self):
         if self.isVector :
-            # non numeric fields will be processed as categorized urscape layer
+            # non numeric fields will be processed as categorized ur-scape layer
             self.isCategorized = not self.layer.fields().field(field).isNumeric()
         else:
             self.isCategorized =  os.path.isfile(self.fullName+".csv")
@@ -463,7 +466,7 @@ class Setup:
                     pass
             return problem
         except:
-            print("Oops! We could not open " + filePath + ". Please close the file.")
+            print("Oops! The file " + filePath + " could not be opened. Please ensure other programs are not using the file.")
             return True          
     
     def testPath (self, problem):
@@ -477,7 +480,7 @@ class Setup:
         if iface.activeLayer().geometryType() == 2 or not forMunicipalBudget:
             return problem
         else:
-            print("Oops! Municipal Budget can be done only from polygons!")
+            print("Oops! Municipal Budget file format can only be created from polygons.")
             return True 
     
     def testRasterReference (self, problem):
@@ -485,7 +488,7 @@ class Setup:
         if not (raster.GetProjectionRef() == ""):
             return problem
         else:
-            print("Oops! No projection defined for the raster layer.")
+            print("Oops! No projection has been defined for the raster layer.")
             return True   
             
     def cleanCategoryString (self, rawCategory):
@@ -519,7 +522,7 @@ class LayerWriter:
             self.addLayerToList(path,name, group,spamList)  
             print("Writing layer " + name + " to the file: Layers.csv")
         elif name:
-            print ("It seems like we already have layer " + name +" in the file: Layers.csv.")
+            print ("It seems like the layer " + name + " already exists in the file: Layers.csv.")
             self.checkColors(spamList)
 
     def addLayerToList (self, path, name,group,layerList):
@@ -536,7 +539,7 @@ class LayerWriter:
             layerList.append(['Group',group,'','',''])
             layerList.append ( ['Layer',name,colorRGB[0],colorRGB[1],colorRGB[2]])
         
-        with open(path, 'w', newline='', encoding='utf-16le') as csvfile:
+        with open(path, 'w', newline='', encoding='utf-8') as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=',')
             for row in  layerList:
                 if len(row)>0:
@@ -549,7 +552,7 @@ class LayerWriter:
             return path
         else:
             return None
-            print("We cannot find the layers.csv file. Please check if it is correctly configured in the Data layer.")
+            print("Layers.csv file not found. Please check if it is correctly configured in the Data folder.")
     
     def getColorRGB(self):
         # prepare full HSV color
@@ -612,7 +615,7 @@ class FileWriter:
             
             if not forMunicipalBudget:
                 LayerWriter(name, group)
-            print ("Data import complete. Have a great day!")
+            print ("Data import complete. Have a good day!")
     
     
     def getExtents(self,raster,setup):
