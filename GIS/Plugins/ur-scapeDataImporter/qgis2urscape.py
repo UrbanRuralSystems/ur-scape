@@ -84,8 +84,11 @@ from PyQt5.QtCore import QFileInfo
 from processing.core.Processing import Processing
 isPlugin = (__name__ != '__console__')
 
-# Disable exceptions
-ogr.DontUseExceptions()
+# Disable exceptions if needed for QGIS 3.34 and other versions
+try:
+    ogr.DontUseExceptions()
+except:
+    pass
 
 if isPlugin :
 	Processing.initialize()
@@ -1713,5 +1716,3 @@ class geoCalculator:
         
 if not isPlugin :
     Exporter()
-
-# This version is from 23.07.2020 - not for public

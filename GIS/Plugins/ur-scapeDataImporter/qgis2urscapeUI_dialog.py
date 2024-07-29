@@ -6,8 +6,8 @@
  This plugin provides a GUI for the ur-scape Data Importer plugin.
                              -------------------
         begin                : 2020-06-05
-        version              : 0.2
-        last updated         : 2024-07-23
+        version              : 0.2.1
+        last updated         : 2024-07-29
         git sha              : $Format:%H$
         copyright            : (C) 2024 Singapore ETH Centre, Future Cities Laboratory
         author:              : Muhammad Salihin Bin Zaol-kefli
