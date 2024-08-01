@@ -807,7 +807,11 @@ class FileWriter:
         """ get info about size and position"""
         minX,minY,maxX,maxY = self.getCleanExtent(setup,extent)
 
-        """ writing data"""
+        """ data preprocessing functions """
+        def stringCleaner(string):
+            return string.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
+
+        """ writing data """
         dateCode = list(date)[-2] + list(date)[-1] if onlyYear else date.replace('.', '')
         sign ='_'+ resolutionSign[int(resolution)]+'_'
 
@@ -818,20 +822,20 @@ class FileWriter:
             output_file.write("METADATA,TRUE"+ '\n')
             output_file.write("Layer Name,"+name+ '\n')
             if source.strip() and source != "Insert Source":
-                output_file.write("Source," + source + '\n')
+                output_file.write("Source," + stringCleaner(source) + '\n')
             if citation.strip() and citation != "Insert Citation":
                 if mandatoryCitation:
-                    output_file.write("MandatoryCitation,"+'"' + citation +'"' + '\n')
+                    output_file.write("MandatoryCitation,"+'"' + stringCleaner(citation) +'"' + '\n')
                 else:
-                    output_file.write("Citation," +'"' + citation + '"' +'\n')
+                    output_file.write("Citation," +'"' + stringCleaner(citation) + '"' +'\n')
             if link.strip() and link != "Insert Link":
-                output_file.write("Link," + link + '\n')
+                output_file.write("Link," + stringCleaner(link) + '\n')
             output_file.write("Colouring,"+"Multi"+ '\n') #+ defined by user
         else:
             output_file.write("METADATA,FALSE"+ '\n')
         
         """ write down category"""
-        if (setup.isCategorized and not setup.isPoint ):
+        if (setup.isCategorized and not setup.isPoint):
             output_file.write("CATEGORIES,TRUE"+ '\n')
             for i in range(len(setup.categories)):
                 output_file.write(str(setup.categories[i] + ","+ str(i+1) + '\n'))
