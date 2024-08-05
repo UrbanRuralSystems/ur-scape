@@ -1388,7 +1388,7 @@
               <string>e.g. World</string>
              </property>
              <property name="placeholderText">
-              <string>e.g. Singapore</string>
+              <string>e.g. Singapore (case-sensitive)</string>
              </property>
             </widget>
            </item>

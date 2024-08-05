@@ -811,21 +811,25 @@ class FileWriter:
         dateCode = list(date)[-2] + list(date)[-1] if onlyYear else date.replace('.', '')
         sign ='_'+ resolutionSign[int(resolution)]+'_'
 
+        """ Input text preprocessing """
+        def stringCleaner(string):
+            return string.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
+
         fileStringTemp = name+ sign +location+'@'+ str(index)+'_'+dateCode+ '_grid.csv'
         fileString = fileStringTemp if not forMunicipalBudget else location + '.csv'
         output_file = open(setup.finalPath+'/' + fileString , 'w',newline='',encoding= 'utf-16')
         if not forMunicipalBudget:
             output_file.write("METADATA,TRUE"+ '\n')
-            output_file.write("Layer Name,"+name+ '\n')
+            output_file.write("Layer Name,"+ stringCleaner(name) + '\n')
             if source.strip() and source != "Insert Source":
-                output_file.write("Source," + source + '\n')
+                output_file.write("Source," + stringCleaner(source) + '\n')
             if citation.strip() and citation != "Insert Citation":
                 if mandatoryCitation:
-                    output_file.write("MandatoryCitation,"+'"' + citation +'"' + '\n')
+                    output_file.write("MandatoryCitation,"+'"' + stringCleaner(citation) +'"' + '\n')
                 else:
-                    output_file.write("Citation," +'"' + citation + '"' +'\n')
+                    output_file.write("Citation," +'"' + stringCleaner(citation) + '"' +'\n')
             if link.strip() and link != "Insert Link":
-                output_file.write("Link," + link + '\n')
+                output_file.write("Link," + stringCleaner(link) + '\n')
             output_file.write("Colouring,"+"Multi"+ '\n') #+ defined by user
         else:
             output_file.write("METADATA,FALSE"+ '\n')
