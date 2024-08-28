@@ -23,6 +23,7 @@ public class EditSpeedPanel : MonoBehaviour
 
     private ReachabilityTool reachabilityTool;
     private SiteBrowser siteBrowser;
+    private bool wasSaved;
 
     //
     // Unity Methods
@@ -38,7 +39,7 @@ public class EditSpeedPanel : MonoBehaviour
         var componentManager = ComponentManager.Instance;
         reachabilityTool = componentManager.Get<ReachabilityTool>();
         siteBrowser = componentManager.Get<SiteBrowser>();
-
+        wasSaved = false;
         InitUI();
     }
 
@@ -62,6 +63,7 @@ public class EditSpeedPanel : MonoBehaviour
 
     private void OnSaveClick()
     {
+        wasSaved = true;
         string activeSiteName = siteBrowser.ActiveSite.Name;
         string filename = Paths.Data + "Reachability" + Path.DirectorySeparatorChar + activeSiteName + ".csv";
 
@@ -74,6 +76,7 @@ public class EditSpeedPanel : MonoBehaviour
             }
         }
         ReachabilityIO.Save(mobilityModes, filename);
+        OnCloseClick();
     }
 
     //

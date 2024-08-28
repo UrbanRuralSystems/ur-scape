@@ -12,7 +12,7 @@ public static class Paths
 {
 	public static readonly string Data;
 	public static readonly string Cache;
-	public static readonly string Sites;
+	public static string Sites;
 	public static readonly string Backgrounds;
 
 #if UNITY_WEBGL
@@ -37,7 +37,7 @@ public static class Paths
 		Cache = Data;
 #endif
 
-		Sites = Data + "Sites" + Path.DirectorySeparatorChar;
+		Sites =  Data + "Sites" + Path.DirectorySeparatorChar;
 		Backgrounds = Cache + "Backgrounds" + Path.DirectorySeparatorChar;
 
 #if UNITY_WEBGL
@@ -47,4 +47,6 @@ public static class Paths
 #endif
 
 	}
+
+
 }

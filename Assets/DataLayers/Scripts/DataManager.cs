@@ -81,14 +81,13 @@ public class DataManager : UrsComponent
 
 		// Load config (groups & layers)
 		StartCoroutine(Init());
-	}
-
+    }
 
     //
     // Public Methods
     //
 
-	public void ChangeActiveSite(Site site)
+    public void ChangeActiveSite(Site site)
 	{
 		ActiveSite = site;
 	}
@@ -350,9 +349,21 @@ public class DataManager : UrsComponent
 			CloseProgressDialog();
 			yield break;
         }
+		//Check if Absolute Path exist and if yes update
+		if (File.Exists(Paths.Data + "DataAbosolutePath.txt"))
+		{
+			string path = File.ReadAllText(Paths.Data + "DataAbosolutePath.txt");
+			if (Directory.Exists(path))
+			{
+				Paths.Sites = path + Path.DirectorySeparatorChar + Paths.Data +
+					Path.DirectorySeparatorChar + "Sites" + Path.DirectorySeparatorChar;
+			}
+		}
+
 
 #if !UNITY_WEBGL
-		if (!Directory.Exists(Paths.Sites))
+
+        if (!Directory.Exists(Paths.Sites))
 		{
 			Debug.LogError("Data path '" + Paths.Sites + "' doesn't exist. Trying to create it.");
 			CloseProgressDialog();
@@ -360,7 +371,6 @@ public class DataManager : UrsComponent
 			yield break;
 		}
 #endif
-
 
 #if UNITY_WEBGL
 		// Show progress message
@@ -383,7 +393,6 @@ public class DataManager : UrsComponent
         // Find valid data directories
         var paths = GetDataDirectories();
 #endif
-
 		// Show progress message
 		progressDialog.SetMessage(Translator.Get("Loading") + " ...");
         progressDialog.SetProgress(0);
