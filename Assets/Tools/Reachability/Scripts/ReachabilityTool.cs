@@ -16,8 +16,8 @@ using UnityEngine.UI;
 public class MobilityMode
 {
     public string name;
-    public readonly float[] speeds = new float[ClassificationValue.Count];
-    public readonly float[] invSpeeds = new float[ClassificationValue.Count];
+    public readonly float[] speeds = new float[ClassificationValue.Count + 1];
+    public readonly float[] invSpeeds = new float[ClassificationValue.Count + 1];
 }
 
 public class ReachabilityTool : Tool
@@ -365,7 +365,7 @@ public class ReachabilityTool : Tool
             var mode = mobilityModes[i];
 
             // Override the speed for "No network" classfication to be walking speed
-            mode.speeds[(int)ClassificationIndex.None] = defaultWalkSpeed * kmPerHourToMetersPerMin; //convert from km/h to m/min
+            //mode.speeds[(int)ClassificationIndex.None] = defaultWalkSpeed * kmPerHourToMetersPerMin; //convert from km/h to m/min
 
             int count = mode.speeds.Length;
             for (int j = 0; j < count; ++j)

@@ -23,35 +23,37 @@ public static class ReachabilityIO
 
     private static List<MobilityMode> Parse(StreamReader sr)
     {
-        // Parse header
-        string line = sr.ReadLine();
-        string[] header = line.Split(',');
+		// Parse header
+		using (sr)
+		{
+			string line = sr.ReadLine();
 
-		if (header == null || header.Length != ClassificationValue.Count)
-			return null;
-
-		List<MobilityMode> modes = new List<MobilityMode>();
-        while ((line = sr.ReadLine()) != null)
-        {
-            string[] cells = line.Split(',');
-            if (string.IsNullOrEmpty(cells[0]))
-                continue;
-
-			if (cells.Length != ClassificationValue.Count)
+			string[] header = line.Split(',');
+			Debug.Log(line + " " + header.Length + " ? " + ClassificationValue.Count);
+			if (header == null || header.Length != ClassificationValue.Count + 1)
 				return null;
+			List<MobilityMode> modes = new List<MobilityMode>();
+			while ((line = sr.ReadLine()) != null)
+			{
+				string[] cells = line.Split(',');
+				if (string.IsNullOrEmpty(cells[0]))
+					continue;
 
-			MobilityMode mode = new MobilityMode();
-			mode.name = cells[0].Trim();
+				if (cells.Length != ClassificationValue.Count + 1)
+					return null;
 
-			for (int i = ClassificationValue.Count - 1; i > 0; --i)
-            {
-				float.TryParse(cells[i], out float value);
-				mode.speeds[ClassificationValue.Count - i] = value * ReachabilityTool.kmPerHourToMetersPerMin;   //convert from km/h to m/min
+				MobilityMode mode = new MobilityMode();
+				mode.name = cells[0].Trim();
+				for (int i = ClassificationValue.Count; i > 0; --i)
+				{
+					float.TryParse(cells[i], out float value);
+					mode.speeds[ClassificationValue.Count - i] = value * ReachabilityTool.kmPerHourToMetersPerMin;   //convert from km/h to m/min
+				}
+				modes.Add(mode);
 			}
-			modes.Add(mode);
-        }
-
-		return modes;
+			sr.Close();
+			return modes;
+		}
 	}
 
 	public static void Save(List<MobilityMode> modes, string filename)
@@ -59,19 +61,20 @@ public static class ReachabilityIO
 #if UNITY_STANDALONE
 		string path = Path.GetDirectoryName(filename);
 		Directory.CreateDirectory(path);
-
 		using (var sw = new StreamWriter(File.Open(filename, FileMode.Create), System.Text.Encoding.UTF8))
 		{
-			sw.WriteLine("Mode,Highway,Highway Link,Primary,Secondary,Other");
+			sw.WriteLine("Mode,Highway,Highway Link,Primary,Secondary,Other,None");
 			foreach (var mode in modes)
 			{
 				sw.Write(mode.name);
-				for (int i = mode.speeds.Length - 1; i > 0; --i)
+				for (int i = mode.speeds.Length-2 ; i > 0; --i)
 				{
 					sw.Write("," + mode.speeds[i]);
 				}
+				sw.Write("," + mode.speeds[0]);
 				sw.WriteLine();
 			}
+			sw.Close();
 		}
 #endif
 	}
