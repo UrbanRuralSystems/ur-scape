@@ -382,7 +382,7 @@ public class ReachabilityTool : Tool
             int index = i;
             mobilityToggle.onValueChanged.AddListener((isOn) => OnMobilityToggleChanged(index, isOn));
 
-            if (i == 0)
+            if (i == mobilityMode)
                 mobilityToggle.isOn = true;
         }
 
