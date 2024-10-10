@@ -1055,7 +1055,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: https://urs.sec.sg/
+  m_Text: https://ur-scape.com/
 --- !u!114 &9022771680019828662
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1149,7 +1149,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: Urban-Rural Systems
+  m_Text: ur-scape website
 --- !u!1 &5858512493674479816
 GameObject:
   m_ObjectHideFlags: 0

@@ -344,19 +344,33 @@ public class DataManager : UrsComponent
 	private const float MaxProcessingTimePerFrame = 0.03f;
 	private IEnumerator InitLayers()
     {
+
         if (dataLayers == null)
         {
 			CloseProgressDialog();
 			yield break;
         }
 		//Check if Absolute Path exist and if yes update
-		if (File.Exists(Paths.Data + "DataAbosolutePath.txt"))
+		if (File.Exists(Paths.Data + "DataAbsolutePath.txt"))
 		{
-			string path = File.ReadAllText(Paths.Data + "DataAbosolutePath.txt");
+			string path = File.ReadAllText(Paths.Data + "DataAbsolutePath.txt");
 			if (Directory.Exists(path))
 			{
-				Paths.Sites = path + Path.DirectorySeparatorChar + Paths.Data +
-					Path.DirectorySeparatorChar + "Sites" + Path.DirectorySeparatorChar;
+				/* Paths.Sites = path + Path.DirectorySeparatorChar + Paths.Data +
+					Path.DirectorySeparatorChar + "Sites" + Path.DirectorySeparatorChar; */
+				Paths.Sites = path + Path.DirectorySeparatorChar + "Sites" + Path.DirectorySeparatorChar;
+
+				bool isEmpty = Directory.GetFileSystemEntries(Paths.Sites).Length == 0;
+				if (isEmpty)
+				{
+					dialogManager.Warn("The path in DataAbsolutePath.txt does not appear to be a valid ur-scape Data folder.\nPlease check the path and try again.");
+					Debug.LogError("Data path '" + Paths.Sites + "' doesn't exist.");
+				}
+			}
+			if (!Directory.Exists(path))
+			{
+				dialogManager.Warn("The path in DataAbsolutePath.txt does not exist.\n ur-scape will proceed to load the Data folder in this copy of ur-scape.\n Please check the path and try again.");
+				Debug.LogError("Data path '" + path + "' doesn't exist.");
 			}
 		}
 
