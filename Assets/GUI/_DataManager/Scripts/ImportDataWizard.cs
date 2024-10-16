@@ -66,7 +66,7 @@ public class ImportThreadInfo
 	public double resY;
 }
 
-public class ImportDataWizard : MonoBehaviour
+public class ImportDataWizard : MonoBehaviour, IWizardController
 {
     [Header("UI Referencess")]
     public WizardDialog wizardDlg;
@@ -90,27 +90,28 @@ public class ImportDataWizard : MonoBehaviour
     //
     // Inheritance Methods
     //
-/*
+
     public GameObject OnWizardNext()
     {
-		if (wizardDlg.Current == importDataPanel.gameObject && DataExists())
+		/*if (wizardDlg.Current == importDataPanel.gameObject && DataExists())
 		{
 			//AskToReplaceExistingData(() => wizardDlg.Next(GetNextWizardPanel()));
 			return null;
-		}
+		}*/
 
 		return GetNextWizardPanel();
     }
 
+
 	public bool OnWizardFinish()
 	{
-		if (wizardDlg.Current == importDataPanel.gameObject && DataExists())
+		/*if (wizardDlg.Current == importDataPanel.gameObject && DataExists())
 		{
 			//AskToReplaceExistingData(ImportData);
 			return false;
 		}
 
-		ImportData();
+		ImportData();*/
 
 		return false;
 	}
@@ -129,21 +130,20 @@ public class ImportDataWizard : MonoBehaviour
     {
     }
 
-
 	//
 	// Private Methods
 	//
 
 	private GameObject GetNextWizardPanel()
 	{
-		//if (wizardDlg.Current == importDataPanel)
-			//return resamplingSettingsPanel;
-
+		if (wizardDlg.Current == importDataPanel)
+			return resamplingSettingsPanel;
+		
 		return null;
 	}
 
 
-	private void ImportData()
+/*	private void ImportData()
 	{
 		
 		var info = new ImportInfo
@@ -158,7 +158,7 @@ public class ImportDataWizard : MonoBehaviour
 		
 
 		wizardDlg.CloseDialog(DialogAction.Ok);
-	}
+	}/*
 
 /*	private bool DataExists()
 	{
