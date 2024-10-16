@@ -66,7 +66,7 @@ public class ImportThreadInfo
 	public double resY;
 }
 
-public class ImportDataWizard : MonoBehaviour, IWizardController
+public class ImportDataWizard : MonoBehaviour
 {
     [Header("UI Referencess")]
     public WizardDialog wizardDlg;
@@ -81,21 +81,21 @@ public class ImportDataWizard : MonoBehaviour, IWizardController
 
 	private void Awake()
     {
-        importDataPanel.Init(wizardDlg);
-        wizardDlg.title.text = Translator.Get("Import Data");
-        wizardDlg.Show(this, importDataPanel.gameObject);
+        //importDataPanel.Init(wizardDlg);
+        //wizardDlg.title.text = Translator.Get("Import Data");
+        //wizardDlg.Show(this, importDataPanel.gameObject);
     }
 
 
     //
     // Inheritance Methods
     //
-
+/*
     public GameObject OnWizardNext()
     {
 		if (wizardDlg.Current == importDataPanel.gameObject && DataExists())
 		{
-			AskToReplaceExistingData(() => wizardDlg.Next(GetNextWizardPanel()));
+			//AskToReplaceExistingData(() => wizardDlg.Next(GetNextWizardPanel()));
 			return null;
 		}
 
@@ -106,7 +106,7 @@ public class ImportDataWizard : MonoBehaviour, IWizardController
 	{
 		if (wizardDlg.Current == importDataPanel.gameObject && DataExists())
 		{
-			AskToReplaceExistingData(ImportData);
+			//AskToReplaceExistingData(ImportData);
 			return false;
 		}
 
@@ -136,87 +136,33 @@ public class ImportDataWizard : MonoBehaviour, IWizardController
 
 	private GameObject GetNextWizardPanel()
 	{
-		if (wizardDlg.Current == importDataPanel)
-			return resamplingSettingsPanel;
+		//if (wizardDlg.Current == importDataPanel)
+			//return resamplingSettingsPanel;
 
 		return null;
 	}
 
-	private void InitInfoCategories(ImportInfo info)
-    {
-		var categoryNames = importDataPanel.GetCategories();
-		if (categoryNames == null)
-			return;
-
-		int categoryCount = categoryNames.Length;
-		info.categories = new IntCategory[categoryCount];
-		for (int i = 0; i < categoryCount; ++i)
-		{
-			info.categories[i] = new IntCategory()
-			{
-				name = categoryNames[i]
-			};
-        }
-	}
 
 	private void ImportData()
 	{
+		
 		var info = new ImportInfo
 		{
 			inputFilename = importDataPanel.FullFilename,
-			outputFilename = importDataPanel.GetOutputFilename(),
-			fieldIndex = importDataPanel.fieldDropdown.value,
-			site = importDataPanel.Site,
-			newSiteName = importDataPanel.SiteName,
-			group = importDataPanel.Group,
-			newGroupName = importDataPanel.GroupName,
-			layer = importDataPanel.Layer,
-			newLayerName = importDataPanel.LayerName,
-			newLayerColor = importDataPanel.LayerColor,
-			level = importDataPanel.Level,
-			year = importDataPanel.Year,
-			month = importDataPanel.Month,
-			units = importDataPanel.Units,
-			resolution = importDataPanel.Resolution,
-			needsResampling = importDataPanel.NeedsResampling,
-			metadata = importDataPanel.GetMetadata(),
 			OnFinishImport = OnFinishImport
 		};
 		InitInfoCategories(info);
 
         var dataImporter = new GameObject("DataImporter").AddComponent<DataImporter>();
 		dataImporter.Import(info);
+		
 
 		wizardDlg.CloseDialog(DialogAction.Ok);
 	}
 
-	private void AskToReplaceExistingData(UnityAction yes)
-	{
-		var translator = LocalizationManager.Instance;
-		string msg = translator.Get("Data already exists for");
-		msg += "\n\n<b>" + importDataPanel.LayerName + "</b>";
-		msg += "\n" + translator.Get("Year") + ": " + importDataPanel.Year;
-		var month = importDataPanel.Month;
-		if (month != 0)
-			msg += "\n" + translator.Get("Month") + ": " + month;
-		msg += "\n" + translator.Get("Site") + ": " + importDataPanel.SiteName;
-		msg += "\n\n" + translator.Get("Do you want to replace existing data?");
-
-		var dlg = ComponentManager.Instance.Get<ModalDialogManager>().NewPopupDialog();
-		dlg.name = "ReplaceDataDialog";
-		dlg.ShowWarningQuestion(msg);
-		dlg.OnCloseDialog += (result) =>
-		{
-			if (result.action == DialogAction.Yes)
-			{
-				yes();
-			}
-		};
-	}
-
-	private bool DataExists()
+/*	private bool DataExists()
 	{
 		return File.Exists(importDataPanel.GetOutputFilename());
-	}
+	}*/
 
 }
