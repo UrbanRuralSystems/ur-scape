@@ -10,6 +10,7 @@
 #define SAFETY_CHECK
 #endif
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -344,35 +345,87 @@ public class DataManager : UrsComponent
 	private const float MaxProcessingTimePerFrame = 0.03f;
 	private IEnumerator InitLayers()
     {
-
         if (dataLayers == null)
         {
-			CloseProgressDialog();
-			yield break;
+            CloseProgressDialog();
+            yield break;
         }
-		//Check if Absolute Path exist and if yes update
-		if (File.Exists(Paths.Data + "DataAbsolutePath.txt"))
-		{
-			string path = File.ReadAllText(Paths.Data + "DataAbsolutePath.txt");
-			if (Directory.Exists(path))
-			{
-				/* Paths.Sites = path + Path.DirectorySeparatorChar + Paths.Data +
-					Path.DirectorySeparatorChar + "Sites" + Path.DirectorySeparatorChar; */
-				Paths.Sites = path + Path.DirectorySeparatorChar + "Sites" + Path.DirectorySeparatorChar;
+        
+        // Check if Absolute Path exists and update if it does
+        string absoluteDataPathFile = "Data" + Path.DirectorySeparatorChar + "DataAbsolutePath.txt";
+		string sourceFilePath = "";
 
-				bool isEmpty = Directory.GetFileSystemEntries(Paths.Sites).Length == 0;
-				if (isEmpty)
+        if (File.Exists(absoluteDataPathFile))
+        {
+            string path = File.ReadAllText(absoluteDataPathFile);
+
+            if (path != "default" && Directory.Exists(path))
+            {
+                // Define source and destination paths for the copy operation
+				if (File.Exists(path + Path.DirectorySeparatorChar + "layers_original.csv"))
 				{
-					dialogManager.Warn("The path in DataAbsolutePath.txt does not appear to be a valid ur-scape Data folder.\nPlease check the path and try again.");
-					Debug.LogError("Data path '" + Paths.Sites + "' doesn't exist.");
+					sourceFilePath = path + Path.DirectorySeparatorChar + "layers_original.csv";
 				}
-			}
-			if (!Directory.Exists(path))
-			{
-				dialogManager.Warn("The path in DataAbsolutePath.txt does not exist.\n ur-scape will proceed to load the Data folder in this copy of ur-scape.\n Please check the path and try again.");
-				Debug.LogError("Data path '" + path + "' doesn't exist.");
-			}
-		}
+				else
+				{
+					sourceFilePath = path + Path.DirectorySeparatorChar + "layers.csv";
+				}
+                string destinationFilePath = "Data" + Path.DirectorySeparatorChar + "layers.csv";
+
+                // Only perform the copy if source file exists
+                if (File.Exists(sourceFilePath))
+                {
+                    try
+                    {
+						// Backup content in destination file
+						string destinationContent = File.ReadAllText(destinationFilePath);
+						if (File.Exists("Data" + Path.DirectorySeparatorChar + "layers_original.csv"))
+						{
+							string dateTimeID = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+							File.WriteAllText("Data" + Path.DirectorySeparatorChar + "layers_original" + dateTimeID + ".csv", destinationContent);
+						}
+						else
+						{
+							File.WriteAllText("Data" + Path.DirectorySeparatorChar + "layers_original.csv", destinationContent);
+						}
+
+                        // Read content from the source file
+						string sourceContent = File.ReadAllText(sourceFilePath);
+						// Write the content to the destination file, overwriting if necessary
+						File.WriteAllText(destinationFilePath, sourceContent);
+                        Debug.Log("Successfully overwrote layers.csv in " + destinationFilePath + " with content from " + sourceFilePath);
+                    }
+                    catch (IOException ex)
+                    {
+                        Debug.LogError("Error overwriting layers.csv: " + ex.Message);
+                    }
+                }
+                else
+                {
+                    Debug.LogError("Source file " + sourceFilePath + " does not exist.");
+                }
+
+                // Update Paths for Data and Sites
+                Paths.Data = path + Path.DirectorySeparatorChar;
+                Paths.Sites = Paths.Data + "Sites" + Path.DirectorySeparatorChar;
+
+                // Check if Sites directory is empty and warn the user if necessary
+                bool isEmpty = Directory.GetFileSystemEntries(Paths.Sites).Length == 0;
+                if (isEmpty && dialogManager != null)
+                {
+                    dialogManager.Warn("The path in DataAbsolutePath.txt does not appear to be a valid ur-scape Data folder.\nPlease check the path and try again.");
+                    Debug.LogError("Data path '" + Paths.Sites + "' doesn't exist.");
+                }
+            }
+            else if (path != "default" && !Directory.Exists(path))
+            {
+                if (dialogManager != null)
+                {
+                    dialogManager.Warn("The path in DataAbsolutePath.txt does not exist.\n ur-scape will proceed to load the Data folder in this copy of ur-scape.\n Please check the path and try again.");
+                }
+                Debug.LogError("Data path '" + path + "' doesn't exist.");
+            }
+        }
 
 
 #if !UNITY_WEBGL

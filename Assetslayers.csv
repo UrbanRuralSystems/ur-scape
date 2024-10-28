@@ -1,0 +1,330 @@
+﻿Type,Name,Color (red),Color (green),Color (blue)
+Group,Transportation,,,
+Layer,Network,100,60,220
+Layer,Reachability,220,220,60
+Layer,Roads Area,135,180,240
+Layer,Accidents,135,180,240
+Layer,Fasilitas Transportasi,135,180,240
+Layer,BRT Stations,200,200,200
+Layer,Alternative Route,255,0,255
+Layer,East-West Corridor (B),204,0,255
+Layer,East-West Corridor,204,0,255
+,,,,
+Group,Resources,,,
+Layer,Solar GHI,80,70,140
+Layer,Rainfall,20,70,160
+Layer,Water Consumption,20,90,200
+Layer,Water Access,20,90,200
+Layer,Water from Wells,20,90,200
+Layer,Water from Pipes,20,90,200
+,,,,
+Group,Sumber Daya,,,
+Layer,Jaringan Pipa,20,90,200
+Layer,Kepadatan Pipa,20,90,200
+Layer,Penyediaan Air,20,90,200
+Layer,Kapasitas IPA,20,90,200
+Layer,Lokasi IPAL,20,90,200
+,,,,
+Group,Hidrologi,,,
+Layer,Produktifitas Air Tanah,20,90,200
+Layer,Hidrologi Baru,20,90,200
+Layer,Hidrologi,20,90,200
+,,,,
+Group,Economy,,,
+Layer,SME,80,70,140
+Layer,GDP,20,160,200
+Layer,GDP per Capita,204,0,255
+Layer,GDP (GHS),204,0,255
+Layer,GDP (HYDE 3.2),204,0,255
+Layer,HDI,100,0,255
+Layer,Poverty,20,100,130
+Layer,Night Light,80,200,255
+Layer,Kawasan Khusus,80,200,255
+Layer,Household Wealth,20,100,130
+,,,,
+Group,Ekonomi,,,
+Layer,Kawasan Strategis,0,100,110
+Layer,Obyek Wisata,0,100,110
+Layer,Lokasi Perkantoran,224,150,47
+Layer,Lokasi Industri,224,150,47
+Layer,Potensi Desa,128,0,250
+,,,,
+Group,Agriculture Production,,,
+Layer,Cropland,40,95,60
+Layer,Soil Suitability,170,180,70
+Layer,Maize,90,200,70
+Layer,Wheat,150,170,20
+Layer,Rice,90,200,20
+Layer,Field Size,210,200,50
+,,,,
+Group,Geography,,,
+Layer,Green Cover,180,180,120
+Layer,Land Cover,180,180,120
+Layer,Anthromes,180,180,120
+Layer,Continents,180,180,120
+Layer,Regions,180,180,120
+Layer,Countries,180,180,120
+Layer,Leaf Area Index,51,255,0
+Layer,River Basins,20,100,130
+Layer,Slope,180,180,120
+Layer,Peatland Area,180,180,120
+Layer,State Forest,180,180,120
+Layer,River Buffer,180,180,120
+Layer,Topography,180,180,120
+Layer,Water Depth,180,180,120
+Layer,SKL Kestabilan Lereng,180,180,120
+Layer,SKL Kestabilan Pondasi,180,180,120
+Layer,SKL Ketersediaan Air,180,180,120
+,,,,
+Group,Geografi,,,
+Layer,Topografi,180,180,120
+Layer,Batimetri,80,200,255
+Layer,Daerah Aliran Sungai,80,200,255
+Layer,Air Tanah,80,200,255
+Layer,Tutupan Lahan,180,180,120
+Layer,Kemampuan Lahan,180,180,120
+Layer,Elevasi,180,180,120
+Layer,Kemiringan,180,180,120
+Layer,Subsoil,135,110,63
+Layer,Topsoil,135,110,63
+Layer,Jenis Tanah,135,110,63
+,,,,
+Group,Iklim,,,
+Layer,Curah Hujan,80,200,255
+,,,,
+Group,Land Use,,,
+Layer,Master Plan,210,200,50
+Layer,Land Use,210,200,50
+Layer,Slum Area,210,200,50
+Layer,Urban Area,210,200,50
+Layer,Urban Expansion,210,200,50
+Layer,Landfill,210,200,50
+Layer,Restricted Areas,210,200,50
+Layer,RW,210,200,50
+Layer,Districts,210,200,50
+,,,,
+Group,Tata Ruang,,,
+Layer,Area Permukiman,210,200,50
+Layer,Guna Lahan,153,134,168
+Layer,Kecamatan,210,200,50
+Layer,Pola Ruang,210,200,50
+Layer,RDTR,210,200,50
+,,,,
+Group,Sanitation & Waste,,,
+Layer,Sanitation Taskforce,224,150,47
+Layer,Sanitation Taskforce Workers,224,150,47
+Layer,Garbage Carts,224,150,47
+Layer,Trash Cans,224,150,47
+Layer,Waste Collection Centres,224,150,47
+Layer,Garbage Trucks,224,150,47
+,,,,
+Group,Demography,,,
+Layer,Population Density,220,80,50
+Layer,Population Count,220,80,50
+Layer,Crime,220,80,50
+Layer,Elementary Education,220,80,50
+Layer,Primary Cooperatives,220,80,50
+,,,,
+Group,Demografi,,,
+Layer,Kepadatan Penduduk,220,80,50
+Layer,Populasi Laki Laki,220,80,50
+Layer,Populasi Perempuan,220,80,50
+Layer,Rumah Tinggal,220,80,50
+Layer,Daerah Kumuh,220,80,50
+,,,,
+Group,Health,,,
+Layer,Infant Mortality,220,70,150
+,,,,
+Group,Vulnerable Land,,,
+Layer,Floods,0,128,255
+Layer,Cyclones,250,0,0
+Layer,Earthquakes,250,0,0
+Layer,Land Movement,250,0,0
+Layer,Fires,250,0,0
+Layer,Liquefaction,255,0,0
+Layer,Affected Area,255,0,0
+Layer,Building Damage,255,0,0
+,,,,
+Group,Kerentanan Bencana,,,
+Layer,Amblesan,250,0,0
+Layer,Banjir,250,0,0
+Layer,Gempa,250,0,0
+Layer,Daerah Rawan Kebakaran,250,0,0
+Layer,Kenaikan Permukaan Laut,250,0,0
+Layer,Lokasi Evakuasi,250,0,0
+,,,,
+Group,Ecology,,,
+Layer,Aerosol,88,36,100
+Layer,Nitrogen Dioxide,88,36,100
+,,,,
+Group,Ekologi,,,
+Layer,Sungai,0,176,240
+Layer,Zona Konservasi Sungai,0,102,255
+,,,,
+Group,Thửa đất,,,
+Layer,Dân Số,255,153,0
+Layer,Lộ Giới,0,102,255
+Layer,Số Thửa,51,255,0
+,,,,
+Group,Utilitas Publik,,,
+Layer,Poskebakaran,210,200,50
+,,,,
+Group,Fasilitas Publik,,,
+Layer,Budaya dan Hiburan,255,153,0
+Layer,Fasilitas Transportasi Publik,255,153,0
+Layer,Jumlah Rumah Sahkit Bersalin,255,153,0
+Layer,Jumlah Poliklinik,255,153,0
+Layer,Jumlah Puskesmas,255,153,0
+Layer,Jumlah Klinik KB,255,153,0
+Layer,Jumlah Taman Kanak Kanak,255,153,0
+Layer,Jumlah Sekolah Dasar,255,153,0
+Layer,Jumlah Sekolah Luar Biasa,255,153,0
+Layer,Jumlah SMP,255,153,0
+Layer,Jumlah SMA,255,153,0
+Layer,Lokasi Pendidikan,224,150,47
+Layer,Lokasi Puskesmas,255,153,0
+Layer,Lokasi Rumah Sakit,255,153,0
+Layer,Pasar,210,200,50
+Layer,Pusat Lingkungan,210,200,50
+Layer,Rumah Sakit,210,200,50
+Layer,Sarana,210,200,50
+Layer,Sekolah,210,200,50
+,,,,
+Group,Infrastruktur,,,
+Layer,Drainase,200,200,200
+Layer,BTS,200,200,200
+,,,,
+Group,Tipe Residensial,,,
+Layer,Apartemen,255,245,107
+Layer,Perumahan,255,245,107
+Layer,Ruko,255,245,107
+Layer,Rusunami,255,245,107
+Layer,Rusunawa,255,245,107
+,,,,
+Group,Lokasi Kesehatan,,,
+Layer,Apotek & Toko Obat,224,191,26
+Layer,B Pengobatan & Klinik & Poliklinik,224,191,26
+Layer,Bidan Praktek & Rumah Bersalin,224,191,26
+Layer,Dokter Gigi & Klinik Gigi,224,191,26
+Layer,Dokter Praktek,224,191,26
+Layer,Dokter Spesialis Anak,224,191,26
+Layer,Posyandu,224,191,26
+,,,,
+Group,Lokasi Ibadah,,,
+Layer,Gereja,224,191,26
+Layer,Masjid,224,191,26
+Layer,Musholla,224,191,26
+Layer,Vihara,224,191,26
+,,,,
+Group,Lokasi Pendidikan Rendah,,,
+Layer,SD,224,191,26
+Layer,SMP,224,191,26
+Layer,SMA,224,191,26
+,,,,
+Group,Lokasi Pendidikan Tinggi,,,
+Layer,TK & Kelompok Bermain,224,191,26
+Layer,SLB,224,191,26
+Layer,Akademi & Politeknik & Lembaga Pendidikan,224,191,26
+Layer,Sekolah Tinggi & Pusat Penelitian & Universitas,224,191,26
+Layer,Bimbingan Belajar & Workshop & Kursus,224,191,26
+,,,,
+Group,Lokasi Institusi Sosial,,,
+Layer,Panti Asuhan,224,191,26
+Layer,Pusat Rehabilitasi Anak,224,191,26
+,,,,
+Group,Lokasi Olahraga,,,
+Layer,Lapangan Olahraga,224,191,26
+Layer,Gedung Olahraga,224,191,26
+Layer,Stadion,224,191,26
+,,,,
+Group,Lokasi Sanitasi dan RTH,,,
+Layer,Lokasi Makam,220,220,220
+Layer,Lokasi Taman,220,220,220
+Layer,Lokasi TPA,220,220,220
+Layer,Lokasi TPS,220,220,220
+,,,,
+Group,Lokasi Hankam,,,
+Layer,Kantor Polisi,140,73,26
+Layer,Kantor Militer,140,73,26
+Layer,Lembaga Pemasyarakatan,140,73,26
+,,,,
+Group,Boundaries,,,
+Layer,RTRWP,240,230,50
+Layer,Lokasi,160,160,160
+Layer,HCMC Boundary,60,50,50
+Layer,HCMC Districts,90,80,30
+Layer,HCMC Wards,160,150,50
+,,,,
+Group,Premise,,,
+Layer,Flood Report - Human,255,203,0
+Layer,Flood Report - Vehicle,203,255,0
+,,,,
+Group,Climate Change,,,
+Layer,Precipitation 25y 8.5,50,100,255
+Layer,Precipitation 25y 4.5,50,100,255
+Layer,Daily Precipitation,0,153,255
+Layer,SPEI-6,255,35,0
+Layer,SPEI-9,255,153,0
+Layer,SPEI-12,255,222,0
+Layer,SPEI-18,136,255,0
+,,,,
+Group,JBA (30m),,,
+Layer,Floods (JBA) P Q20,0,120,255
+Layer,Floods (JBA) P Q50,0,120,255
+Layer,Floods (JBA) P Q100,0,120,255
+Layer,Floods (JBA) FU Q20,0,120,255
+Layer,Floods (JBA) FU Q50,0,120,255
+Layer,Floods (JBA) FU Q100,0,120,255
+,,,,
+Group,FATHOM 1 (90m),,,
+Layer,FATHOM1 - FU Q100,0,120,255
+,,,,
+Group,FATHOM 2 (rev. 90m),,,
+Layer,Floods (F2) P 1in5,0,120,255
+Layer,Floods (F2) P 1in20,0,120,255
+Layer,Floods (F2) P 1in100,0,120,255
+Layer,Floods (F2) FU 1in5,255,0,120
+Layer,Floods (F2) FU 1in20,255,0,120
+Layer,Floods (F2) FU 1in100,255,0,120
+Layer,Floods (F2) FD 1in5,120,255,0
+Layer,Floods (F2) FD 1in20,120,255,0
+Layer,Floods (F2) FD 1in100,120,255,0
+Layer,Floods (F2) P Q20,0,120,255
+Layer,Floods (F2) P Q50,0,120,255
+Layer,Floods (F2) P Q100,0,120,255
+Layer,Floods (F2) FU Q20,0,120,255
+Layer,Floods (F2) FU Q50,0,120,255
+Layer,Floods (F2) FU Q100,0,120,255
+,,,,
+Group,Emergency Services,,,
+Layer,Police & Fire Station,255,255,100
+Layer,Hospitals,220,70,150
+Layer,Hospitals - BC,0,255,50
+Layer,Hospital,0,255,100
+Layer,Hospital & PCCC,255,255,100
+,,,,
+Group,Betweenness Centrality,,,
+Layer,BC D4 Hospital - No Floods,255,230,180
+Layer,BC D4 Hospital - Heavy Floods,255,80,180
+Layer,BC D4 Hospital - Change (Inc),120,240,120
+Layer,BC D4 Hospital - Change (Dec),240,150,100
+Layer,BC D4 H Pop - No Floods,255,230,180
+Layer,BC D4 H Pop - Heavy Floods,255,80,180
+Layer,BC D4 H Pop - NF (Inc),120,240,120
+Layer,BC D4 H Pop - NF (Dec),240,150,100
+Layer,BC D4 H Pop - HF (Inc),120,240,120
+Layer,BC D4 H Pop - HF (Dec),240,150,100
+Layer,BC PCCC - Heavy Floods,255,80,180
+Layer,BC Hospital - No Floods,255,230,180
+Layer,BC Hospital - Heavy Floods,255,80,180
+Layer,BC Hospital - Change (Inc),120,240,120
+Layer,BC Hospital - Change (Dec),240,150,100
+Layer,BC Hospitals - No Floods,255,230,180
+Layer,BC Hospitals - Heavy Floods,255,80,180
+Layer,BC Hospitals - Change (Inc),120,240,120
+Layer,BC Hospitals - Change (Dec),240,150,100
+Layer,BC P&F - No Floods,255,230,180
+Layer,BC P&F - Heavy Floods,255,80,180
+Layer,BC P&F - Change (Inc),120,240,120
+Layer,BC P&F - Change (Dec),240,150,100
+,,,,

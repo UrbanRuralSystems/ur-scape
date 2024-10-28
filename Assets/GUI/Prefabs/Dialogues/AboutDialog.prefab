@@ -257,7 +257,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 31, y: -20}
-  m_SizeDelta: {x: 227, y: 0}
+  m_SizeDelta: {x: 172, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &222421594387867878
 CanvasRenderer:
@@ -320,40 +320,24 @@ MonoBehaviour:
     MANGAL
 
 
-    <b>Product Manager</b>
+    <b>Development Community</b>
 
     Joshua VARGAS
 
-
-    <b>Senior Software
-    Engineer</b>
-
-    Michael JOOS *
-
-
-    <b>UI / UX Designer</b>
-
-    Serene CHEN
-    *
-
-
-    <b>ur-scape studio team</b>
-
     Pari Sen BISWAS
 
-    Denise LEE Hui
-    Min
+    Denise
+    LEE Hui Min
 
     Darshan LINESWALA
 
+    Yuhao LU
 
 
-    <size=12>* Team Alum
+    <size=12>Team Alumni:
 
-    For complete list
-    of Team Alums,
-
-    visit the ur-scape website at ur-scape.com</size>'
+    Michael
+    JOOS, Serene CHEN</size>'
 --- !u!114 &114685573797656854
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -407,8 +391,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 388, y: -361.62445}
-  m_SizeDelta: {x: 736, y: 0}
+  m_AnchoredPosition: {x: 360.5, y: -348.62445}
+  m_SizeDelta: {x: 681, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &114099084421538780
 MonoBehaviour:
@@ -508,7 +492,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -19}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &222309452246835372
@@ -643,8 +627,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 368, y: -331.5}
-  m_SizeDelta: {x: 736, y: 0}
+  m_AnchoredPosition: {x: 340.5, y: -318.5}
+  m_SizeDelta: {x: 681, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &114181223080349930
 MonoBehaviour:
@@ -762,7 +746,7 @@ GameObject:
   - component: {fileID: 8002275120833419832}
   - component: {fileID: 2341036018013777844}
   m_Layer: 5
-  m_Name: Partners
+  m_Name: Consortium
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -830,20 +814,18 @@ MonoBehaviour:
     m_LineSpacing: 1.1
   m_Text: 'Total Synergy Consulting Pvt Ltd
 
-    <i>in consortium with</i>
+    HAN-A Urban Research Institute
 
-    HAN-A
-    Urban Research Institute
-
-    Singapore-ETH Centre
+    Singapore-ETH
+    Centre
 
 
     <b>Singapore-ETH Centre
 
-    National
-    Consultants</b>
+    National Consultants</b>
 
-    Tanvi MAHESHWARI
+    Tanvi
+    MAHESHWARI
 
     Srilalitah GOPALAKRISHNAN
 
@@ -1121,7 +1103,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 0, y: -404}
+  m_AnchoredPosition: {x: 0, y: -386}
   m_SizeDelta: {x: 187, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &8170398667645937267
@@ -1394,8 +1376,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 511.5, y: -277.5}
-  m_SizeDelta: {x: 389, y: 515}
+  m_AnchoredPosition: {x: 456.5, y: -264.5}
+  m_SizeDelta: {x: 389, y: 489}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &4506026405921709731
 MonoBehaviour:
@@ -1450,7 +1432,7 @@ GameObject:
   - component: {fileID: 8119947106599025528}
   - component: {fileID: 3464180601104663534}
   m_Layer: 5
-  m_Name: Partners_Title
+  m_Name: Consortium_Title
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1762,7 +1744,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1.1
-  m_Text: '(c) 2024 Future Cities Laboratory, Singapore-ETH Centre. All rights reserved.
+  m_Text: '2024 Future Cities Laboratory, Singapore-ETH Centre. Open source software.
 
     Produced
     as part of TA-6779 IND: Promoting Smart and Integrated Urban Planning
@@ -1954,7 +1936,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 0, y: -437}
+  m_AnchoredPosition: {x: 0, y: -419}
   m_SizeDelta: {x: 293, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &2147111250171773825

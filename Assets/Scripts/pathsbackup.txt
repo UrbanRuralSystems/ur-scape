@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -7,11 +7,12 @@
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 
 using System.IO;
+using UnityEngine;
 
 public static class Paths
 {
 	public static string Data;
-	public static readonly string Cache;
+	public static string Cache;
 	public static string Sites;
 	public static readonly string Backgrounds;
 
@@ -21,14 +22,30 @@ public static class Paths
 	public static readonly string DataWebDBPatches;
 #endif
 
-	static Paths()
+static Paths()
 	{
+
+	// Declare and initialise absoluteDataFilePath
+	string dataPath;
+	string absoluteDataFilePath;
+	absoluteDataFilePath = Application.dataPath + Path.DirectorySeparatorChar + "Data" + Path.DirectorySeparatorChar + "DataAbsolutePath.txt";
+
+	if (File.Exists(absoluteDataFilePath))
+	{
+		dataPath = File.ReadAllText(absoluteDataFilePath);
+	}
+	else
+	{
+		dataPath = "Data" + Path.DirectorySeparatorChar;
+	}
+
+// Set Data path based on platform
 #if UNITY_ANDROID
 		Data = "/sdcard/urscape" + Path.DirectorySeparatorChar;
 #elif UNITY_IOS && !UNITY_EDITOR
 		Data = UnityEngine.Application.streamingAssetsPath + Path.DirectorySeparatorChar;
 #else
-		Data = "Data" + Path.DirectorySeparatorChar;
+		Data = dataPath;
 #endif
 
 #if UNITY_IOS

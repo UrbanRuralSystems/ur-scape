@@ -6,7 +6,10 @@
 //
 // Author:  Michael Joos  (joos@arch.ethz.ch)
 
+using SFB;
+using System;
 using System.Collections;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -147,7 +150,29 @@ public class SettingsPanel : MonoBehaviour
 
 	private void OnImportClick()
 	{
-		ComponentManager.Instance.Get<ModalDialogManager>().NewDialog(importDataPrefab);
+		// Open a file dialog to select the folder
+		string newFolderPath  = StandaloneFileBrowser.OpenFolderPanel("Select Folder", "", false)[0];
+
+		// Declare variable to store path of DataAbsolutePath.txt
+		string AbsolutePathFilePath;
+		AbsolutePathFilePath = Path.Combine(Application.dataPath, "../Data/DataAbsolutePath.txt");
+		// OriginalFilePath = File.ReadAllText(AbsolutePathFilePath);
+
+		// If the selected path is valid, save it to DataAbsolutePath.txt
+		// newFolderPath[0].EndsWith("Data")
+		if (!string.IsNullOrEmpty(newFolderPath) && newFolderPath.EndsWith("Data"))
+		{
+			AbsolutePathFilePath = Path.Combine(Application.dataPath, "../Data/DataAbsolutePath.txt");
+			File.WriteAllText(AbsolutePathFilePath, newFolderPath);	
+			dataManager.Refresh();
+			dataManager.OnDataLoaded += OnDataLoaded;
+		}
+		else 
+		{
+			Debug.Log("Invalid Path");
+		}
+		// Refresh the data manager
+		
 		Close();
 	}
 
