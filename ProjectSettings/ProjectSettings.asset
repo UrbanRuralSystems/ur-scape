@@ -13,7 +13,7 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 0
   companyName: Future Cities Laboratory
-  productName: ur-scape for Rajasthan
+  productName: ur-scape
   defaultCursor: {fileID: 2800000, guid: 65974473ec414794abf3a9ea177e47db, type: 3}
   cursorHotspot: {x: 1, y: 1}
   m_SplashScreenBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
