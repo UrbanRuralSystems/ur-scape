@@ -299,7 +299,7 @@ MonoBehaviour:
     m_RichText: 1
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
-    m_LineSpacing: 1.1
+    m_LineSpacing: 1.2
   m_Text: '     <size=16><b>Development Team</b></size>
 
 
@@ -391,7 +391,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 360.5, y: -269.0265}
+  m_AnchoredPosition: {x: 360.5, y: -282.5265}
   m_SizeDelta: {x: 681, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &114099084421538780
@@ -627,7 +627,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 340.5, y: -252}
+  m_AnchoredPosition: {x: 340.5, y: -265.5}
   m_SizeDelta: {x: 681, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &114181223080349930
@@ -846,7 +846,7 @@ MonoBehaviour:
     m_RichText: 1
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
-    m_LineSpacing: 1.1
+    m_LineSpacing: 1.2
   m_Text: 'City of Bandung
 
     City of Palembang
@@ -867,6 +867,11 @@ MonoBehaviour:
 
     Jodhpur
     Municipal Corporation
+
+    University of Hasanuddin
+
+    University of Diponegoro
+
 
 '
 --- !u!114 &6520562946089772283
@@ -994,7 +999,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 0, y: -211}
+  m_AnchoredPosition: {x: 0, y: -277}
   m_SizeDelta: {x: 187, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &8170398667645937267
@@ -1190,8 +1195,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 456.5, y: -198}
-  m_SizeDelta: {x: 389, y: 356}
+  m_AnchoredPosition: {x: 456.5, y: -211.5}
+  m_SizeDelta: {x: 389, y: 383}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &4506026405921709731
 MonoBehaviour:
@@ -1647,7 +1652,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 0, y: -244}
+  m_AnchoredPosition: {x: 0, y: -310}
   m_SizeDelta: {x: 293, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &2147111250171773825
@@ -1690,7 +1695,7 @@ MonoBehaviour:
     m_RichText: 1
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
-    m_LineSpacing: 1.1
+    m_LineSpacing: 1.2
   m_Text: 'Swiss Secretariat for Economic Affairs (SECO)
 
     National Research Foundation
