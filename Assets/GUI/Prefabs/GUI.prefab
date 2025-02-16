@@ -5822,7 +5822,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\xA9 2022 Future Cities Laboratory, SEC"
+  m_Text: "\xA9 2024 Future Cities Laboratory, SEC"
 --- !u!1 &6341485772278768872
 GameObject:
   m_ObjectHideFlags: 0

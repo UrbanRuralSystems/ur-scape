@@ -1,10 +1,11 @@
-﻿// Copyright (C) 2019 Singapore ETH Centre, Future Cities Laboratory
+﻿// Copyright (C) 2025 Singapore ETH Centre, Future Cities Laboratory
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENSE file for details.
 //
-// Author:  Michael Joos  (joos@arch.ethz.ch)
+// Original Author:  Michael Joos  (joos@arch.ethz.ch)
+// Revisions: 2024 David Neudecker, 2024-2025 Joshua Vargas (joshua.vargas@sec.ethz.ch)
 
 #if UNITY_EDITOR
 #define SAFETY_CHECK
@@ -350,14 +351,18 @@ public class DataManager : UrsComponent
 			yield break;
         }
 		//Check if Absolute Path exist and if yes update
-		if (File.Exists(Paths.Data + "DataAbosolutePath.txt"))
+		if (File.Exists(Paths.Data + "DataAbsolutePath.txt"))
 		{
-			string path = File.ReadAllText(Paths.Data + "DataAbosolutePath.txt");
-			if (Directory.Exists(path))
+			string path = File.ReadAllText(Paths.Data + "DataAbsolutePath.txt");
+			if (path == "default")
 			{
-				Paths.Sites = path + Path.DirectorySeparatorChar + Paths.Data +
-					Path.DirectorySeparatorChar + "Sites" + Path.DirectorySeparatorChar;
+				// Do nothing
 			}
+			else if (Directory.Exists(path))
+			{
+				Paths.Sites = path + Path.DirectorySeparatorChar + "Sites" + Path.DirectorySeparatorChar;
+			}
+			
 		}
 
 
@@ -365,7 +370,7 @@ public class DataManager : UrsComponent
 
         if (!Directory.Exists(Paths.Sites))
 		{
-			Debug.LogError("Data path '" + Paths.Sites + "' doesn't exist. Trying to create it.");
+			Debug.LogError("Data path '" + Paths.Sites + "' does not exist. Trying to create it.");
 			CloseProgressDialog();
 			Directory.CreateDirectory(Paths.Sites);
 			yield break;
