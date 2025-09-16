@@ -314,30 +314,24 @@ MonoBehaviour:
     David NEUDECKER
 
 
-    <b>Research Coordinator</b>
-
-    Niraly
-    MANGAL
-
-
     <b>Development Community</b>
-
-    Joshua VARGAS
-
-    Pari Sen BISWAS
 
     Denise
     LEE Hui Min
 
-    Darshan LINESWALA
+    Joshua VARGAS
 
-    Yuhao LU
+    Niraly MANGAL
 
 
     <size=12>Team Alumni:
 
     Michael
-    JOOS, Serene CHEN</size>'
+    JOOS, Serene CHEN,
+
+    Yuhao LU, Pari Sen BISWAS,
+
+    Darshan LINESWALA</size>'
 --- !u!114 &114685573797656854
 MonoBehaviour:
   m_ObjectHideFlags: 0
